@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f2ea">
+  <title>Runline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Manrope:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="planner" aria-label="Route planner">
+      <header class="brand-row">
+        <a class="brand" href="/" aria-label="Runline home">
+          <span class="brand-mark" aria-hidden="true"><span></span></span>
+          <span>runline</span>
+        </a>
+        <span class="mode-pill">Loop builder</span>
+      </header>
+
+      <div class="intro">
+        <p class="eyebrow">Build a better run</p>
+        <h1>Your distance. Fewer interruptions.</h1>
+        <p>Routes shaped around the way you actually want to run.</p>
+      </div>
+
+      <form id="route-form">
+        <div class="field start-field">
+          <label for="address">Start</label>
+          <div class="input-shell">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
+            <input id="address" name="address" autocomplete="street-address" value="Legacy Elementary School, Ashburn, Virginia" placeholder="Address or click the map">
+            <button class="icon-button" id="locate" type="button" aria-label="Use my location">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            </button>
+          </div>
+          <input id="latitude" type="hidden">
+          <input id="longitude" type="hidden">
+        </div>
+
+        <div class="distance-row">
+          <div class="field distance-field">
+            <label for="distance">Distance</label>
+            <div class="distance-input"><input id="distance" type="number" min="1" max="30" step="0.5" value="3"><span>miles</span></div>
+          </div>
+          <div class="quick-distances" aria-label="Quick distances">
+            <button class="active" type="button" data-distance="3">3</button>
+            <button type="button" data-distance="5">5</button>
+            <button type="button" data-distance="8">8</button>
+            <button type="button" data-distance="12">12</button>
+          </div>
+        </div>
+
+        <fieldset>
+          <legend>Surface</legend>
+          <div class="segmented" data-control="surface">
+            <button type="button" data-value="road">Road</button>
+            <button class="active" type="button" data-value="mixed">Mixed</button>
+            <button type="button" data-value="trail">Trail</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Elevation</legend>
+          <div class="segmented" data-control="elevation">
+            <button type="button" data-value="flat">Flat</button>
+            <button class="active" type="button" data-value="balanced">Balanced</button>
+            <button type="button" data-value="hilly">Hilly</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Better starts <span>max drive</span></legend>
+          <div class="segmented four" data-control="drive">
+            <button type="button" data-value="0">Here</button>
+            <button class="active" type="button" data-value="1">1 mi</button>
+            <button type="button" data-value="3">3 mi</button>
+            <button type="button" data-value="5">5 mi</button>
+          </div>
+        </fieldset>
+
+        <div class="priority-note">
+          <span class="priority-icon" aria-hidden="true"></span>
+          <div><strong>Low-interruption routing</strong><span>Signals and major crossings carry the highest penalty.</span></div>
+        </div>
+
+        <button class="generate" type="submit"><span>Generate routes</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+        <p class="form-status" id="form-status" aria-live="polite"></p>
+      </form>
+
+      <section class="results" id="results" aria-label="Route results" hidden>
+        <div class="results-heading"><h2>Best routes</h2><span id="result-context"></span></div>
+        <div id="route-list"></div>
+      </section>
+    </section>
+
+    <section class="map-panel" aria-label="Route map">
+      <div id="map"></div>
+      <div class="map-tip" id="map-tip"><span></span>Click anywhere to set your start</div>
+      <div class="selected-summary" id="selected-summary" hidden>
+        <div><span id="summary-distance">5.02 mi</span><small id="summary-start">Start here</small></div>
+        <div><span id="summary-gain">218 ft</span><small>Elevation</small></div>
+        <div><span id="summary-signals">1</span><small>Signals</small></div>
+        <button id="download-gpx" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>GPX</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
