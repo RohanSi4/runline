@@ -1,0 +1,9 @@
+.git/
+.private/
+.pytest_cache/
+.venv/
+cache/
+output/
+tests/
+**/__pycache__/
+*.egg-info/

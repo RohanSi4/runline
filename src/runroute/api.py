@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+import tempfile
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
@@ -23,7 +25,15 @@ from .planner import geocode_address, plan_routes
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB_ROOT = PROJECT_ROOT / "web"
-CACHE_ROOT = PROJECT_ROOT / "cache"
+
+
+def cache_root() -> Path:
+    if os.environ.get("VERCEL"):
+        return Path(tempfile.gettempdir()) / "run-route-lab-cache"
+    return PROJECT_ROOT / "cache"
+
+
+CACHE_ROOT = cache_root()
 
 app = FastAPI(title="Runline", version="0.1.0")
 app.mount("/assets", StaticFiles(directory=WEB_ROOT), name="assets")
