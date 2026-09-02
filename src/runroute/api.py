@@ -77,7 +77,9 @@ async def health() -> dict[str, str]:
 async def routes(request: RouteRequest) -> dict:
     try:
         if request.address and request.address.strip():
-            origin = await run_in_threadpool(geocode_address, request.address.strip())
+            origin = await run_in_threadpool(
+                geocode_address, request.address.strip(), CACHE_ROOT
+            )
         else:
             origin = Coordinate(float(request.latitude), float(request.longitude))
         preferences = RoutePreferences(

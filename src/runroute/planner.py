@@ -20,9 +20,15 @@ class PlanResult:
     warnings: tuple[str, ...]
 
 
-def geocode_address(address: str) -> Coordinate:
+def geocode_address(
+    address: str, cache_directory: Path | None = None
+) -> Coordinate:
     import osmnx as ox
 
+    if cache_directory is not None:
+        cache_directory.mkdir(parents=True, exist_ok=True)
+        ox.settings.use_cache = True
+        ox.settings.cache_folder = str(cache_directory / "http")
     latitude, longitude = ox.geocoder.geocode(address)
     return Coordinate(float(latitude), float(longitude))
 
