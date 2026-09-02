@@ -30,7 +30,12 @@ WEB_ROOT = PROJECT_ROOT / "web"
 def cache_root() -> Path:
     if os.environ.get("VERCEL"):
         return Path(tempfile.gettempdir()) / "run-route-lab-cache"
-    return PROJECT_ROOT / "cache"
+    local_cache = PROJECT_ROOT / "cache"
+    try:
+        local_cache.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return Path(tempfile.gettempdir()) / "run-route-lab-cache"
+    return local_cache
 
 
 CACHE_ROOT = cache_root()
