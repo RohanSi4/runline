@@ -4,7 +4,7 @@ import json
 
 import networkx as nx
 
-from runroute.elevation import enrich_graph_open_meteo
+from runline.elevation import enrich_graph_open_meteo
 
 
 class _Response:

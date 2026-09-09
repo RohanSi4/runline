@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from runroute.models import (
+from runline.models import (
     Coordinate,
     ElevationPreference,
     RouteCandidate,
     RouteMetrics,
     RoutePreferences,
 )
-from runroute.scoring import rank_candidates
+from runline.scoring import rank_candidates
 
 
 def _candidate(route_id: str, *, signals: int = 0, gain: float = 100) -> RouteCandidate:

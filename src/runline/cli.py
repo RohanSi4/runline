@@ -74,7 +74,7 @@ def _generate(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="runroute")
+    parser = argparse.ArgumentParser(prog="runline")
     subparsers = parser.add_subparsers(dest="command", required=True)
     generate = subparsers.add_parser("generate", help="generate and score running loops")
     generate.add_argument("--address")

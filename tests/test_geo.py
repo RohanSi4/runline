@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import math
 
-from runroute.geo import EARTH_RADIUS_METERS, destination, distance_meters
-from runroute.models import Coordinate
+from runline.geo import EARTH_RADIUS_METERS, destination, distance_meters
+from runline.models import Coordinate
 
 
 def _haversine_meters(first: Coordinate, second: Coordinate) -> float:
