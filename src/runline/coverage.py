@@ -44,6 +44,7 @@ class Area:
     filename: str
     starts_filename: str | None = None
     drive_filename: str | None = None
+    places_filename: str | None = None
 
     def covers(self, origin: Coordinate, radius_meters: float) -> bool:
         """True when a disc of ``radius_meters`` around origin fits inside this area."""
@@ -85,6 +86,7 @@ def _read_manifest(root: str) -> tuple[Area, ...]:
             filename=entry["file"],
             starts_filename=entry.get("starts_file"),
             drive_filename=entry.get("drive_file"),
+            places_filename=entry.get("places_file"),
         )
         for entry in payload.get("areas", ())
     )
@@ -143,7 +145,7 @@ def containing_area(origin: Coordinate) -> Area | None:
     return min(inside, key=lambda area: distance_meters(area.center, origin))
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=4)
 def _load_json_file(path: str) -> tuple:
     return tuple(json.loads(Path(path).read_text(encoding="utf-8")))
 
@@ -154,6 +156,17 @@ def load_area_starts(area: Area) -> tuple:
     if not area.starts_filename:
         return ()
     path = graphs_root() / area.starts_filename
+    if not path.exists():
+        return ()
+    return _load_json_file(str(path))
+
+
+def load_area_places(area: Area) -> tuple:
+    """Named streets and public places used for address autocomplete."""
+
+    if not area.places_filename:
+        return ()
+    path = graphs_root() / area.places_filename
     if not path.exists():
         return ()
     return _load_json_file(str(path))

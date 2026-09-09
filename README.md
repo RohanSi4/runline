@@ -86,6 +86,16 @@ calls per request, which is why picking a drive radius used to take minutes.
 The drive graph is reduced to its largest strongly connected component, since
 drive distance is a directed shortest path.
 
+**Address autocomplete.** Areas ship `<slug>-places.json`: every named street
+in the walk graph plus the named public start points, about 2,700 entries and
+226KB for Charlottesville. `/api/places` serves it once and the browser filters
+locally, so suggestions are instant. Nominatim's usage policy forbids
+per-keystroke geocoding, and building the list from the shipped map has two
+further advantages: only places inside the covered area can be suggested, and
+a chosen suggestion carries its own coordinates, so the request skips
+geocoding entirely. Typing a free-form address still works and is geocoded
+server-side, and clicking the map still sets a start.
+
 **Production dependencies.** `requirements.txt` is deliberately smaller than
 `pyproject.toml`. Serving a precomputed area needs no osmnx, so none of
 geopandas, pandas, pyogrio, pyproj or shapely are installed on the serverless

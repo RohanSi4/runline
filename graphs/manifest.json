@@ -9,7 +9,8 @@
       "radius_meters": 12000.0,
       "file": "charlottesville-va.pkl.gz",
       "starts_file": "charlottesville-va-starts.json",
-      "drive_file": "charlottesville-va-drive.pkl.gz"
+      "drive_file": "charlottesville-va-drive.pkl.gz",
+      "places_file": "charlottesville-va-places.json"
     }
   ]
 }

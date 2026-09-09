@@ -10,11 +10,11 @@ from typing import Literal
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
-from .coverage import CoverageError, area_labels
+from .coverage import CoverageError, area_labels, areas, load_area_places
 from .export import candidate_feature
 from .gpx import candidate_to_gpx
 from .models import (
@@ -142,6 +142,24 @@ async def routes(request: RouteRequest) -> dict:
 @app.get("/api/areas")
 async def supported_areas() -> dict:
     return {"areas": list(area_labels())}
+
+
+@app.get("/api/places")
+async def places() -> JSONResponse:
+    """Autocomplete entries for every covered area.
+
+    Served from the shipped map rather than a geocoder: Nominatim's usage
+    policy forbids per-keystroke autocomplete. The list is immutable for a
+    given deployment, so it is cached hard in the browser.
+    """
+
+    entries: list[dict] = []
+    for area in areas():
+        entries.extend(load_area_places(area))
+    return JSONResponse(
+        {"places": entries},
+        headers={"Cache-Control": "public, max-age=86400, immutable"},
+    )
 
 
 @app.get("/api/demo")
