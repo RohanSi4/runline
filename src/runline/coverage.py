@@ -42,6 +42,8 @@ class Area:
     center: Coordinate
     radius_meters: float
     filename: str
+    starts_filename: str | None = None
+    drive_filename: str | None = None
 
     def covers(self, origin: Coordinate, radius_meters: float) -> bool:
         """True when a disc of ``radius_meters`` around origin fits inside this area."""
@@ -81,6 +83,8 @@ def _read_manifest(root: str) -> tuple[Area, ...]:
             center=Coordinate(float(entry["latitude"]), float(entry["longitude"])),
             radius_meters=float(entry["radius_meters"]),
             filename=entry["file"],
+            starts_filename=entry.get("starts_file"),
+            drive_filename=entry.get("drive_file"),
         )
         for entry in payload.get("areas", ())
     )
@@ -103,7 +107,9 @@ def find_area(origin: Coordinate, radius_meters: float) -> Area | None:
     return min(covering, key=lambda area: distance_meters(area.center, origin))
 
 
-@lru_cache(maxsize=1)
+# Holds one area's walk graph plus its drive graph; at maxsize=1 the two would
+# evict each other on every request that discovers starts.
+@lru_cache(maxsize=2)
 def _load_graph_file(path: str) -> nx.MultiDiGraph:
     with gzip.open(path, "rb") as handle:
         return pickle.load(handle)
@@ -112,8 +118,8 @@ def _load_graph_file(path: str) -> nx.MultiDiGraph:
 def load_area_graph(area: Area) -> nx.MultiDiGraph:
     """Load and memoize an area's graph.
 
-    Only one graph is held at a time; a warm instance answers repeat requests
-    for the same area without touching disk.
+    A warm instance answers repeat requests for the same area without touching
+    disk.
     """
 
     path = graphs_root() / area.filename
@@ -121,6 +127,46 @@ def load_area_graph(area: Area) -> nx.MultiDiGraph:
         raise CoverageError(
             f"Map data for {area.label} is missing from this deployment."
         )
+    return _load_graph_file(str(path))
+
+
+def containing_area(origin: Coordinate) -> Area | None:
+    """The area a point sits inside, ignoring how much map a route would need."""
+
+    inside = [
+        area
+        for area in areas()
+        if distance_meters(area.center, origin) <= area.radius_meters
+    ]
+    if not inside:
+        return None
+    return min(inside, key=lambda area: distance_meters(area.center, origin))
+
+
+@lru_cache(maxsize=1)
+def _load_json_file(path: str) -> tuple:
+    return tuple(json.loads(Path(path).read_text(encoding="utf-8")))
+
+
+def load_area_starts(area: Area) -> tuple:
+    """Public start candidates precomputed for an area, or () if none shipped."""
+
+    if not area.starts_filename:
+        return ()
+    path = graphs_root() / area.starts_filename
+    if not path.exists():
+        return ()
+    return _load_json_file(str(path))
+
+
+def load_area_drive_graph(area: Area) -> nx.MultiDiGraph | None:
+    """Road network used to measure drive distance to a discovered start."""
+
+    if not area.drive_filename:
+        return None
+    path = graphs_root() / area.drive_filename
+    if not path.exists():
+        return None
     return _load_graph_file(str(path))
 
 

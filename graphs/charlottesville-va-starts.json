@@ -1,0 +1,6746 @@
+[
+ {
+  "label": "Rugby Road-University Corner Historic District",
+  "kind": "park",
+  "latitude": 38.0418055,
+  "longitude": -78.50029
+ },
+ {
+  "label": "University of Virginia Historic District",
+  "kind": "park",
+  "latitude": 38.0345834,
+  "longitude": -78.5039012
+ },
+ {
+  "label": "Albemarle Historic District",
+  "kind": "park",
+  "latitude": 38.0315693,
+  "longitude": -78.4779167
+ },
+ {
+  "label": "Charlottesville and Albemarle County Courthouse Historic District",
+  "kind": "park",
+  "latitude": 38.0313388,
+  "longitude": -78.4803207
+ },
+ {
+  "label": "Ridge Street Historic District",
+  "kind": "park",
+  "latitude": 38.0223617,
+  "longitude": -78.4914008
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0339526,
+  "longitude": -78.4984423
+ },
+ {
+  "label": "Brook Hill River Park",
+  "kind": "park",
+  "latitude": 38.102379,
+  "longitude": -78.4616103
+ },
+ {
+  "label": "Fry's Spring Beach Club",
+  "kind": "park",
+  "latitude": 38.0178972,
+  "longitude": -78.5142939
+ },
+ {
+  "label": "Parking lot A-1 : Bus/RV parking",
+  "kind": "parking",
+  "latitude": 38.0052017,
+  "longitude": -78.452916
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0360406,
+  "longitude": -78.5231522
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0359271,
+  "longitude": -78.5232408
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035525,
+  "longitude": -78.5234604
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0336627,
+  "longitude": -78.5237957
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.026916,
+  "longitude": -78.5266628
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0467099,
+  "longitude": -78.5135933
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0484055,
+  "longitude": -78.5139435
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0480286,
+  "longitude": -78.514181
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0473498,
+  "longitude": -78.5135681
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0335125,
+  "longitude": -78.5210921
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0377466,
+  "longitude": -78.5224973
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0378597,
+  "longitude": -78.5226206
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0379377,
+  "longitude": -78.5225155
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0504867,
+  "longitude": -78.4800383
+ },
+ {
+  "label": "Water Street Garage",
+  "kind": "parking",
+  "latitude": 38.029308650000004,
+  "longitude": -78.4804219361237
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03022705,
+  "longitude": -78.49597871762617
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0108942,
+  "longitude": -78.51736147163322
+ },
+ {
+  "label": "Lot 2",
+  "kind": "parking",
+  "latitude": 38.00584365,
+  "longitude": -78.48425077334622
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01426925,
+  "longitude": -78.50174584117444
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01434825,
+  "longitude": -78.50250583604041
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.010511199999996,
+  "longitude": -78.5000906
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0102986,
+  "longitude": -78.50040074161677
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9997706,
+  "longitude": -78.49720574822474
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01725905,
+  "longitude": -78.52162339253441
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99793915,
+  "longitude": -78.48899117181291
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01129845,
+  "longitude": -78.50269775322582
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0113204,
+  "longitude": -78.50231632110317
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0120049,
+  "longitude": -78.50354174251544
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0065627,
+  "longitude": -78.52574943664811
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00686495,
+  "longitude": -78.52601002804403
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0024456,
+  "longitude": -78.52653036123695
+ },
+ {
+  "label": "McIntire Park",
+  "kind": "park",
+  "latitude": 38.0453731,
+  "longitude": -78.47494865751054
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04392425,
+  "longitude": -78.44747436374739
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.089632550000005,
+  "longitude": -78.46745903303284
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09135825,
+  "longitude": -78.46795939195144
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07225405,
+  "longitude": -78.47568236450931
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07423125,
+  "longitude": -78.47962925303008
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07314100000001,
+  "longitude": -78.48082700080755
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06605845,
+  "longitude": -78.48688721380148
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0687767,
+  "longitude": -78.48344759530073
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01975805,
+  "longitude": -78.42785559419596
+ },
+ {
+  "label": "Azalea Park West",
+  "kind": "park",
+  "latitude": 38.01296945,
+  "longitude": -78.52063972857871
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.074428499999996,
+  "longitude": -78.48936438937099
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.070441200000005,
+  "longitude": -78.48992844579759
+ },
+ {
+  "label": "Economy Parking Lot",
+  "kind": "parking",
+  "latitude": 38.13678525,
+  "longitude": -78.44905962241408
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03506855,
+  "longitude": -78.48520387552142
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0447328,
+  "longitude": -78.53631536637673
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07689475,
+  "longitude": -78.47948468870996
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041792900000004,
+  "longitude": -78.49592528349847
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.127845300000004,
+  "longitude": -78.43912364082263
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0109962,
+  "longitude": -78.38460224821472
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0908283,
+  "longitude": -78.4936440657502
+ },
+ {
+  "label": "Emmet / Ivy Parking Garage",
+  "kind": "parking",
+  "latitude": 38.04189825,
+  "longitude": -78.50792374245175
+ },
+ {
+  "label": "Darden Court",
+  "kind": "park",
+  "latitude": 38.032983099999996,
+  "longitude": -78.50987056984933
+ },
+ {
+  "label": "Arena Parking Garage",
+  "kind": "parking",
+  "latitude": 38.04719385,
+  "longitude": -78.50761871587906
+ },
+ {
+  "label": "Darden Parking Garage",
+  "kind": "parking",
+  "latitude": 38.053737,
+  "longitude": -78.5137975396076
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00984115,
+  "longitude": -78.45070690883483
+ },
+ {
+  "label": "Walnut Creek Park",
+  "kind": "park",
+  "latitude": 37.92690705,
+  "longitude": -78.59359289739596
+ },
+ {
+  "label": "Darden Towe Park",
+  "kind": "park",
+  "latitude": 38.04246445,
+  "longitude": -78.45015941817815
+ },
+ {
+  "label": "Charlotte Y. Humphris Park",
+  "kind": "park",
+  "latitude": 38.07634135,
+  "longitude": -78.49253226850638
+ },
+ {
+  "label": "Market Street Park",
+  "kind": "park",
+  "latitude": 38.0317947,
+  "longitude": -78.48061875277601
+ },
+ {
+  "label": "Market Street Garage",
+  "kind": "parking",
+  "latitude": 38.0301957,
+  "longitude": -78.47774495898094
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0298215,
+  "longitude": -78.48239625758166
+ },
+ {
+  "label": "Culbreth Road Garage",
+  "kind": "parking",
+  "latitude": 38.0401666,
+  "longitude": -78.5041250122388
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07624165,
+  "longitude": -78.47331407381384
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.078890099999995,
+  "longitude": -78.475891139706
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0782283,
+  "longitude": -78.47601244151238
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07971045,
+  "longitude": -78.47479662232371
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07647235,
+  "longitude": -78.47693911250461
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0787561,
+  "longitude": -78.47266895201616
+ },
+ {
+  "label": "11th Street Parking Garage",
+  "kind": "parking",
+  "latitude": 38.03228815,
+  "longitude": -78.4970313064179
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0331336,
+  "longitude": -78.50052551115044
+ },
+ {
+  "label": "Patient and Patient Visitor Parking",
+  "kind": "parking",
+  "latitude": 38.03169215,
+  "longitude": -78.49735994759372
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03558945,
+  "longitude": -78.50041389836437
+ },
+ {
+  "label": "Nameless Field",
+  "kind": "park",
+  "latitude": 38.03752325000001,
+  "longitude": -78.5062906251957
+ },
+ {
+  "label": "Arena Surface Parking",
+  "kind": "parking",
+  "latitude": 38.046688950000004,
+  "longitude": -78.50852393648366
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03224805,
+  "longitude": -78.49101348792868
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02144545,
+  "longitude": -78.43434347420458
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0332742,
+  "longitude": -78.47162098137288
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032888400000004,
+  "longitude": -78.4773703407298
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02786245,
+  "longitude": -78.48264918722799
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03164195,
+  "longitude": -78.48561081297777
+ },
+ {
+  "label": "Jefferson School City Center Parking",
+  "kind": "parking",
+  "latitude": 38.032728899999995,
+  "longitude": -78.48614603184038
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032463899999996,
+  "longitude": -78.49229376721095
+ },
+ {
+  "label": "Washington Park",
+  "kind": "park",
+  "latitude": 38.04061795,
+  "longitude": -78.49077227714368
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04042295,
+  "longitude": -78.49012743085979
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.051668750000005,
+  "longitude": -78.45134467640187
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0545264,
+  "longitude": -78.45097790494549
+ },
+ {
+  "label": "Pen Park",
+  "kind": "park",
+  "latitude": 38.051924400000004,
+  "longitude": -78.45297720626337
+ },
+ {
+  "label": "Benjamin Tonsler Park",
+  "kind": "park",
+  "latitude": 38.0258672,
+  "longitude": -78.49047061808776
+ },
+ {
+  "label": "Quarry Park",
+  "kind": "park",
+  "latitude": 38.01452655,
+  "longitude": -78.47695337078031
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01718805,
+  "longitude": -78.47136676196106
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0336833,
+  "longitude": -78.4747856102058
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0061568,
+  "longitude": -78.4958139969971
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.034394649999996,
+  "longitude": -78.49902380765889
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022064900000004,
+  "longitude": -78.44380215434207
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0226988,
+  "longitude": -78.44834461687583
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02347145,
+  "longitude": -78.44317073512616
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.021464300000005,
+  "longitude": -78.4442256873089
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022582650000004,
+  "longitude": -78.441211348997
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0243751,
+  "longitude": -78.44410050654048
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02224675,
+  "longitude": -78.44268656287008
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02171575,
+  "longitude": -78.44633479586906
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02046965,
+  "longitude": -78.44007035332879
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0226606,
+  "longitude": -78.45175055989813
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.021343099999996,
+  "longitude": -78.44475699640029
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.023927400000005,
+  "longitude": -78.44851784435872
+ },
+ {
+  "label": "Starr Hill Park",
+  "kind": "park",
+  "latitude": 38.03213025,
+  "longitude": -78.4890077377684
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041609699999995,
+  "longitude": -78.50488476076379
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030055649999994,
+  "longitude": -78.4973369234057
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.005585550000006,
+  "longitude": -78.51743094217647
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00477555,
+  "longitude": -78.5182925975955
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0081514,
+  "longitude": -78.52481927918558
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04446335,
+  "longitude": -78.50635659195862
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03035725,
+  "longitude": -78.4866192
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03047945,
+  "longitude": -78.48764275721555
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03103185,
+  "longitude": -78.48883279776368
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0318255,
+  "longitude": -78.48873584999998
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.036093300000005,
+  "longitude": -78.50069281949476
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.033643850000004,
+  "longitude": -78.4992476273388
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0350954,
+  "longitude": -78.51485199821371
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01390285,
+  "longitude": -78.5014528
+ },
+ {
+  "label": "Court Square Park",
+  "kind": "park",
+  "latitude": 38.03188255,
+  "longitude": -78.47807730443901
+ },
+ {
+  "label": "R1 Permit",
+  "kind": "parking",
+  "latitude": 38.035240099999996,
+  "longitude": -78.51018921507837
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.034595949999996,
+  "longitude": -78.50183436379835
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03440545,
+  "longitude": -78.50169668842241
+ },
+ {
+  "label": "C1 Permit",
+  "kind": "parking",
+  "latitude": 38.0326331,
+  "longitude": -78.50829280990386
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030217,
+  "longitude": -78.47625839759783
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0299833,
+  "longitude": -78.48333538469916
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0283974,
+  "longitude": -78.48037507354587
+ },
+ {
+  "label": "McGuffey Park",
+  "kind": "park",
+  "latitude": 38.0329604,
+  "longitude": -78.4816456816906
+ },
+ {
+  "label": "Schenk's Greenway",
+  "kind": "park",
+  "latitude": 38.0388961,
+  "longitude": -78.47846174218954
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.11189589999999,
+  "longitude": -78.36860750585612
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0958818,
+  "longitude": -78.4422682341553
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09497415,
+  "longitude": -78.4424427924128
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0331333,
+  "longitude": -78.4625614428889
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9870423,
+  "longitude": -78.38595144365601
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.98811405,
+  "longitude": -78.38501147809745
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.98852105,
+  "longitude": -78.38459435382921
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03531065,
+  "longitude": -78.45877551815437
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.12912805,
+  "longitude": -78.43657749653252
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.128453,
+  "longitude": -78.43600182081882
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1278741,
+  "longitude": -78.43682288460545
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0302674,
+  "longitude": -78.47510183916862
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035529249999996,
+  "longitude": -78.45454846261899
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035798400000004,
+  "longitude": -78.45516202543224
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0360989,
+  "longitude": -78.45530918767261
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03609605,
+  "longitude": -78.45382863108753
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.036337950000004,
+  "longitude": -78.45422189707412
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041851699999995,
+  "longitude": -78.47466363380303
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039329550000005,
+  "longitude": -78.47603819210154
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.0355689,
+  "longitude": -78.50210985535617
+ },
+ {
+  "label": "L8 Permit",
+  "kind": "parking",
+  "latitude": 38.03418485,
+  "longitude": -78.50360685000001
+ },
+ {
+  "label": "L8 Permit",
+  "kind": "parking",
+  "latitude": 38.034073899999996,
+  "longitude": -78.5036647467949
+ },
+ {
+  "label": "L5 Permit",
+  "kind": "parking",
+  "latitude": 38.035093849999996,
+  "longitude": -78.50312474984041
+ },
+ {
+  "label": "L7 Permit",
+  "kind": "parking",
+  "latitude": 38.03446825,
+  "longitude": -78.50345455
+ },
+ {
+  "label": "L5 Permit",
+  "kind": "parking",
+  "latitude": 38.03517745,
+  "longitude": -78.50307455029773
+ },
+ {
+  "label": "L7 Permit",
+  "kind": "parking",
+  "latitude": 38.034577049999996,
+  "longitude": -78.5033971
+ },
+ {
+  "label": "L6 Permit",
+  "kind": "parking",
+  "latitude": 38.03478015,
+  "longitude": -78.50328955
+ },
+ {
+  "label": "L6 Permit",
+  "kind": "parking",
+  "latitude": 38.03489185,
+  "longitude": -78.50322845
+ },
+ {
+  "label": "The Lawn",
+  "kind": "park",
+  "latitude": 38.034258949999995,
+  "longitude": -78.5041324329639
+ },
+ {
+  "label": "L3 Permit",
+  "kind": "parking",
+  "latitude": 38.03543815,
+  "longitude": -78.5040429
+ },
+ {
+  "label": "L1 Permit",
+  "kind": "parking",
+  "latitude": 38.03484855,
+  "longitude": -78.5043534
+ },
+ {
+  "label": "L4 Permit",
+  "kind": "parking",
+  "latitude": 38.03516125,
+  "longitude": -78.50418277106496
+ },
+ {
+  "label": "L2 Permit",
+  "kind": "parking",
+  "latitude": 38.03440085,
+  "longitude": -78.50463218871766
+ },
+ {
+  "label": "A1 Permit",
+  "kind": "parking",
+  "latitude": 38.0370619,
+  "longitude": -78.50558063371733
+ },
+ {
+  "label": "T5 Permit",
+  "kind": "parking",
+  "latitude": 38.0327431,
+  "longitude": -78.50949006113115
+ },
+ {
+  "label": "T3 Permit",
+  "kind": "parking",
+  "latitude": 38.0320235,
+  "longitude": -78.50999561659111
+ },
+ {
+  "label": "T4 Permit",
+  "kind": "parking",
+  "latitude": 38.0326364,
+  "longitude": -78.51144560578291
+ },
+ {
+  "label": "R2 Permit",
+  "kind": "parking",
+  "latitude": 38.034068500000004,
+  "longitude": -78.5093542117381
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0350783,
+  "longitude": -78.50866332266594
+ },
+ {
+  "label": "R2 Permit",
+  "kind": "parking",
+  "latitude": 38.03440955,
+  "longitude": -78.50991398937003
+ },
+ {
+  "label": "R2 Permit",
+  "kind": "parking",
+  "latitude": 38.034038100000004,
+  "longitude": -78.50953823741247
+ },
+ {
+  "label": "C1 Permit",
+  "kind": "parking",
+  "latitude": 38.032902899999996,
+  "longitude": -78.50581394333639
+ },
+ {
+  "label": "C3 Permit",
+  "kind": "parking",
+  "latitude": 38.03431225,
+  "longitude": -78.50818372840271
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0327883,
+  "longitude": -78.51284285
+ },
+ {
+  "label": "A3 Permit",
+  "kind": "parking",
+  "latitude": 38.0363082,
+  "longitude": -78.50470185636362
+ },
+ {
+  "label": "C5 Permit",
+  "kind": "parking",
+  "latitude": 38.034495050000004,
+  "longitude": -78.50647740000001
+ },
+ {
+  "label": "M1 Permit",
+  "kind": "parking",
+  "latitude": 38.034527499999996,
+  "longitude": -78.50093770032268
+ },
+ {
+  "label": "M1 Permit",
+  "kind": "parking",
+  "latitude": 38.0338281,
+  "longitude": -78.50051000764063
+ },
+ {
+  "label": "M3 Permit",
+  "kind": "parking",
+  "latitude": 38.0329892,
+  "longitude": -78.50184261632923
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.034951050000004,
+  "longitude": -78.51226925777627
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03461315,
+  "longitude": -78.51126781041819
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0351747,
+  "longitude": -78.50770197928134
+ },
+ {
+  "label": "Central Grounds Parking",
+  "kind": "parking",
+  "latitude": 38.0363628,
+  "longitude": -78.50758233178615
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.037930700000004,
+  "longitude": -78.50699202206323
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0378794,
+  "longitude": -78.507109
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0373087,
+  "longitude": -78.50702357004039
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0304297,
+  "longitude": -78.50204142802512
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031364350000004,
+  "longitude": -78.50018308732069
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0312438,
+  "longitude": -78.50023998213457
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0298993,
+  "longitude": -78.50007591723873
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03136165,
+  "longitude": -78.49984640477655
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.042525,
+  "longitude": -78.4494101988643
+ },
+ {
+  "label": "Lot 1",
+  "kind": "parking",
+  "latitude": 38.0079762,
+  "longitude": -78.48341864525034
+ },
+ {
+  "label": "Lot 4",
+  "kind": "parking",
+  "latitude": 38.00492115,
+  "longitude": -78.48730650810109
+ },
+ {
+  "label": "Lot 3",
+  "kind": "parking",
+  "latitude": 38.00480835,
+  "longitude": -78.48532851696655
+ },
+ {
+  "label": "Overflow Parking Lot",
+  "kind": "parking",
+  "latitude": 38.1372299,
+  "longitude": -78.44835353748101
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.11123745,
+  "longitude": -78.37194260000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1109665,
+  "longitude": -78.3713286095138
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0587352,
+  "longitude": -78.4928603076006
+ },
+ {
+  "label": "Fifeville Park",
+  "kind": "park",
+  "latitude": 38.0286778,
+  "longitude": -78.50053315
+ },
+ {
+  "label": "Forest Hills Park",
+  "kind": "park",
+  "latitude": 38.0236248,
+  "longitude": -78.49753007300488
+ },
+ {
+  "label": "Frys Spring Park",
+  "kind": "park",
+  "latitude": 38.018306249999995,
+  "longitude": -78.51433880450122
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.019928,
+  "longitude": -78.5095460223804
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0171479,
+  "longitude": -78.51126427026611
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02690785,
+  "longitude": -78.49615615
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0267473,
+  "longitude": -78.49595640000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02650355,
+  "longitude": -78.49596785
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.026442599999996,
+  "longitude": -78.4958003
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0273488,
+  "longitude": -78.49704633528535
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0274241,
+  "longitude": -78.49784623767604
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0267066,
+  "longitude": -78.49666690000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0258934,
+  "longitude": -78.49726027592519
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01800125,
+  "longitude": -78.49598827919064
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022661049999996,
+  "longitude": -78.48632040095075
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022692899999996,
+  "longitude": -78.48556687620018
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02153935,
+  "longitude": -78.48621236313255
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02180265,
+  "longitude": -78.48833438268915
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02043075,
+  "longitude": -78.48709745
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.018219849999994,
+  "longitude": -78.49473785
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022574199999994,
+  "longitude": -78.48629363158813
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.024393849999996,
+  "longitude": -78.48752082858809
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02062235,
+  "longitude": -78.48684664999999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.024305299999995,
+  "longitude": -78.48762632278766
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01807765,
+  "longitude": -78.4960706
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02274815,
+  "longitude": -78.48780941936485
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02134805,
+  "longitude": -78.48614585
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02283575,
+  "longitude": -78.48802420000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02072995,
+  "longitude": -78.48677145647866
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0207278,
+  "longitude": -78.49394485180582
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.026540350000005,
+  "longitude": -78.48319434912409
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02874545,
+  "longitude": -78.48207274612068
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02439215,
+  "longitude": -78.48276267733424
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.028225649999996,
+  "longitude": -78.48618534407052
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0247657,
+  "longitude": -78.48233211364114
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.028539949999995,
+  "longitude": -78.48283380977364
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0271852,
+  "longitude": -78.49432321029019
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.026421049999996,
+  "longitude": -78.49025687060461
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0254682,
+  "longitude": -78.4899516007928
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02729775,
+  "longitude": -78.49470045000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.027294850000004,
+  "longitude": -78.49449650625289
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02705745,
+  "longitude": -78.49438412152173
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02855565,
+  "longitude": -78.49434275
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02838635,
+  "longitude": -78.49399515
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02862785,
+  "longitude": -78.494135
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02748105,
+  "longitude": -78.49052043506165
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02937105,
+  "longitude": -78.49561437062664
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0291305,
+  "longitude": -78.4946580574723
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0310123,
+  "longitude": -78.49292995861472
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0303198,
+  "longitude": -78.48848605
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.028611,
+  "longitude": -78.49278922232006
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031634249999996,
+  "longitude": -78.49214085868489
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02988565,
+  "longitude": -78.49091110227927
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031017750000004,
+  "longitude": -78.49307697345122
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0297604,
+  "longitude": -78.49609777264612
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030670900000004,
+  "longitude": -78.49329829999999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03040865,
+  "longitude": -78.48840995
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03102465,
+  "longitude": -78.4931572851452
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02898075,
+  "longitude": -78.49439540782947
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031376,
+  "longitude": -78.49074526753654
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02358015,
+  "longitude": -78.48288541636309
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02682235,
+  "longitude": -78.47849744976463
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.024555750000005,
+  "longitude": -78.48154353355301
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.021669149999994,
+  "longitude": -78.48440138607653
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0237705,
+  "longitude": -78.48245235262263
+ },
+ {
+  "label": "Jordan Park",
+  "kind": "park",
+  "latitude": 38.017320999999995,
+  "longitude": -78.48780756921603
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.015150399999996,
+  "longitude": -78.47825451652744
+ },
+ {
+  "label": "Belmont Park",
+  "kind": "park",
+  "latitude": 38.0189921,
+  "longitude": -78.48153589982427
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02223205,
+  "longitude": -78.4761545
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02292825000001,
+  "longitude": -78.47672487967537
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0190448,
+  "longitude": -78.47525454706185
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0223741,
+  "longitude": -78.47279908125483
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0245046,
+  "longitude": -78.47335009647615
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02803765,
+  "longitude": -78.47718202342762
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02468365,
+  "longitude": -78.47385317408279
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.027690699999994,
+  "longitude": -78.4740917209561
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022605049999996,
+  "longitude": -78.47483544438998
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0265333,
+  "longitude": -78.47231742060947
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02825625,
+  "longitude": -78.47768340748047
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02720825,
+  "longitude": -78.47687465048847
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0272211,
+  "longitude": -78.47827124029105
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02431905,
+  "longitude": -78.47295460000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0265968,
+  "longitude": -78.4775746
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0271672,
+  "longitude": -78.47320035
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0250399,
+  "longitude": -78.47689146120268
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0264321,
+  "longitude": -78.47761305773341
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01660425,
+  "longitude": -78.47488154756945
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.015895400000005,
+  "longitude": -78.47349584739906
+ },
+ {
+  "label": "Rives Park",
+  "kind": "park",
+  "latitude": 38.0166947,
+  "longitude": -78.47053156142655
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.023829,
+  "longitude": -78.46949852473747
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.023269,
+  "longitude": -78.4700871835928
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0231662,
+  "longitude": -78.47016078640206
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02305565,
+  "longitude": -78.47022405000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0232087,
+  "longitude": -78.47029012909154
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0302566,
+  "longitude": -78.48412313849084
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02962465,
+  "longitude": -78.48435389522041
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03057325,
+  "longitude": -78.48412292097856
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0303938,
+  "longitude": -78.48422125
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0303963,
+  "longitude": -78.48395578840294
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03032545,
+  "longitude": -78.4838541871573
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.029596,
+  "longitude": -78.48478791337737
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0286463,
+  "longitude": -78.47692859816391
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0297073,
+  "longitude": -78.48486034150197
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030010149999995,
+  "longitude": -78.4843536718452
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0296414,
+  "longitude": -78.48459828835033
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0299249,
+  "longitude": -78.4841663
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0296814,
+  "longitude": -78.4847113791013
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030592999999996,
+  "longitude": -78.48389999999999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0304238,
+  "longitude": -78.48403988340655
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0340103,
+  "longitude": -78.5132345
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0295397,
+  "longitude": -78.51997649178716
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0305015,
+  "longitude": -78.4747617
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03030295000001,
+  "longitude": -78.47558250675849
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0311226,
+  "longitude": -78.4766966
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03116285,
+  "longitude": -78.47679447325551
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030389549999995,
+  "longitude": -78.47482940149084
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0310038,
+  "longitude": -78.47642331001589
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03021455,
+  "longitude": -78.4751086
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03038125,
+  "longitude": -78.47509099440944
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0314323,
+  "longitude": -78.4767971935708
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03012095,
+  "longitude": -78.47519809999999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032657099999994,
+  "longitude": -78.48003342880577
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03130985,
+  "longitude": -78.47630158661869
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0322475,
+  "longitude": -78.47954264999998
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03236,
+  "longitude": -78.47949342917664
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0308598,
+  "longitude": -78.47666154012688
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03021175,
+  "longitude": -78.47564091664715
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030688999999995,
+  "longitude": -78.47686076390994
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0307575,
+  "longitude": -78.4777342
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0296977,
+  "longitude": -78.47625115
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03293035,
+  "longitude": -78.4836109
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0298983,
+  "longitude": -78.47681918500705
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0327208,
+  "longitude": -78.48395572451298
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0332279,
+  "longitude": -78.48373216408334
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0321101,
+  "longitude": -78.48382066990521
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0325263,
+  "longitude": -78.48427397399877
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0333228,
+  "longitude": -78.48616842714114
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03052785,
+  "longitude": -78.48675649262356
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030321,
+  "longitude": -78.48648657617785
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03062405,
+  "longitude": -78.48716681562499
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031876350000005,
+  "longitude": -78.48983089704751
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.033557349999995,
+  "longitude": -78.4860739808241
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032603800000004,
+  "longitude": -78.48703764884534
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0304204,
+  "longitude": -78.48702359614238
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0330833,
+  "longitude": -78.48600593621794
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03338935,
+  "longitude": -78.48630646543484
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0298869,
+  "longitude": -78.4856456
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030403,
+  "longitude": -78.48688545098568
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0322966,
+  "longitude": -78.49596414105145
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032428100000004,
+  "longitude": -78.49582421871318
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0338428,
+  "longitude": -78.49333981245117
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03361265,
+  "longitude": -78.49270976144453
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031979750000005,
+  "longitude": -78.49473668538391
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03257355,
+  "longitude": -78.49592646693586
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03334425,
+  "longitude": -78.49207286191645
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0331039,
+  "longitude": -78.49145136025552
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0326064,
+  "longitude": -78.49576265
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03565285,
+  "longitude": -78.48731554433705
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03579205,
+  "longitude": -78.49147921418012
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03584515,
+  "longitude": -78.49165739376228
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041625249999996,
+  "longitude": -78.49136100885094
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0354577,
+  "longitude": -78.48227038475582
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0393903,
+  "longitude": -78.4902377
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0405921,
+  "longitude": -78.48716731081893
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0391397,
+  "longitude": -78.49019218015313
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039035999999996,
+  "longitude": -78.49079683025542
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03926625,
+  "longitude": -78.49030018257727
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.038820099999995,
+  "longitude": -78.49056707602924
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.040132299999996,
+  "longitude": -78.48270627983862
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0361767,
+  "longitude": -78.48137860694393
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03884125,
+  "longitude": -78.48964755
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0359476,
+  "longitude": -78.48133396065522
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0402184,
+  "longitude": -78.4826085
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03630605,
+  "longitude": -78.48156815227912
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.040695549999995,
+  "longitude": -78.48346076924545
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04028695,
+  "longitude": -78.48572487503043
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0389696,
+  "longitude": -78.4900648
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0392384,
+  "longitude": -78.4900303288156
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03501885,
+  "longitude": -78.48362399162879
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039344549999996,
+  "longitude": -78.49089537305085
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.034774350000006,
+  "longitude": -78.48419134999999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0398292,
+  "longitude": -78.48715934601391
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.038622000000004,
+  "longitude": -78.48983315
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04040205,
+  "longitude": -78.48305454999999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04085925,
+  "longitude": -78.48369801490622
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.040850899999995,
+  "longitude": -78.48343678258237
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03867085,
+  "longitude": -78.49003222272782
+ },
+ {
+  "label": "Courtyard Marriott Parking",
+  "kind": "parking",
+  "latitude": 38.0339315,
+  "longitude": -78.49706089271336
+ },
+ {
+  "label": "Route 20 parking",
+  "kind": "parking",
+  "latitude": 38.0042911,
+  "longitude": -78.47907015331143
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07030315,
+  "longitude": -78.48631881637834
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03632055,
+  "longitude": -78.48848772066009
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035718200000005,
+  "longitude": -78.5158155074005
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035230850000005,
+  "longitude": -78.51611357280487
+ },
+ {
+  "label": "University Gardens Playground",
+  "kind": "park",
+  "latitude": 38.04476405,
+  "longitude": -78.50364095
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1307625,
+  "longitude": -78.43263191880177
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1312543,
+  "longitude": -78.43321127103604
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.053976199999994,
+  "longitude": -78.51056137562051
+ },
+ {
+  "label": "IX Art Park",
+  "kind": "park",
+  "latitude": 38.02549365,
+  "longitude": -78.48256756786333
+ },
+ {
+  "label": "The Field",
+  "kind": "park",
+  "latitude": 38.05262105,
+  "longitude": -78.51003022835941
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06479,
+  "longitude": -78.45335518656344
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06831925,
+  "longitude": -78.45237799714005
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.1304813,
+  "longitude": -78.44529893446216
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1269925,
+  "longitude": -78.4431163518949
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0524685,
+  "longitude": -78.5368917382523
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.129191899999995,
+  "longitude": -78.439442870255
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08868525,
+  "longitude": -78.47310147247867
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08775175,
+  "longitude": -78.47401280350039
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.087399149999996,
+  "longitude": -78.47281888441925
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06237695,
+  "longitude": -78.46287109146452
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030544,
+  "longitude": -78.49095849243612
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03048215,
+  "longitude": -78.4928515010248
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02897205,
+  "longitude": -78.47230189999999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0299641,
+  "longitude": -78.47395441418851
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0294237,
+  "longitude": -78.47349841496815
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05336315,
+  "longitude": -78.48410285954797
+ },
+ {
+  "label": "Greenleaf Park",
+  "kind": "park",
+  "latitude": 38.05053335,
+  "longitude": -78.4816842148253
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0252884,
+  "longitude": -78.48318964364569
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.025418200000004,
+  "longitude": -78.48205987929134
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0258362,
+  "longitude": -78.4828681224042
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.92310285,
+  "longitude": -78.58745607094458
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.92669565,
+  "longitude": -78.58924339138014
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.131815450000005,
+  "longitude": -78.44379714333269
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.065828800000006,
+  "longitude": -78.49255753285445
+ },
+ {
+  "label": "Handicapped Street Parking",
+  "kind": "parking",
+  "latitude": 38.034534300000004,
+  "longitude": -78.50582990000001
+ },
+ {
+  "label": "The Trail at Monticello Parking (Route 53)",
+  "kind": "parking",
+  "latitude": 38.0027898,
+  "longitude": -78.477230294852
+ },
+ {
+  "label": "Michie Tavern parking area",
+  "kind": "parking",
+  "latitude": 38.0089459,
+  "longitude": -78.46429951179577
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9986187,
+  "longitude": -78.49040964713069
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.998316349999996,
+  "longitude": -78.49313966982758
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99991405,
+  "longitude": -78.48831057667002
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.037098,
+  "longitude": -78.48975768513017
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0285614,
+  "longitude": -78.48471534891135
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04449565,
+  "longitude": -78.5114537
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0443553,
+  "longitude": -78.51115173564779
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07526955,
+  "longitude": -78.4676494922202
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035223349999995,
+  "longitude": -78.4617754266242
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0358368,
+  "longitude": -78.46295166641303
+ },
+ {
+  "label": "Greenbrier Park",
+  "kind": "park",
+  "latitude": 38.0613268,
+  "longitude": -78.47227679614272
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0515281,
+  "longitude": -78.51297119342235
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.052674100000004,
+  "longitude": -78.50733505801145
+ },
+ {
+  "label": "Spies Garden",
+  "kind": "park",
+  "latitude": 38.05325465,
+  "longitude": -78.510022029107
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0524942,
+  "longitude": -78.5107328994726
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04941355,
+  "longitude": -78.48210559740639
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0299777,
+  "longitude": -78.55784072540362
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0267299,
+  "longitude": -78.55583095
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.024214650000005,
+  "longitude": -78.52465012185053
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02538895,
+  "longitude": -78.51602707478594
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02537955,
+  "longitude": -78.51624886590214
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.026928100000006,
+  "longitude": -78.52017308736076
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0322995,
+  "longitude": -78.48237902358997
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032652,
+  "longitude": -78.48256141536189
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03269115,
+  "longitude": -78.4822586
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0326032,
+  "longitude": -78.48199009999999
+ },
+ {
+  "label": "Village Green",
+  "kind": "park",
+  "latitude": 38.074609300000006,
+  "longitude": -78.45661266388407
+ },
+ {
+  "label": "Griffen Park",
+  "kind": "park",
+  "latitude": 38.07505305,
+  "longitude": -78.45400366565241
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.054002749999995,
+  "longitude": -78.53587013834252
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0541398,
+  "longitude": -78.53512970781782
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05413265,
+  "longitude": -78.5363237448652
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05436895,
+  "longitude": -78.53572998625836
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0266245,
+  "longitude": -78.5168661
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0264897,
+  "longitude": -78.51669415
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02834645,
+  "longitude": -78.51451621892315
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.044093849999996,
+  "longitude": -78.45234262844659
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04283775,
+  "longitude": -78.45382531024279
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03980675,
+  "longitude": -78.45337249442778
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0268419,
+  "longitude": -78.5215309659715
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02516685,
+  "longitude": -78.52688015828393
+ },
+ {
+  "label": "Northeast Park",
+  "kind": "park",
+  "latitude": 38.04138975,
+  "longitude": -78.46604539156351
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039223899999996,
+  "longitude": -78.49195213879469
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0355111,
+  "longitude": -78.48413822315193
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03523225,
+  "longitude": -78.48469710087426
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03702,
+  "longitude": -78.48879629894634
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0384583,
+  "longitude": -78.48938807469196
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.033993550000005,
+  "longitude": -78.48613038159039
+ },
+ {
+  "label": "Jenkins Park",
+  "kind": "park",
+  "latitude": 38.033608150000006,
+  "longitude": -78.48983849615676
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03436645,
+  "longitude": -78.49343817618845
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.034113250000004,
+  "longitude": -78.49318678899051
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0335848,
+  "longitude": -78.49387094873427
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02902505,
+  "longitude": -78.48484509401911
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01041275,
+  "longitude": -78.51539878832384
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00700335,
+  "longitude": -78.52037807547141
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0097539,
+  "longitude": -78.50860184798975
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0093083,
+  "longitude": -78.50908284134532
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00247345,
+  "longitude": -78.51897587020511
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0016283,
+  "longitude": -78.5195644850869
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.011419000000004,
+  "longitude": -78.52587976518087
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01025635,
+  "longitude": -78.52596239272609
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0088971,
+  "longitude": -78.52626004232496
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00972945,
+  "longitude": -78.5253712052826
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.009822150000005,
+  "longitude": -78.52180298871482
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0094141,
+  "longitude": -78.52148959440501
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00901035,
+  "longitude": -78.52078957951076
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0085763,
+  "longitude": -78.51953390464669
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00917535000001,
+  "longitude": -78.50161608879532
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.006513999999996,
+  "longitude": -78.4803278839003
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01083065,
+  "longitude": -78.46437197697895
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.010817200000005,
+  "longitude": -78.46457110864485
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9900941,
+  "longitude": -78.47273712575807
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00991775,
+  "longitude": -78.50575309375226
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0108371,
+  "longitude": -78.52525254900974
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00173545,
+  "longitude": -78.5257213978835
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00137655,
+  "longitude": -78.52581206472634
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02756025,
+  "longitude": -78.4831325786609
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.025931150000005,
+  "longitude": -78.48193051867278
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.025257749999994,
+  "longitude": -78.48195295424836
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0234034,
+  "longitude": -78.48469018132602
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02474795,
+  "longitude": -78.48396618352942
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0241927,
+  "longitude": -78.48428418019681
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0116963,
+  "longitude": -78.45023405042724
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0116488,
+  "longitude": -78.44933644535053
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00028585,
+  "longitude": -78.4527910359972
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99969485,
+  "longitude": -78.45191205275611
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.017943149999994,
+  "longitude": -78.49872149849111
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.018019699999996,
+  "longitude": -78.4982160000338
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01782755,
+  "longitude": -78.49837833368468
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01769535,
+  "longitude": -78.49833332411453
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.017359799999994,
+  "longitude": -78.49896366287385
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01752155,
+  "longitude": -78.49959615848591
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.017982450000005,
+  "longitude": -78.49954076021218
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0219824,
+  "longitude": -78.48684220993044
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.014412899999996,
+  "longitude": -78.5010295124869
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.014138,
+  "longitude": -78.5010100671317
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01309115,
+  "longitude": -78.50223667707175
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01381755,
+  "longitude": -78.50238660777957
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.014363849999995,
+  "longitude": -78.50287411598838
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01491925,
+  "longitude": -78.50431547763573
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.010444500000006,
+  "longitude": -78.49937866889313
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01021605,
+  "longitude": -78.498859486641
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0101588,
+  "longitude": -78.49889071890061
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.010175849999996,
+  "longitude": -78.49982642243663
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.008935449999996,
+  "longitude": -78.49654761108741
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.003152,
+  "longitude": -78.48697986012239
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00847195,
+  "longitude": -78.49090611630695
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0138332,
+  "longitude": -78.52279510609864
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01338305,
+  "longitude": -78.52274118607116
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01286845,
+  "longitude": -78.5236135609334
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0138394,
+  "longitude": -78.52392679511047
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0141778,
+  "longitude": -78.52413285158184
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.014975,
+  "longitude": -78.52351683574926
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01467205,
+  "longitude": -78.5231413030072
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0376474,
+  "longitude": -78.46281430180443
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031517949999994,
+  "longitude": -78.4802959126924
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03187005,
+  "longitude": -78.48013488069962
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0315072,
+  "longitude": -78.47808110062502
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02782675,
+  "longitude": -78.47799780948054
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0082236,
+  "longitude": -78.53147596934065
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.000708,
+  "longitude": -78.49728120573555
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00169005,
+  "longitude": -78.49560263609803
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02246475,
+  "longitude": -78.46079750716953
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02254535,
+  "longitude": -78.46082130173528
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9956161,
+  "longitude": -78.50570405787353
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99225355,
+  "longitude": -78.4970604747441
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.992477699999995,
+  "longitude": -78.496870898195
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.992647,
+  "longitude": -78.4900504282972
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99286600000001,
+  "longitude": -78.48969892790049
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.995583499999995,
+  "longitude": -78.48681942901027
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0115828,
+  "longitude": -78.50292706459041
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0112283,
+  "longitude": -78.50333348336903
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01115595,
+  "longitude": -78.5030131667564
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01115725,
+  "longitude": -78.50272356565216
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.011752400000006,
+  "longitude": -78.49869687500001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.011752400000006,
+  "longitude": -78.498598375
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0103936,
+  "longitude": -78.50086034801413
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01088755,
+  "longitude": -78.49931627459733
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9978373,
+  "longitude": -78.49804207790285
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00479385,
+  "longitude": -78.49481491465504
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0054336,
+  "longitude": -78.49530257587665
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00529835,
+  "longitude": -78.4950348531834
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0051768,
+  "longitude": -78.494982800507
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0051308,
+  "longitude": -78.49469394186835
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.999125500000005,
+  "longitude": -78.52099407361854
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00688675,
+  "longitude": -78.52359277950201
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00672205,
+  "longitude": -78.52409949817381
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.006754,
+  "longitude": -78.5242569836081
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.006657,
+  "longitude": -78.5248804117999
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.007391150000004,
+  "longitude": -78.5263248703366
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99563015,
+  "longitude": -78.49136235349891
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0577642,
+  "longitude": -78.49080143955015
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.057787149999996,
+  "longitude": -78.49178087243234
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0001158,
+  "longitude": -78.49756939672122
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.999894749999996,
+  "longitude": -78.4977132921507
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.999715800000004,
+  "longitude": -78.49767690005547
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.999683250000004,
+  "longitude": -78.49792667504245
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9961574,
+  "longitude": -78.49147269342902
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.996083049999996,
+  "longitude": -78.49090389958221
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01157375,
+  "longitude": -78.50521406854304
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01138365,
+  "longitude": -78.50531493955563
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0112021,
+  "longitude": -78.50512597067177
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01121825,
+  "longitude": -78.50573012914396
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01142995,
+  "longitude": -78.50630430158633
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.011219,
+  "longitude": -78.50605057292343
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.011101,
+  "longitude": -78.50621470374632
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01100975,
+  "longitude": -78.50613612402623
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.010881,
+  "longitude": -78.50602233747878
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.010807,
+  "longitude": -78.50569763945578
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0112854,
+  "longitude": -78.50479758060398
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01161035,
+  "longitude": -78.50444195103265
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01166395,
+  "longitude": -78.50470625404986
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01153455,
+  "longitude": -78.50486729038943
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01167845,
+  "longitude": -78.50496742989043
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01148715,
+  "longitude": -78.50402707746821
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0282639,
+  "longitude": -78.48500522972725
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.027886699999996,
+  "longitude": -78.48354380176694
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.019719699999996,
+  "longitude": -78.52713448054004
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0214872,
+  "longitude": -78.53252860393064
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.014139,
+  "longitude": -78.49509046522513
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.030604800000006,
+  "longitude": -78.51935011688559
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03116705,
+  "longitude": -78.5198261080829
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031047349999994,
+  "longitude": -78.51914635000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0313828,
+  "longitude": -78.5197009593733
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0312584,
+  "longitude": -78.51906574503695
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00804115,
+  "longitude": -78.5259789703436
+ },
+ {
+  "label": "Meadow Creek Gardens and Disc Golf Course",
+  "kind": "park",
+  "latitude": 38.05565985,
+  "longitude": -78.49218265010592
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0561656,
+  "longitude": -78.49292641160073
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.055909099999994,
+  "longitude": -78.4934798
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05528615,
+  "longitude": -78.49379269834165
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0469504,
+  "longitude": -78.47786874405912
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0481781,
+  "longitude": -78.47859540565591
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04852905,
+  "longitude": -78.47888500866313
+ },
+ {
+  "label": "Meadow Creek Valley",
+  "kind": "park",
+  "latitude": 38.0628305,
+  "longitude": -78.483613150016
+ },
+ {
+  "label": "Meadow Creek Valley",
+  "kind": "park",
+  "latitude": 38.065183149999996,
+  "longitude": -78.47751190716116
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0366303,
+  "longitude": -78.49219528689358
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035098149999996,
+  "longitude": -78.4923420852067
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0495042,
+  "longitude": -78.47784460912926
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.028010949999995,
+  "longitude": -78.46563584050119
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032923999999994,
+  "longitude": -78.461259944592
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03211785,
+  "longitude": -78.46533540853278
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03098625,
+  "longitude": -78.48933552100081
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032779000000005,
+  "longitude": -78.46389078267077
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0270726,
+  "longitude": -78.4708954415994
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04985085,
+  "longitude": -78.47629555642075
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0499778,
+  "longitude": -78.47507299788283
+ },
+ {
+  "label": "Unity Field",
+  "kind": "park",
+  "latitude": 38.04241625,
+  "longitude": -78.46819542443856
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03805415,
+  "longitude": -78.45405446460877
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035339199999996,
+  "longitude": -78.45628747863236
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.04396895,
+  "longitude": -78.45514843611784
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0417497,
+  "longitude": -78.47551813872518
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0028159,
+  "longitude": -78.38239300042369
+ },
+ {
+  "label": "Bailey Mini-Park",
+  "kind": "park",
+  "latitude": 38.04318285,
+  "longitude": -78.47607831109322
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08239015,
+  "longitude": -78.47700415
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01702195,
+  "longitude": -78.46228437205882
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00956245,
+  "longitude": -78.46774207299244
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01708725,
+  "longitude": -78.45811515
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02757775,
+  "longitude": -78.47629725911796
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02776365,
+  "longitude": -78.47634142433556
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0380848,
+  "longitude": -78.45673063516168
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03761955,
+  "longitude": -78.4969902174041
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0221953,
+  "longitude": -78.48674166965975
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.026893799999996,
+  "longitude": -78.51590624810225
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0236011,
+  "longitude": -78.4836927782676
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99690875,
+  "longitude": -78.49982409318014
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.003774,
+  "longitude": -78.49344577875617
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00516795,
+  "longitude": -78.51778268076009
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0032106,
+  "longitude": -78.50490640885482
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99556885,
+  "longitude": -78.39904269624728
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.034092650000005,
+  "longitude": -78.43879878506142
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0398517,
+  "longitude": -78.45752060084715
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032661450000006,
+  "longitude": -78.44191761960506
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.026735,
+  "longitude": -78.43675176427593
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.029962499999996,
+  "longitude": -78.45121705431373
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0282603,
+  "longitude": -78.50962133081012
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1005241,
+  "longitude": -78.46550925605283
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07948075,
+  "longitude": -78.49026411844713
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07051125,
+  "longitude": -78.46293659327081
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0703389,
+  "longitude": -78.46299857284657
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.070368450000004,
+  "longitude": -78.46233849418974
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02116825,
+  "longitude": -78.53118964502588
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.061337050000006,
+  "longitude": -78.54323736280259
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.042785800000004,
+  "longitude": -78.48326406379948
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04045120000001,
+  "longitude": -78.48404614196325
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.062815150000006,
+  "longitude": -78.50957975408909
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05935075,
+  "longitude": -78.48794741548029
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0143932,
+  "longitude": -78.47029188883455
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0483885,
+  "longitude": -78.51015402447177
+ },
+ {
+  "label": "Parking Lot B-2",
+  "kind": "parking",
+  "latitude": 38.005603050000005,
+  "longitude": -78.45168119170448
+ },
+ {
+  "label": "Parking Lot B-4",
+  "kind": "parking",
+  "latitude": 38.00555235,
+  "longitude": -78.45115365947255
+ },
+ {
+  "label": "Parking Lot B-3",
+  "kind": "parking",
+  "latitude": 38.005506350000005,
+  "longitude": -78.45143665509937
+ },
+ {
+  "label": "Bus/RV parking lot",
+  "kind": "parking",
+  "latitude": 38.005206400000006,
+  "longitude": -78.45290618952066
+ },
+ {
+  "label": "Parking Lot E-3",
+  "kind": "parking",
+  "latitude": 38.00440605,
+  "longitude": -78.45368889268559
+ },
+ {
+  "label": "Parking Lot E-1",
+  "kind": "parking",
+  "latitude": 38.00452275,
+  "longitude": -78.45312463230766
+ },
+ {
+  "label": "Parking Lot C-1",
+  "kind": "parking",
+  "latitude": 38.005114750000004,
+  "longitude": -78.45236321669424
+ },
+ {
+  "label": "Parking Lot C-2",
+  "kind": "parking",
+  "latitude": 38.005022,
+  "longitude": -78.45209396902914
+ },
+ {
+  "label": "Parking Lot C-3",
+  "kind": "parking",
+  "latitude": 38.004943299999994,
+  "longitude": -78.45171299452096
+ },
+ {
+  "label": "Parking Lot C-4",
+  "kind": "parking",
+  "latitude": 38.004828950000004,
+  "longitude": -78.45153031570847
+ },
+ {
+  "label": "Parking Lot D-3",
+  "kind": "parking",
+  "latitude": 38.00453125,
+  "longitude": -78.45226505781535
+ },
+ {
+  "label": "Parking Lot D-4",
+  "kind": "parking",
+  "latitude": 38.0043434,
+  "longitude": -78.45219477475246
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.047478049999995,
+  "longitude": -78.52153930705
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.049798800000005,
+  "longitude": -78.4592370939067
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0447153,
+  "longitude": -78.52319447859625
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0424469,
+  "longitude": -78.4490621259555
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0437248,
+  "longitude": -78.44971821638407
+ },
+ {
+  "label": "Meade Park",
+  "kind": "park",
+  "latitude": 38.027665999999996,
+  "longitude": -78.46508394913931
+ },
+ {
+  "label": "Park at Ivy",
+  "kind": "park",
+  "latitude": 38.049448350000006,
+  "longitude": -78.51445368737973
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.040572,
+  "longitude": -78.45071122810972
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0239889,
+  "longitude": -78.45478406648098
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9821818,
+  "longitude": -78.45475867436821
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06645365,
+  "longitude": -78.4917006538594
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.049371050000005,
+  "longitude": -78.50534602245543
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0507884,
+  "longitude": -78.5019573314352
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0509881,
+  "longitude": -78.50004958034839
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0528165,
+  "longitude": -78.50049951186065
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0520858,
+  "longitude": -78.50034968513174
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05255175,
+  "longitude": -78.49995223515197
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05401945,
+  "longitude": -78.49971322874504
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05496415,
+  "longitude": -78.50065598025347
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06854285,
+  "longitude": -78.48926853531668
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0677042,
+  "longitude": -78.48775834732241
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06522625,
+  "longitude": -78.49119645550071
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0636534,
+  "longitude": -78.49153675668846
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06424425,
+  "longitude": -78.49255399881156
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.060005000000004,
+  "longitude": -78.49175438146389
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0602849,
+  "longitude": -78.4885593938894
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0587584,
+  "longitude": -78.49560852691107
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.083353,
+  "longitude": -78.4698537810745
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0835359,
+  "longitude": -78.4715329637448
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.082669249999995,
+  "longitude": -78.47184497897744
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08126955,
+  "longitude": -78.47240373785135
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.082502399999996,
+  "longitude": -78.4728406215
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0825174,
+  "longitude": -78.4709857025095
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.080367300000006,
+  "longitude": -78.47190196151831
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06692405,
+  "longitude": -78.49316355071437
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.92702505,
+  "longitude": -78.35713295935318
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.92668845,
+  "longitude": -78.35831876333958
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03921855,
+  "longitude": -78.45034082353723
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05032555,
+  "longitude": -78.50588282213386
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.029382299999995,
+  "longitude": -78.44759351763152
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02990235,
+  "longitude": -78.4476258576381
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03239255,
+  "longitude": -78.45368552458154
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0317541,
+  "longitude": -78.45448914816984
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035886399999995,
+  "longitude": -78.45275451270385
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03166625,
+  "longitude": -78.44876677268553
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03172575,
+  "longitude": -78.44478792875643
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0896143,
+  "longitude": -78.4674086462831
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09134345,
+  "longitude": -78.46772993882163
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09139835,
+  "longitude": -78.46772231275295
+ },
+ {
+  "label": "Longwood Park",
+  "kind": "park",
+  "latitude": 38.01155405,
+  "longitude": -78.50770724489695
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0245477,
+  "longitude": -78.548711577611
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0882688,
+  "longitude": -78.45126813350203
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0725818,
+  "longitude": -78.46723204110526
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.071955599999995,
+  "longitude": -78.46765682642103
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00752785,
+  "longitude": -78.37180619223906
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.006741950000006,
+  "longitude": -78.36922848184538
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.073568699999996,
+  "longitude": -78.47504594991715
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.072478149999995,
+  "longitude": -78.47974300694928
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07219375,
+  "longitude": -78.48125940012872
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07280195,
+  "longitude": -78.4807409940379
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07589825,
+  "longitude": -78.4693262248546
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0770687,
+  "longitude": -78.47037993418458
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07702845,
+  "longitude": -78.47167508406831
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07764295,
+  "longitude": -78.47173717677194
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06820185,
+  "longitude": -78.48426370056498
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0752643,
+  "longitude": -78.47732386539946
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07444615,
+  "longitude": -78.47708557956341
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0674692,
+  "longitude": -78.48598383671339
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.063284949999996,
+  "longitude": -78.48707161607801
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06423075,
+  "longitude": -78.4860864339205
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.064562699999996,
+  "longitude": -78.48464231508143
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06498555,
+  "longitude": -78.48573707931158
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06544015,
+  "longitude": -78.48638574299807
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.065221550000004,
+  "longitude": -78.48772949408118
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.064849300000006,
+  "longitude": -78.48693694088024
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.064631649999995,
+  "longitude": -78.48838694865928
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06383025,
+  "longitude": -78.48766036431792
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.063399950000004,
+  "longitude": -78.48888387122531
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06270125,
+  "longitude": -78.48921360194942
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.062549149999995,
+  "longitude": -78.48949075426428
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.062986699999996,
+  "longitude": -78.4899812475
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06742515,
+  "longitude": -78.48161511906233
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.067027949999996,
+  "longitude": -78.48227911293543
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.066937949999996,
+  "longitude": -78.48305366161188
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06794825,
+  "longitude": -78.48169262279589
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0682271,
+  "longitude": -78.48108747607911
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.068578349999996,
+  "longitude": -78.48216558913886
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06047085,
+  "longitude": -78.48759628780596
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0610335,
+  "longitude": -78.48561720052216
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06099245,
+  "longitude": -78.4868160140758
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0604251,
+  "longitude": -78.48666865500377
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0615508,
+  "longitude": -78.4858859949097
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05906145,
+  "longitude": -78.48751747748577
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06992515,
+  "longitude": -78.4828079306743
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.070371,
+  "longitude": -78.48319719273431
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.069557,
+  "longitude": -78.4815460996484
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.070534800000004,
+  "longitude": -78.48057729245284
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0722739,
+  "longitude": -78.47899854225614
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0726845,
+  "longitude": -78.47839005612047
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.074278250000006,
+  "longitude": -78.47629392418844
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.074084400000004,
+  "longitude": -78.47415021575343
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0735444,
+  "longitude": -78.47303450563919
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07442055,
+  "longitude": -78.4685423532344
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07041435,
+  "longitude": -78.48127127185462
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.071080499999994,
+  "longitude": -78.48198622922474
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07531525,
+  "longitude": -78.47910435580847
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0804104,
+  "longitude": -78.47397540682849
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0799349,
+  "longitude": -78.47316922662283
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0699357,
+  "longitude": -78.48185628849097
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0702013,
+  "longitude": -78.48222061163017
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07033815,
+  "longitude": -78.48239615041615
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.070495449999996,
+  "longitude": -78.4830815281903
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0536685,
+  "longitude": -78.4531475182201
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05639,
+  "longitude": -78.46144260776646
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.056712250000004,
+  "longitude": -78.46347721262413
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06363475,
+  "longitude": -78.4639134670366
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0631369,
+  "longitude": -78.46410165563947
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0103261,
+  "longitude": -78.39668498989207
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.00976685,
+  "longitude": -78.39710373834727
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0108806,
+  "longitude": -78.3963172
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0113642,
+  "longitude": -78.39609392397671
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.011260050000004,
+  "longitude": -78.39592835728186
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05489205,
+  "longitude": -78.45844618874943
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05354095,
+  "longitude": -78.45833912043764
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04718935,
+  "longitude": -78.50463921472502
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04798915000001,
+  "longitude": -78.50445305076326
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0477297,
+  "longitude": -78.50466053300866
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.12682155,
+  "longitude": -78.44245563191856
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.051783799999995,
+  "longitude": -78.54874626687777
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0509231,
+  "longitude": -78.5276841483157
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05051765,
+  "longitude": -78.527193256305
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0510169,
+  "longitude": -78.52833740238475
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0426312,
+  "longitude": -78.44323707231284
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04258075,
+  "longitude": -78.4436514
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0428224,
+  "longitude": -78.44413632854527
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.100042450000004,
+  "longitude": -78.45432790246112
+ },
+ {
+  "label": "Azalea Park",
+  "kind": "park",
+  "latitude": 38.011026,
+  "longitude": -78.51677577480862
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0844514,
+  "longitude": -78.47177195901847
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02491975,
+  "longitude": -78.5356659871212
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0249874,
+  "longitude": -78.53419840025836
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02383225,
+  "longitude": -78.53483777458032
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9943777,
+  "longitude": -78.58047443858695
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09976185,
+  "longitude": -78.46132789175145
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0997474,
+  "longitude": -78.46009740054895
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.096752699999996,
+  "longitude": -78.46598606149288
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.95194565,
+  "longitude": -78.50827260053336
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.947561449999995,
+  "longitude": -78.4959809052946
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0196173,
+  "longitude": -78.4162032577654
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.018739350000004,
+  "longitude": -78.41554972025583
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.993611400000006,
+  "longitude": -78.50164006236463
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.065114449999996,
+  "longitude": -78.51435220978658
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08084985,
+  "longitude": -78.48582413480653
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06871975,
+  "longitude": -78.48662291271518
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0503449,
+  "longitude": -78.54278241780155
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0510866,
+  "longitude": -78.54180989401158
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0507963,
+  "longitude": -78.54330324808949
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05035665,
+  "longitude": -78.54434129549026
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04354635,
+  "longitude": -78.51446372412283
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04301595,
+  "longitude": -78.5146438383326
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0428352,
+  "longitude": -78.51427515
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04169415,
+  "longitude": -78.5153198075794
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 37.9866111,
+  "longitude": -78.5035149024659
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022309050000004,
+  "longitude": -78.51378000262504
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04740615,
+  "longitude": -78.52252905743966
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04786585,
+  "longitude": -78.52115469833927
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.046697699999996,
+  "longitude": -78.51985290365243
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0463938,
+  "longitude": -78.51916138086965
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01007,
+  "longitude": -78.49111634579987
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0825988,
+  "longitude": -78.47829083717781
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0826614,
+  "longitude": -78.47892481839588
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0823249,
+  "longitude": -78.47779829469451
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0374273,
+  "longitude": -78.49044118803951
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09106735,
+  "longitude": -78.4733392947048
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.091168550000006,
+  "longitude": -78.47257559757676
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0861491,
+  "longitude": -78.47526063662693
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.036372,
+  "longitude": -78.51491462057159
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03711495,
+  "longitude": -78.51527316680557
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041290849999996,
+  "longitude": -78.5126575462576
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0331111,
+  "longitude": -78.51537791143039
+ },
+ {
+  "label": "Park and ride",
+  "kind": "parking",
+  "latitude": 38.0168949,
+  "longitude": -78.54292017378518
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.136247350000005,
+  "longitude": -78.44940945882061
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.050026200000005,
+  "longitude": -78.51796112615605
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05088045,
+  "longitude": -78.51775473894209
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.050567599999994,
+  "longitude": -78.51788685
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.051335800000004,
+  "longitude": -78.51752904706305
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.051974900000005,
+  "longitude": -78.51752637352666
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0518456,
+  "longitude": -78.5175375986598
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05061325,
+  "longitude": -78.51914605
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.093632,
+  "longitude": -78.47214362766266
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.092620749999995,
+  "longitude": -78.47218992829997
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0928651,
+  "longitude": -78.4699326782245
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03093440000001,
+  "longitude": -78.47241067099901
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0842411,
+  "longitude": -78.48839138408826
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.081295600000004,
+  "longitude": -78.48734700478724
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08301425,
+  "longitude": -78.49166607836527
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08240725,
+  "longitude": -78.49280415641749
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0842219,
+  "longitude": -78.4873648572893
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08384495,
+  "longitude": -78.48711156832164
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.083496350000004,
+  "longitude": -78.48720641318017
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.083851499999994,
+  "longitude": -78.48794296162717
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.083339,
+  "longitude": -78.48858406184661
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08314335,
+  "longitude": -78.48778642105981
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07760095,
+  "longitude": -78.49499736681567
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.13145005,
+  "longitude": -78.44486063400319
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.136058899999995,
+  "longitude": -78.44435202202757
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0836381,
+  "longitude": -78.479423428767
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0716982,
+  "longitude": -78.48434607191521
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.024597299999996,
+  "longitude": -78.35533610858761
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02324035,
+  "longitude": -78.3584632986595
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0221149,
+  "longitude": -78.45676075215904
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.022679600000004,
+  "longitude": -78.45927300955806
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02513585,
+  "longitude": -78.46331544758239
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04514075,
+  "longitude": -78.53690381863979
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04471865,
+  "longitude": -78.5381739207788
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04491415,
+  "longitude": -78.53928086189879
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0453793,
+  "longitude": -78.53995376479268
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04556615,
+  "longitude": -78.53903788650985
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.046125599999996,
+  "longitude": -78.53837615780947
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0490678,
+  "longitude": -78.53462685680468
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.053226699999996,
+  "longitude": -78.53615784445633
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0355747,
+  "longitude": -78.42412496520697
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039606750000004,
+  "longitude": -78.50048949946276
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0391438,
+  "longitude": -78.50025052665583
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06673375,
+  "longitude": -78.49546251855583
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06694575,
+  "longitude": -78.49578942390954
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039335550000004,
+  "longitude": -78.49822322398836
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0412544,
+  "longitude": -78.49483980176173
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0424832,
+  "longitude": -78.49390893517993
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0527915,
+  "longitude": -78.49834122656686
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.053303299999996,
+  "longitude": -78.49833461872744
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.053542,
+  "longitude": -78.49786135086494
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05405375,
+  "longitude": -78.49749122206157
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05448375,
+  "longitude": -78.49736337923625
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05473935,
+  "longitude": -78.49680047259804
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0551648,
+  "longitude": -78.49666703935324
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.078139050000004,
+  "longitude": -78.47770064200016
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.079145,
+  "longitude": -78.47770280964716
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07875175,
+  "longitude": -78.47713524042038
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07942585,
+  "longitude": -78.47837949340536
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07999955,
+  "longitude": -78.47859911650993
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.080368050000004,
+  "longitude": -78.47814557680636
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0799849,
+  "longitude": -78.4777017622327
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0797767,
+  "longitude": -78.47763639871889
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08107975,
+  "longitude": -78.4786996823596
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0818516,
+  "longitude": -78.47907358314504
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0380284,
+  "longitude": -78.4508279395474
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0435806,
+  "longitude": -78.47791177058437
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08618695,
+  "longitude": -78.472139045
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08644405,
+  "longitude": -78.46737176704256
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0870988,
+  "longitude": -78.46731747586969
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08687535,
+  "longitude": -78.46720122021786
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.086798900000005,
+  "longitude": -78.46705684501065
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.08670855,
+  "longitude": -78.46603304775749
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0864114,
+  "longitude": -78.46647916571163
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0470439,
+  "longitude": -78.5065746214359
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.045147799999995,
+  "longitude": -78.5099226798604
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04509925,
+  "longitude": -78.50393526471893
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.044011600000005,
+  "longitude": -78.50499480852173
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0399216,
+  "longitude": -78.45570540699758
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04101005,
+  "longitude": -78.45569319966341
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03940685,
+  "longitude": -78.45656031909434
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039103749999995,
+  "longitude": -78.45708532397009
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03773985,
+  "longitude": -78.45666531943024
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.036679750000005,
+  "longitude": -78.45904418133199
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0405722,
+  "longitude": -78.49251026901582
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041210899999996,
+  "longitude": -78.49277006120516
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041019500000004,
+  "longitude": -78.49429597215195
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.040681899999996,
+  "longitude": -78.49410887103593
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04251535,
+  "longitude": -78.4916420972051
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.042895200000004,
+  "longitude": -78.49335057165439
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03460395,
+  "longitude": -78.49479934121155
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0978281,
+  "longitude": -78.46623255788461
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09776445,
+  "longitude": -78.46308773699695
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0982786,
+  "longitude": -78.46251175490315
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09582725,
+  "longitude": -78.46464775794209
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09553,
+  "longitude": -78.46510474063744
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.127080199999995,
+  "longitude": -78.43864385229487
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.12747305,
+  "longitude": -78.43997006655536
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.12751815,
+  "longitude": -78.43803929019396
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.128045400000005,
+  "longitude": -78.43814112837202
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.06919875,
+  "longitude": -78.5232628
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01169955,
+  "longitude": -78.48771380355095
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0123222,
+  "longitude": -78.48710138928277
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01353709999999,
+  "longitude": -78.48631039620294
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1191729,
+  "longitude": -78.44419158425463
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0406797,
+  "longitude": -78.50178734705571
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.094058849999996,
+  "longitude": -78.4765895463085
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.094044600000004,
+  "longitude": -78.47604885856319
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04493375,
+  "longitude": -78.5139340133419
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.053574600000005,
+  "longitude": -78.5057427893747
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05313035,
+  "longitude": -78.50260504539636
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0524469,
+  "longitude": -78.50299826473672
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.017024649999996,
+  "longitude": -78.45895966973114
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0179236,
+  "longitude": -78.46707021987167
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032084049999995,
+  "longitude": -78.47288871161494
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03274945,
+  "longitude": -78.4725418395939
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0279673,
+  "longitude": -78.47482264988523
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03465275000001,
+  "longitude": -78.4601915648712
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.031904499999996,
+  "longitude": -78.46401045840292
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.091848299999995,
+  "longitude": -78.46863742153243
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0913162,
+  "longitude": -78.46946927753925
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.09194745,
+  "longitude": -78.46980103889086
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0245987,
+  "longitude": -78.47468159596484
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03702225,
+  "longitude": -78.49467272646622
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.016963950000005,
+  "longitude": -78.4280396111379
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0310597,
+  "longitude": -78.44330571317114
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032647749999995,
+  "longitude": -78.44542188809498
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04895745,
+  "longitude": -78.52280282162857
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04830535,
+  "longitude": -78.5223998944146
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.048987350000004,
+  "longitude": -78.52303349438799
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0385585,
+  "longitude": -78.5085820320614
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03813995,
+  "longitude": -78.50862409257276
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.049460550000006,
+  "longitude": -78.52495990329531
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.050299949999996,
+  "longitude": -78.52528709372903
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.050542300000004,
+  "longitude": -78.52429299533203
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04613765,
+  "longitude": -78.51812224428673
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04612015,
+  "longitude": -78.51722920171527
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0459619,
+  "longitude": -78.51669621949951
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.045621249999996,
+  "longitude": -78.51591425000001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0453326,
+  "longitude": -78.5155238935669
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04869065,
+  "longitude": -78.5156974
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0412305,
+  "longitude": -78.48016627173237
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04138675,
+  "longitude": -78.4803027781054
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041374399999995,
+  "longitude": -78.48007384954488
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041513550000005,
+  "longitude": -78.48020198199443
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04165115,
+  "longitude": -78.47963111499254
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04142005,
+  "longitude": -78.47933946103797
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04063565,
+  "longitude": -78.47858055301768
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0411036,
+  "longitude": -78.47861646828622
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0413863,
+  "longitude": -78.47825739447441
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0418365,
+  "longitude": -78.47814764811633
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04160115,
+  "longitude": -78.47819978040694
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.041122099999995,
+  "longitude": -78.4774080033136
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0409365,
+  "longitude": -78.47783348033497
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04086305,
+  "longitude": -78.47765613797517
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0502242,
+  "longitude": -78.51647691201558
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0446273,
+  "longitude": -78.52385738832979
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04536795,
+  "longitude": -78.51923625178014
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0449871,
+  "longitude": -78.518430675
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04518735,
+  "longitude": -78.51764565335881
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04493815,
+  "longitude": -78.51800753524282
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0444088,
+  "longitude": -78.5150805721907
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0448717,
+  "longitude": -78.52040483615214
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0479833,
+  "longitude": -78.50600237562911
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0482111,
+  "longitude": -78.50723782368931
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0447236,
+  "longitude": -78.51920116024853
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04656,
+  "longitude": -78.52242392755001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0845128,
+  "longitude": -78.47108411209169
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.03322045,
+  "longitude": -78.52333414080795
+ },
+ {
+  "label": "Park",
+  "kind": "park",
+  "latitude": 38.04083345,
+  "longitude": -78.48299878460222
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.023054599999995,
+  "longitude": -78.47119523399303
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02061605,
+  "longitude": -78.47288377555293
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07672935,
+  "longitude": -78.50076143672322
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0750849,
+  "longitude": -78.49910774199296
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07416875,
+  "longitude": -78.49966651684782
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0765494,
+  "longitude": -78.50748680624278
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07664725,
+  "longitude": -78.50615089205752
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07792905,
+  "longitude": -78.50592373956846
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07975020000001,
+  "longitude": -78.50240709234316
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.079673099999994,
+  "longitude": -78.50110512481001
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0793147,
+  "longitude": -78.50221382663716
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0780941,
+  "longitude": -78.50351160444266
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0368934,
+  "longitude": -78.52160081253777
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0368313,
+  "longitude": -78.52190951897242
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.92956475,
+  "longitude": -78.35760414350244
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.92986425,
+  "longitude": -78.35743005
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.929850900000005,
+  "longitude": -78.35722352860066
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.1235781,
+  "longitude": -78.41973381797928
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.93128625,
+  "longitude": -78.34529672010179
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.930746299999996,
+  "longitude": -78.34737808380092
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9305706,
+  "longitude": -78.34669835
+ },
+ {
+  "label": "Flagler Court",
+  "kind": "park",
+  "latitude": 38.052039199999996,
+  "longitude": -78.51485013177978
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.039305600000006,
+  "longitude": -78.47486262913371
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0316426,
+  "longitude": -78.50300215035128
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.024698099999995,
+  "longitude": -78.53814278385858
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0370427,
+  "longitude": -78.50241133565743
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99627705,
+  "longitude": -78.50014180187051
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9946374,
+  "longitude": -78.50112675867358
+ },
+ {
+  "label": "Biscuit Run Park",
+  "kind": "park",
+  "latitude": 37.97897265,
+  "longitude": -78.51843613733004
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9957041,
+  "longitude": -78.5000625670684
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.995553150000006,
+  "longitude": -78.4997329
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9953493,
+  "longitude": -78.49928419408778
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9956477,
+  "longitude": -78.49963458661972
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9955343,
+  "longitude": -78.49938458294208
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9259396,
+  "longitude": -78.34898492483995
+ },
+ {
+  "label": "Foxhaven Trail Parking",
+  "kind": "parking",
+  "latitude": 38.025829099999996,
+  "longitude": -78.53824830553029
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0252233,
+  "longitude": -78.5581816919088
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.023070000000004,
+  "longitude": -78.55751104598909
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02408775,
+  "longitude": -78.55739719779145
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02463885,
+  "longitude": -78.55488216317735
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0191443,
+  "longitude": -78.51556288734785
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01982125,
+  "longitude": -78.51558821854968
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9812527,
+  "longitude": -78.50869552705693
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05307075,
+  "longitude": -78.50843725
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0539732,
+  "longitude": -78.50681236848584
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0544493,
+  "longitude": -78.49898303398865
+ },
+ {
+  "label": "Riverview Park",
+  "kind": "park",
+  "latitude": 38.025177150000005,
+  "longitude": -78.45356740656521
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0456832,
+  "longitude": -78.46936815057106
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04220775,
+  "longitude": -78.47226557616156
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02220545,
+  "longitude": -78.53103362730585
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.02257005,
+  "longitude": -78.53164820640733
+ },
+ {
+  "label": "Fontaine Research Park Garage",
+  "kind": "parking",
+  "latitude": 38.0260783,
+  "longitude": -78.52646671167584
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.068044549999996,
+  "longitude": -78.463499929656
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0689673,
+  "longitude": -78.46224061671307
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9825329,
+  "longitude": -78.45668423360613
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.01889345,
+  "longitude": -78.51430983125
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0690876,
+  "longitude": -78.48328712692073
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.019335600000005,
+  "longitude": -78.51598922264887
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0587565,
+  "longitude": -78.46197124836293
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0595615,
+  "longitude": -78.46241751584358
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0593735,
+  "longitude": -78.46369557911977
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0603983,
+  "longitude": -78.46253782786059
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0591019,
+  "longitude": -78.46421504853527
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05700285,
+  "longitude": -78.49831181884946
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9915789,
+  "longitude": -78.49750595913024
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9973538,
+  "longitude": -78.4942495087042
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.99717035,
+  "longitude": -78.49389911000921
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 37.9971427,
+  "longitude": -78.49407685
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.035164699999996,
+  "longitude": -78.48275685763375
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0331211,
+  "longitude": -78.47802793146856
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032885199999996,
+  "longitude": -78.47821485599769
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032798,
+  "longitude": -78.47775133429926
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.032568350000005,
+  "longitude": -78.47778891225136
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.07237695,
+  "longitude": -78.45853902335749
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04950905,
+  "longitude": -78.5100351589423
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.05003345,
+  "longitude": -78.51068566617646
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.04992545,
+  "longitude": -78.51018620772248
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0507773,
+  "longitude": -78.51048843477719
+ },
+ {
+  "label": "Parking",
+  "kind": "parking",
+  "latitude": 38.0514886,
+  "longitude": -78.5097469072349
+ }
+]

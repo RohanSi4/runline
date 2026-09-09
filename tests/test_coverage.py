@@ -109,3 +109,46 @@ def test_message_distinguishes_distance_from_location(graphs_dir) -> None:
     outside = coverage.unsupported_message(Coordinate(40.7128, -74.0060), 2_655)
     assert "no map data for that location" in outside
     assert "Supported areas" in outside
+
+
+class _FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return self._payload
+
+
+class _FakeSession:
+    def __init__(self, payload):
+        self._payload = payload
+        self.calls = []
+
+    def get(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return _FakeResponse(self._payload)
+
+
+def test_geocode_calls_nominatim_directly() -> None:
+    """Geocoding must not need osmnx, which drags in the whole geo stack."""
+
+    from runline.planner import NOMINATIM_URL, geocode_address
+
+    session = _FakeSession([{"lat": "38.0293", "lon": "-78.4767"}])
+    result = geocode_address("Charlottesville, VA", session=session)
+
+    assert (round(result.latitude, 4), round(result.longitude, 4)) == (38.0293, -78.4767)
+    url, kwargs = session.calls[0]
+    assert url == NOMINATIM_URL
+    # Nominatim's usage policy requires an identifying User-Agent.
+    assert "runline" in kwargs["headers"]["User-Agent"]
+
+
+def test_geocode_reports_an_unknown_address() -> None:
+    from runline.planner import geocode_address
+
+    with pytest.raises(ValueError):
+        geocode_address("nowhere at all", session=_FakeSession([]))

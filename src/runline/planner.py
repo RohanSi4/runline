@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import requests
 
+from .coverage import CoverageError
 from .elevation import enrich_graph_open_meteo
 from .models import Coordinate, RouteCandidate, RoutePreferences, StartCandidate
 from .osm import generate_loops, graph_radius_meters, prepare_core
@@ -20,17 +22,33 @@ class PlanResult:
     warnings: tuple[str, ...]
 
 
-def geocode_address(
-    address: str, cache_directory: Path | None = None
-) -> Coordinate:
-    import osmnx as ox
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+# Nominatim's usage policy requires an identifying User-Agent.
+NOMINATIM_HEADERS = {"User-Agent": "runline/0.1 (+https://runline-nine.vercel.app)"}
 
-    if cache_directory is not None:
-        cache_directory.mkdir(parents=True, exist_ok=True)
-        ox.settings.use_cache = True
-        ox.settings.cache_folder = str(cache_directory / "http")
-    latitude, longitude = ox.geocoder.geocode(address)
-    return Coordinate(float(latitude), float(longitude))
+
+def geocode_address(
+    address: str, cache_directory: Path | None = None, *, session: Any = requests
+) -> Coordinate:
+    """Resolve an address with Nominatim.
+
+    This calls the service directly rather than through osmnx, which pulls in
+    geopandas, pandas, pyogrio, pyproj and shapely. That is roughly 70MB a
+    serverless instance downloads on every cold start, and none of it is
+    needed to serve a precomputed area.
+    """
+
+    response = session.get(
+        NOMINATIM_URL,
+        params={"q": address, "format": "json", "limit": 1},
+        headers=NOMINATIM_HEADERS,
+        timeout=20,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not payload:
+        raise ValueError(f"could not find a location for {address!r}")
+    return Coordinate(float(payload[0]["lat"]), float(payload[0]["lon"]))
 
 
 def plan_routes(
@@ -69,12 +87,21 @@ def plan_routes(
 
     candidates: list[RouteCandidate] = []
     for start in starts:
-        graph = prepare_core(
-            start.coordinate,
-            graph_radius_meters(preferences),
-            cache_directory,
-            preferences,
-        )
+        try:
+            graph = prepare_core(
+                start.coordinate,
+                graph_radius_meters(preferences),
+                cache_directory,
+                preferences,
+            )
+        except CoverageError as error:
+            # The origin must be mapped, but a discovered start near the edge
+            # of a shipped area need not be. Skip it instead of failing a
+            # request that still has a usable start.
+            if start.kind == "origin":
+                raise
+            warnings.append(f"Skipped {start.label}: {error}")
+            continue
         # Precomputed graphs ship with elevation already attached; refetching it
         # per request is pure latency, and on a serverless host the Open-Meteo
         # cache is wiped between instances so it would never amortise.

@@ -79,6 +79,20 @@ seriously and lower `radius_meters` for that area rather than raising the
 threshold. An area's radius also caps route length, since the whole route disc
 must fit inside it.
 
+**What ships per area.** The walk graph, the drive-radius start candidates
+(`<slug>-starts.json`), and the road graph used to measure drive distance
+(`<slug>-drive.pkl.gz`). `discover_public_starts` otherwise makes two Overpass
+calls per request, which is why picking a drive radius used to take minutes.
+The drive graph is reduced to its largest strongly connected component, since
+drive distance is a directed shortest path.
+
+**Production dependencies.** `requirements.txt` is deliberately smaller than
+`pyproject.toml`. Serving a precomputed area needs no osmnx, so none of
+geopandas, pandas, pyogrio, pyproj or shapely are installed on the serverless
+host, saving roughly 70MB of downloads on every cold start. Geocoding calls
+Nominatim directly. osmnx stays a development dependency because it builds the
+graphs. If you add a runtime code path that imports it, add it back.
+
 **Caching.** One area graph is held in memory at a time, and the prepared graph
 (cropped, collapsed, reduced to its strongly connected core) is cached for the
 four most recent origin/surface combinations. Start points are rounded to about
