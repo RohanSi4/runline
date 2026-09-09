@@ -204,6 +204,20 @@ document.getElementById("download-gpx").addEventListener("click", () => {
   URL.revokeObjectURL(link.href);
 });
 
+async function loadCoverage() {
+  try {
+    const response = await fetch("/api/areas");
+    if (!response.ok) return;
+    const { areas } = await response.json();
+    if (!areas || !areas.length) return;
+    const hint = document.getElementById("coverage-hint");
+    hint.textContent = `Map data available for ${areas.join(" · ")}`;
+    hint.hidden = false;
+  } catch (_error) {
+    // The hint is decorative; failing to load it must not block the form.
+  }
+}
+
 async function loadDemo() {
   try {
     const response = await fetch("/api/demo");
@@ -214,4 +228,5 @@ async function loadDemo() {
   }
 }
 
+loadCoverage();
 loadDemo();

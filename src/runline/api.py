@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 import tempfile
 from typing import Literal
 
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
+from .coverage import CoverageError, area_labels
 from .export import candidate_feature
 from .gpx import candidate_to_gpx
 from .models import (
@@ -22,6 +25,8 @@ from .models import (
 )
 from .planner import geocode_address, plan_routes
 
+
+LOGGER = logging.getLogger("runline.api")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB_ROOT = PROJECT_ROOT / "web"
@@ -96,8 +101,22 @@ async def routes(request: RouteRequest) -> dict:
             cache_directory=CACHE_ROOT,
             start_candidate_limit=2,
         )
+    except CoverageError as error:
+        # Expected outcome for an unsupported location, not a fault.
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except requests.RequestException as error:
+        LOGGER.exception("upstream request failed while planning routes")
+        raise HTTPException(
+            status_code=503,
+            detail="A map data provider is unavailable right now. Try again shortly.",
+        ) from error
     except Exception as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
+        # Log the traceback: returning str(error) alone leaves nothing to debug.
+        LOGGER.exception("route planning failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Route generation failed unexpectedly.",
+        ) from error
 
     if not result.candidates:
         raise HTTPException(
@@ -118,6 +137,11 @@ async def routes(request: RouteRequest) -> dict:
             for index, candidate in enumerate(result.candidates, start=1)
         ],
     }
+
+
+@app.get("/api/areas")
+async def supported_areas() -> dict:
+    return {"areas": list(area_labels())}
 
 
 @app.get("/api/demo")

@@ -1,0 +1,22 @@
+{
+  "areas": [
+    {
+      "slug": "charlottesville-va",
+      "label": "Charlottesville, VA",
+      "query": "Charlottesville, Virginia, USA",
+      "radius_meters": 12000
+    },
+    {
+      "slug": "richmond-va",
+      "label": "Richmond, VA",
+      "query": "Richmond, Virginia, USA",
+      "radius_meters": 6000
+    },
+    {
+      "slug": "washington-dc",
+      "label": "Washington, DC",
+      "query": "Washington, District of Columbia, USA",
+      "radius_meters": 5000
+    }
+  ]
+}

@@ -46,6 +46,42 @@ The command writes `option-1.gpx`, `option-2.gpx`, `option-3.gpx`,
 `routes.geojson`, `routes.json`, and a self-contained `preview.html` route
 comparison (the street tiles require an internet connection).
 
+## Map coverage and precomputed graphs
+
+Route generation needs an OpenStreetMap walk graph for the area around the
+start point. Downloading one from the Overpass API takes anywhere from ten
+seconds to several minutes depending on how hard Overpass is throttling, which
+is far longer than a serverless request may run. The deployed app therefore
+never calls Overpass: it ships prebuilt graphs and serves only the areas it has.
+
+Areas are declared in `config/areas.json` and built into `graphs/`:
+
+```bash
+.venv/bin/python scripts/build_graphs.py             # build anything missing
+.venv/bin/python scripts/build_graphs.py --force     # rebuild everything
+.venv/bin/python scripts/build_graphs.py --only richmond-va
+```
+
+The script writes one gzipped pickle per area plus `graphs/manifest.json`, all
+committed so a deploy needs no network access. Pickle rather than GraphML
+because a 40k-node graph loads in 0.9s against 6.3s, at a fifth of the peak
+memory. `requirements.txt` pins exact versions so the graphs load under the
+same library versions that built them.
+
+**Choosing a radius.** Cost scales with node count, not area radius, so dense
+cities need smaller radii. Measured on a full 5 mile request: 57k nodes peaks
+near 490MB RSS, while 118k nodes peaks near 1186MB and will exhaust a 1GB
+serverless function. The build script warns above 70k nodes; take the warning
+seriously and lower `radius_meters` for that area rather than raising the
+threshold. An area's radius also caps route length, since the whole route disc
+must fit inside it.
+
+Locally, an address outside every shipped area still falls back to a live
+Overpass download and caches it under `cache/`. That fallback is disabled
+whenever `VERCEL` is set, and can be forced either way with
+`RUNLINE_ALLOW_OSM_DOWNLOAD=1` or `=0`. Uncovered requests return HTTP 422 with
+a message naming the supported areas.
+
 ## Frontend
 
 ```bash
