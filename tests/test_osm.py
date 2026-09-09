@@ -4,7 +4,7 @@ import networkx as nx
 import pytest
 
 from runline.models import Coordinate, ElevationPreference, RoutePreferences, SurfacePreference
-from runline.osm import _nearest_node, collapse_graph, measure_route
+from runline.osm import _nearest_node, _routable_core, collapse_graph, measure_route
 
 
 def _graph() -> nx.MultiDiGraph:
@@ -72,3 +72,35 @@ def test_nearest_node_does_not_require_optional_spatial_index() -> None:
     graph = _graph()
 
     assert _nearest_node(graph, Coordinate(38.0101, -78.4899)) == 2
+
+
+def test_routable_core_drops_disconnected_islands() -> None:
+    """A start point on a stranded fragment made every waypoint unreachable."""
+
+    graph = nx.DiGraph()
+    for node, (latitude, longitude) in enumerate(
+        [(38.00, -78.00), (38.01, -78.00), (38.00, -78.01)]
+    ):
+        graph.add_node(node, y=latitude, x=longitude)
+    graph.add_edges_from([(0, 1), (1, 2), (2, 0)])
+
+    # An island sitting nearest to the query point but reachable from nothing.
+    graph.add_node(99, y=38.005, x=-78.005)
+    graph.add_node(98, y=38.0051, x=-78.0051)
+    graph.add_edge(99, 98)
+
+    core = _routable_core(graph)
+
+    assert set(core.nodes) == {0, 1, 2}
+    assert _nearest_node(core, Coordinate(38.005, -78.005)) in {0, 1, 2}
+
+
+def test_routable_core_leaves_a_fully_connected_graph_alone() -> None:
+    graph = nx.DiGraph()
+    for node, (latitude, longitude) in enumerate(
+        [(38.00, -78.00), (38.01, -78.00), (38.00, -78.01)]
+    ):
+        graph.add_node(node, y=latitude, x=longitude)
+    graph.add_edges_from([(0, 1), (1, 2), (2, 0)])
+
+    assert _routable_core(graph) is graph

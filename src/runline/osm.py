@@ -275,6 +275,29 @@ def _is_distinct(edge_sets: list[set[tuple[int, int]]], candidate: set[tuple[int
     return True
 
 
+def _routable_core(graph: nx.DiGraph) -> nx.DiGraph:
+    """Drop nodes that cannot both be reached from and return to the rest.
+
+    OSM extracts are built with ``retain_all=True``, so they include isolated
+    fragments such as a stranded footway or a service loop inside a car park.
+    Picking a start on one of those islands makes every waypoint unreachable
+    and the planner returns nothing, which is what happened for start points
+    near central Richmond. Only a strongly connected component can host an
+    out-and-back loop, so the planner works within the largest one.
+    """
+
+    components = list(nx.strongly_connected_components(graph))
+    if not components:
+        return graph
+    core = max(components, key=len)
+    if len(core) == graph.number_of_nodes():
+        return graph
+
+    trimmed = graph.subgraph(core).copy()
+    trimmed.graph.pop(NODE_INDEX_KEY, None)
+    return trimmed
+
+
 def generate_loops(
     graph: nx.Graph,
     origin: Coordinate,
@@ -285,6 +308,7 @@ def generate_loops(
     """Generate triangular loop candidates across headings, widths, and radii."""
 
     collapsed = collapse_graph(graph, preferences)
+    collapsed = _routable_core(collapsed)
     origin_node = _nearest_node(collapsed, origin)
     outbound_paths = nx.single_source_dijkstra_path(
         collapsed, origin_node, weight="_cost"
