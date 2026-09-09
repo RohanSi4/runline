@@ -7,7 +7,7 @@ import requests
 
 from .elevation import enrich_graph_open_meteo
 from .models import Coordinate, RouteCandidate, RoutePreferences, StartCandidate
-from .osm import generate_loops, graph_radius_meters, load_graph
+from .osm import generate_loops, graph_radius_meters, prepare_core
 from .scoring import rank_candidates
 from .starts import discover_public_starts
 
@@ -69,15 +69,22 @@ def plan_routes(
 
     candidates: list[RouteCandidate] = []
     for start in starts:
-        graph = load_graph(
-            start.coordinate, graph_radius_meters(preferences), cache_directory
+        graph = prepare_core(
+            start.coordinate,
+            graph_radius_meters(preferences),
+            cache_directory,
+            preferences,
         )
+        # Precomputed graphs ship with elevation already attached; refetching it
+        # per request is pure latency, and on a serverless host the Open-Meteo
+        # cache is wiped between instances so it would never amortise.
+        start_loader = None if graph.graph.get("elevation_baked") else elevation_loader
         start_routes = generate_loops(
             graph,
             start.coordinate,
             preferences,
             drive_distance_miles=start.drive_distance_miles,
-            elevation_loader=elevation_loader,
+            elevation_loader=start_loader,
         )
         for candidate in start_routes:
             candidate.start = start
