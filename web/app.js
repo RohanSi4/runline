@@ -9,7 +9,14 @@ const state = {
 };
 
 const routeColors = ["#e2552f", "#235f9f", "#7a4d96", "#2f785b", "#ad7628"];
-const map = L.map("map", { zoomControl: false }).setView([38.9799, -77.5257], 13);
+// Open on the prefilled start rather than a hardcoded point, so the map always
+// shows the area the app actually covers.
+const startLatitude = Number(document.getElementById("latitude").value) || 38.0293;
+const startLongitude = Number(document.getElementById("longitude").value) || -78.4767;
+const map = L.map("map", { zoomControl: false }).setView(
+  [startLatitude, startLongitude],
+  13,
+);
 L.control.zoom({ position: "bottomright" }).addTo(map);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
