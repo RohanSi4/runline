@@ -7,6 +7,12 @@ from typing import Any
 
 import networkx as nx
 
+from .coverage import (
+    containing_area,
+    downloads_allowed,
+    load_area_drive_graph,
+    load_area_starts,
+)
 from .geo import distance_meters
 from .models import METERS_PER_MILE, Coordinate, StartCandidate
 from .osm import _nearest_node
@@ -90,6 +96,49 @@ def _road_distance_miles(
     return float(meters) / METERS_PER_MILE
 
 
+def _starts_from_precomputed(
+    entries: tuple,
+    area: Any,
+    origin: Coordinate,
+    radius_miles: float,
+    *,
+    limit: int,
+) -> list[StartCandidate]:
+    """Select shipped start candidates near an origin and measure the drive."""
+
+    possible: list[StartCandidate] = []
+    for entry in entries:
+        coordinate = Coordinate(float(entry["latitude"]), float(entry["longitude"]))
+        direct_miles = distance_meters(origin, coordinate) / METERS_PER_MILE
+        if direct_miles < 0.15 or direct_miles > radius_miles:
+            continue
+        if any(
+            distance_meters(coordinate, existing.coordinate) < 150
+            for existing in possible
+        ):
+            continue
+        possible.append(
+            StartCandidate(entry["label"], entry["kind"], coordinate, direct_miles)
+        )
+
+    drive_graph = load_area_drive_graph(area)
+    if drive_graph is None:
+        return sorted(
+            possible, key=lambda item: (KIND_PRIORITY[item.kind], item.drive_distance_miles)
+        )[:limit]
+
+    reachable: list[StartCandidate] = []
+    for candidate in possible:
+        road_distance = _road_distance_miles(drive_graph, origin, candidate.coordinate)
+        if road_distance is None or road_distance > radius_miles:
+            continue
+        reachable.append(replace(candidate, drive_distance_miles=road_distance))
+    return sorted(
+        reachable,
+        key=lambda item: (KIND_PRIORITY[item.kind], item.drive_distance_miles),
+    )[:limit]
+
+
 def discover_public_starts(
     origin: Coordinate,
     radius_miles: float,
@@ -101,6 +150,21 @@ def discover_public_starts(
 
     if radius_miles <= 0:
         return []
+
+    area = containing_area(origin)
+    if area is not None:
+        precomputed = load_area_starts(area)
+        if precomputed:
+            return _starts_from_precomputed(
+                precomputed, area, origin, radius_miles, limit=limit
+            )
+
+    if not downloads_allowed():
+        # Discovering starts costs two Overpass calls, which cannot complete
+        # inside a serverless request. Without precomputed starts the origin
+        # is still a perfectly good place to run from.
+        return []
+
     import osmnx as ox
 
     ox.settings.use_cache = True

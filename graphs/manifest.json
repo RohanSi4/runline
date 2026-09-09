@@ -7,7 +7,9 @@
       "latitude": 38.029306,
       "longitude": -78.4766781,
       "radius_meters": 12000.0,
-      "file": "charlottesville-va.pkl.gz"
+      "file": "charlottesville-va.pkl.gz",
+      "starts_file": "charlottesville-va-starts.json",
+      "drive_file": "charlottesville-va-drive.pkl.gz"
     }
   ]
 }

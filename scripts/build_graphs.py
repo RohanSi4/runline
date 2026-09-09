@@ -46,7 +46,7 @@ class ThrottledSession:
     the runtime path never calls the service.
     """
 
-    def __init__(self, delay: float = 1.0, attempts: int = 7) -> None:
+    def __init__(self, delay: float = 2.5, attempts: int = 8) -> None:
         self.delay = delay
         self.attempts = attempts
 
@@ -66,6 +66,71 @@ class ThrottledSession:
 
 def nodes_with_elevation(graph) -> int:
     return sum(1 for _, data in graph.nodes(data=True) if "elevation" in data)
+
+
+def build_start_candidates(ox, slug: str, latitude: float, longitude: float, radius: float) -> None:
+    """Precompute the drive-radius start points and the road graph they need.
+
+    discover_public_starts otherwise makes two Overpass calls per request, one
+    for trailhead/parking/park features and one for the drive network. Neither
+    can complete inside a serverless request, so both are shipped.
+    """
+
+    sys.path.insert(0, str(PROJECT_ROOT / "src"))
+    from runline.starts import _feature_kind, BLOCKED_ACCESS, _text_values
+
+    features = ox.features.features_from_point(
+        (latitude, longitude),
+        tags={"information": "trailhead", "amenity": "parking", "leisure": "park"},
+        dist=radius,
+    )
+    entries = []
+    for _, row in features.iterrows():
+        data = row.to_dict()
+        kind = _feature_kind(data)
+        if kind is None or _text_values(data.get("access")) & BLOCKED_ACCESS:
+            continue
+        geometry = row.geometry
+        point = (
+            geometry
+            if geometry.geom_type == "Point"
+            else geometry.representative_point()
+        )
+        name = data.get("name")
+        entries.append(
+            {
+                "label": str(name)
+                if isinstance(name, str) and name.strip()
+                else kind.title(),
+                "kind": kind,
+                "latitude": float(point.y),
+                "longitude": float(point.x),
+            }
+        )
+    (GRAPHS_DIR / f"{slug}-starts.json").write_text(
+        json.dumps(entries, indent=1) + "\n", encoding="utf-8"
+    )
+
+    drive = ox.graph.graph_from_point(
+        (latitude, longitude),
+        dist=radius + 1_000,
+        network_type="drive",
+        simplify=True,
+        retain_all=False,
+    )
+    # retain_all=False keeps the largest WEAKLY connected component, but drive
+    # distance is a directed shortest path. Without this the graph had 19
+    # strongly connected components and every candidate was unreachable.
+    from runline.osm import _routable_core
+
+    drive = _routable_core(drive)
+    drive_payload = gzip.compress(pickle.dumps(drive, protocol=5), 6)
+    (GRAPHS_DIR / f"{slug}-drive.pkl.gz").write_bytes(drive_payload)
+    print(
+        f"  {slug}: {len(entries)} start candidates, "
+        f"drive graph {drive.number_of_nodes()} nodes "
+        f"({len(drive_payload) / 1048576:.1f}MB gz)"
+    )
 
 
 def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
@@ -120,6 +185,8 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
         GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)
 
+        build_start_candidates(ox, slug, latitude, longitude, radius)
+
         nodes = graph.number_of_nodes()
         print(
             f"  {slug}: {nodes} nodes, {len(payload) / 1048576:.1f}MB gz, "
@@ -138,6 +205,8 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
         "longitude": longitude,
         "radius_meters": radius,
         "file": f"{slug}.pkl.gz",
+        "starts_file": f"{slug}-starts.json",
+        "drive_file": f"{slug}-drive.pkl.gz",
     }
 
 
@@ -145,6 +214,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="build_graphs")
     parser.add_argument("--force", action="store_true", help="rebuild existing graphs")
     parser.add_argument("--only", help="build a single area by slug")
+    parser.add_argument(
+        "--starts-only",
+        action="store_true",
+        help="rebuild only the start candidates and drive graph",
+    )
     arguments = parser.parse_args()
 
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
@@ -165,11 +239,30 @@ def main() -> int:
             for entry in json.loads(manifest_path.read_text(encoding="utf-8"))["areas"]
         }
 
-    print(f"building {len(selected)} area(s) into {GRAPHS_DIR}")
-    entries = [
-        build_area(area, force=arguments.force, known=existing.get(area["slug"]))
-        for area in selected
-    ]
+    if arguments.starts_only:
+        import osmnx as ox
+
+        for area in selected:
+            known = existing[area["slug"]]
+            build_start_candidates(
+                ox,
+                area["slug"],
+                known["latitude"],
+                known["longitude"],
+                float(area["radius_meters"]),
+            )
+        entries = [
+            {**existing[area["slug"]],
+             "starts_file": f"{area['slug']}-starts.json",
+             "drive_file": f"{area['slug']}-drive.pkl.gz"}
+            for area in selected
+        ]
+    else:
+        print(f"building {len(selected)} area(s) into {GRAPHS_DIR}")
+        entries = [
+            build_area(area, force=arguments.force, known=existing.get(area["slug"]))
+            for area in selected
+        ]
     for entry in entries:
         existing[entry["slug"]] = entry
 
