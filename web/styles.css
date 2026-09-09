@@ -65,6 +65,7 @@ input { min-width: 0; border: 0; outline: 0; background: transparent; color: var
 .generate svg { width: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .form-status { min-height: 16px; margin: -9px 0 0; color: var(--muted); font-size: 11px; text-align: center; }
 .form-status.error { color: #a33225; }
+.coverage-hint { margin: -4px 0 0; color: var(--muted); font-size: 10px; text-align: center; opacity: 0.75; }
 .results { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); }
 .results-heading { justify-content: space-between; margin-bottom: 10px; }
 .results h2 { margin: 0; font: 500 16px "Manrope", sans-serif; }

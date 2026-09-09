@@ -5,7 +5,11 @@
       "src": "app.py",
       "use": "@vercel/python",
       "config": {
-        "includeFiles": ["src/**", "web/**"]
+        "includeFiles": [
+          "src/**",
+          "web/**",
+          "graphs/**"
+        ]
       }
     }
   ],

@@ -8,7 +8,14 @@ from typing import Any, Callable
 
 import networkx as nx
 
-from .geo import destination
+from .coverage import (
+    CoverageError,
+    downloads_allowed,
+    find_area,
+    load_area_graph,
+    unsupported_message,
+)
+from .geo import destination, distance_meters
 from .models import (
     METERS_PER_MILE,
     Coordinate,
@@ -193,24 +200,56 @@ def measure_route(
     )
 
 
+NODE_INDEX_KEY = "_runline_node_index"
+
+
+def _node_index(graph: nx.Graph) -> tuple[Any, Any, Any]:
+    """Node ids and coordinates as parallel arrays, cached on the graph.
+
+    ``generate_loops`` asks for a nearest node ~200 times per request, so a
+    per-node Python scan dominates the whole planner on a city-sized graph.
+    The arrays are stashed in ``graph.graph`` so they live and die with the
+    graph, and are rebuilt whenever the node count no longer matches.
+    """
+
+    import numpy as np
+
+    cached = graph.graph.get(NODE_INDEX_KEY)
+    if cached is not None and cached[0] == graph.number_of_nodes():
+        return cached[1], cached[2], cached[3]
+
+    nodes: list[int] = []
+    latitudes: list[float] = []
+    longitudes: list[float] = []
+    for node, data in graph.nodes(data=True):
+        nodes.append(node)
+        latitudes.append(float(data["y"]))
+        longitudes.append(float(data["x"]))
+
+    index = (
+        np.asarray(nodes, dtype=np.int64),
+        np.asarray(latitudes, dtype=np.float64),
+        np.asarray(longitudes, dtype=np.float64),
+    )
+    graph.graph[NODE_INDEX_KEY] = (len(nodes), *index)
+    return index
+
+
 def _nearest_node(graph: nx.Graph, coordinate: Coordinate) -> int:
+    import numpy as np
+
+    node_ids, latitudes, longitudes = _node_index(graph)
+    if node_ids.size == 0:
+        raise nx.NodeNotFound("cannot find a nearest node in an empty graph")
+
     longitude_scale = math.cos(math.radians(coordinate.latitude))
-    try:
-        return int(
-            min(
-                graph.nodes,
-                key=lambda node: (
-                    (float(graph.nodes[node]["y"]) - coordinate.latitude) ** 2
-                    + (
-                        (float(graph.nodes[node]["x"]) - coordinate.longitude)
-                        * longitude_scale
-                    )
-                    ** 2
-                ),
-            )
-        )
-    except ValueError as error:
-        raise nx.NodeNotFound("cannot find a nearest node in an empty graph") from error
+    latitude_delta = latitudes - coordinate.latitude
+    longitude_delta = (longitudes - coordinate.longitude) * longitude_scale
+    return int(
+        node_ids[
+            int(np.argmin(latitude_delta * latitude_delta + longitude_delta * longitude_delta))
+        ]
+    )
 
 
 def _path(graph: nx.DiGraph, start: int, end: int) -> list[int]:
@@ -310,7 +349,56 @@ def generate_loops(
     return ranked[: preferences.result_count]
 
 
+def crop_to_radius(
+    graph: nx.MultiDiGraph, origin: Coordinate, radius_meters: float
+) -> nx.MultiDiGraph:
+    """Cut a city-wide graph down to the disc a single request actually needs.
+
+    Precomputed areas span a whole city so that one artifact serves every start
+    point in it, but collapsing and searching all of that per request is both
+    slow and memory-hungry. A 5 mile run in Washington DC touches roughly a
+    tenth of the city graph.
+
+    A degrees-based bounding box rejects most nodes before any trigonometry.
+    """
+
+    latitude_span = radius_meters / 111_320.0
+    longitude_span = latitude_span / max(
+        math.cos(math.radians(origin.latitude)), 1e-6
+    )
+    minimum_latitude = origin.latitude - latitude_span
+    maximum_latitude = origin.latitude + latitude_span
+    minimum_longitude = origin.longitude - longitude_span
+    maximum_longitude = origin.longitude + longitude_span
+
+    keep = [
+        node
+        for node, data in graph.nodes(data=True)
+        if minimum_latitude <= data["y"] <= maximum_latitude
+        and minimum_longitude <= data["x"] <= maximum_longitude
+        and distance_meters(origin, Coordinate(data["y"], data["x"])) <= radius_meters
+    ]
+    cropped = graph.subgraph(keep).copy()
+    cropped.graph.pop(NODE_INDEX_KEY, None)
+    return cropped
+
+
 def load_graph(origin: Coordinate, radius_meters: float, cache_directory: Path) -> nx.Graph:
+    """Return a walk graph covering ``radius_meters`` around ``origin``.
+
+    Precomputed areas are preferred, then the local download cache, then a live
+    Overpass fetch. The fetch is disabled on serverless hosts, where it would
+    outlive the function's time budget; there an uncovered location raises
+    ``CoverageError`` instead of hanging.
+    """
+
+    area = find_area(origin, radius_meters)
+    if area is not None:
+        return crop_to_radius(load_area_graph(area), origin, radius_meters)
+
+    if not downloads_allowed():
+        raise CoverageError(unsupported_message(origin, radius_meters))
+
     import osmnx as ox
 
     cache_directory.mkdir(parents=True, exist_ok=True)
