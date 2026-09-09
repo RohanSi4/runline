@@ -68,7 +68,69 @@ def nodes_with_elevation(graph) -> int:
     return sum(1 for _, data in graph.nodes(data=True) if "elevation" in data)
 
 
-def build_start_candidates(ox, slug: str, latitude: float, longitude: float, radius: float) -> None:
+def build_place_index(slug: str, graph, start_entries: list) -> None:
+    """Write the place list that powers address autocomplete.
+
+    Nominatim's usage policy forbids per-keystroke autocomplete, and the app
+    only covers one city, so suggestions come from the shipped map instead:
+    every named street plus the named public start points. Selecting one gives
+    coordinates directly, so a chosen suggestion skips geocoding entirely, and
+    nothing outside the mapped area can be suggested.
+    """
+
+    sums: dict[str, list[float]] = {}
+    for _, target, _, data in graph.edges(keys=True, data=True):
+        raw = data.get("name")
+        names = [raw] if isinstance(raw, str) else raw if isinstance(raw, list) else []
+        node = graph.nodes[target]
+        for name in names:
+            if not isinstance(name, str) or not name.strip():
+                continue
+            entry = sums.setdefault(name, [0.0, 0.0, 0.0])
+            entry[0] += float(node["y"])
+            entry[1] += float(node["x"])
+            entry[2] += 1
+
+    places = [
+        {
+            "name": name,
+            "kind": "street",
+            "latitude": round(total_lat / count, 6),
+            "longitude": round(total_lon / count, 6),
+        }
+        for name, (total_lat, total_lon, count) in sums.items()
+        if count
+    ]
+
+    generic = {"Parking", "Park", "Trailhead"}
+    seen = {place["name"] for place in places}
+    for entry in start_entries:
+        if entry["label"] in generic or entry["label"] in seen:
+            continue
+        seen.add(entry["label"])
+        places.append(
+            {
+                "name": entry["label"],
+                "kind": entry["kind"],
+                "latitude": round(entry["latitude"], 6),
+                "longitude": round(entry["longitude"], 6),
+            }
+        )
+
+    # Drop names that read as map annotations rather than places a runner
+    # would type, e.g. a trail blaze colour like "(yellow blaze)".
+    places = [
+        place
+        for place in places
+        if len(place["name"]) >= 3 and place["name"][:1].isalnum()
+    ]
+    places.sort(key=lambda place: place["name"])
+    path = GRAPHS_DIR / f"{slug}-places.json"
+    path.write_text(json.dumps(places, separators=(",", ":")) + "\n", encoding="utf-8")
+    print(f"  {slug}: {len(places)} autocomplete places ({path.stat().st_size / 1024:.0f}KB)")
+
+
+def build_start_candidates(ox, slug: str, latitude: float, longitude: float, radius: float) -> list:
     """Precompute the drive-radius start points and the road graph they need.
 
     discover_public_starts otherwise makes two Overpass calls per request, one
@@ -131,6 +193,7 @@ def build_start_candidates(ox, slug: str, latitude: float, longitude: float, rad
         f"drive graph {drive.number_of_nodes()} nodes "
         f"({len(drive_payload) / 1048576:.1f}MB gz)"
     )
+    return entries
 
 
 def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
@@ -185,7 +248,8 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
         GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)
 
-        build_start_candidates(ox, slug, latitude, longitude, radius)
+        start_entries = build_start_candidates(ox, slug, latitude, longitude, radius)
+        build_place_index(slug, graph, start_entries)
 
         nodes = graph.number_of_nodes()
         print(
@@ -207,6 +271,7 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
         "file": f"{slug}.pkl.gz",
         "starts_file": f"{slug}-starts.json",
         "drive_file": f"{slug}-drive.pkl.gz",
+        "places_file": f"{slug}-places.json",
     }
 
 
@@ -244,17 +309,20 @@ def main() -> int:
 
         for area in selected:
             known = existing[area["slug"]]
-            build_start_candidates(
+            start_entries = build_start_candidates(
                 ox,
                 area["slug"],
                 known["latitude"],
                 known["longitude"],
                 float(area["radius_meters"]),
             )
+            with gzip.open(GRAPHS_DIR / known["file"], "rb") as handle:
+                build_place_index(area["slug"], pickle.load(handle), start_entries)
         entries = [
             {**existing[area["slug"]],
              "starts_file": f"{area['slug']}-starts.json",
-             "drive_file": f"{area['slug']}-drive.pkl.gz"}
+             "drive_file": f"{area['slug']}-drive.pkl.gz",
+             "places_file": f"{area['slug']}-places.json"}
             for area in selected
         ]
     else:

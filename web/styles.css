@@ -36,6 +36,13 @@ form { display: grid; gap: 19px; }
 .field label, legend { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 500; }
 legend span { margin-left: 5px; color: var(--muted); font-weight: 400; }
 fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.start-field { position: relative; }
+.suggestions { position: absolute; z-index: 1200; left: 0; right: 0; top: calc(100% + 4px); max-height: 232px; margin: 0; padding: 4px; overflow-y: auto; list-style: none; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 28px rgb(16 24 20 / 12%); }
+.suggestions li { display: flex; align-items: baseline; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.suggestions li[aria-selected="true"], .suggestions li:hover { background: var(--soft); }
+.suggestions .place-kind { margin-left: auto; color: var(--muted); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+.suggestions .no-match { color: var(--muted); cursor: default; }
+.suggestions .no-match:hover { background: transparent; }
 .input-shell { display: grid; grid-template-columns: 20px 1fr 34px; align-items: center; gap: 7px; min-height: 48px; padding: 0 7px 0 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
 .input-shell:focus-within { border-color: var(--green-2); box-shadow: 0 0 0 3px rgb(47 99 72 / 10%); }
 .input-shell > svg { width: 18px; fill: none; stroke: var(--green-2); stroke-width: 1.7; }

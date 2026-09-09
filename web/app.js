@@ -23,6 +23,93 @@ const longitude = document.getElementById("longitude");
 const distanceInput = document.getElementById("distance");
 const status = document.getElementById("form-status");
 const generateButton = form.querySelector(".generate");
+const suggestionList = document.getElementById("address-suggestions");
+
+// Autocomplete is served from the shipped map rather than a geocoder:
+// Nominatim's usage policy forbids per-keystroke lookups. Picking a suggestion
+// carries its own coordinates, so the request skips geocoding entirely.
+const MAX_SUGGESTIONS = 8;
+let places = [];
+let matches = [];
+let activeIndex = -1;
+
+function closeSuggestions() {
+  suggestionList.hidden = true;
+  suggestionList.replaceChildren();
+  address.setAttribute("aria-expanded", "false");
+  matches = [];
+  activeIndex = -1;
+}
+
+function findMatches(query) {
+  const needle = query.trim().toLowerCase();
+  if (needle.length < 2 || !places.length) return [];
+  const prefix = [];
+  const inner = [];
+  for (const place of places) {
+    const position = place.name.toLowerCase().indexOf(needle);
+    if (position === 0) prefix.push(place);
+    else if (position > 0 && inner.length < MAX_SUGGESTIONS) inner.push(place);
+    if (prefix.length >= MAX_SUGGESTIONS) break;
+  }
+  return prefix.concat(inner).slice(0, MAX_SUGGESTIONS);
+}
+
+function highlight(index) {
+  activeIndex = index;
+  suggestionList.querySelectorAll("li[role='option']").forEach((item, itemIndex) => {
+    const selected = itemIndex === index;
+    item.setAttribute("aria-selected", selected ? "true" : "false");
+    if (selected) item.scrollIntoView({ block: "nearest" });
+  });
+}
+
+function chooseSuggestion(index) {
+  const place = matches[index];
+  if (!place) return;
+  closeSuggestions();
+  setStart(place.latitude, place.longitude, place.name);
+  document.getElementById("map-tip").hidden = true;
+}
+
+function renderSuggestions(query) {
+  matches = findMatches(query);
+  suggestionList.replaceChildren();
+  if (!matches.length) {
+    closeSuggestions();
+    return;
+  }
+  matches.forEach((place, index) => {
+    const item = document.createElement("li");
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-selected", "false");
+    const name = document.createElement("span");
+    name.textContent = place.name;
+    const kind = document.createElement("span");
+    kind.className = "place-kind";
+    kind.textContent = place.kind === "street" ? "" : place.kind;
+    item.append(name, kind);
+    // mousedown, not click: blur would tear the list down before click fires.
+    item.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      chooseSuggestion(index);
+    });
+    suggestionList.appendChild(item);
+  });
+  suggestionList.hidden = false;
+  address.setAttribute("aria-expanded", "true");
+  highlight(-1);
+}
+
+async function loadPlaces() {
+  try {
+    const response = await fetch("/api/places");
+    if (!response.ok) return;
+    places = (await response.json()).places || [];
+  } catch (_error) {
+    // Typing a full address still works; it is geocoded server-side.
+  }
+}
 
 function setStart(latitudeValue, longitudeValue, label = "Pinned location") {
   latitude.value = latitudeValue;
@@ -43,6 +130,29 @@ map.on("click", (event) => {
 address.addEventListener("input", () => {
   latitude.value = "";
   longitude.value = "";
+  renderSuggestions(address.value);
+});
+
+address.addEventListener("keydown", (event) => {
+  if (suggestionList.hidden || !matches.length) return;
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    highlight((activeIndex + 1) % matches.length);
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    highlight(activeIndex <= 0 ? matches.length - 1 : activeIndex - 1);
+  } else if (event.key === "Enter" && activeIndex >= 0) {
+    // Take the highlighted suggestion rather than submitting the form.
+    event.preventDefault();
+    chooseSuggestion(activeIndex);
+  } else if (event.key === "Escape") {
+    closeSuggestions();
+  }
+});
+
+address.addEventListener("blur", closeSuggestions);
+address.addEventListener("focus", () => {
+  if (address.value.trim().length >= 2) renderSuggestions(address.value);
 });
 
 document.getElementById("locate").addEventListener("click", () => {
@@ -229,4 +339,5 @@ async function loadDemo() {
 }
 
 loadCoverage();
+loadPlaces();
 loadDemo();

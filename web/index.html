@@ -33,13 +33,14 @@
           <label for="address">Start</label>
           <div class="input-shell">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
-            <input id="address" name="address" autocomplete="street-address" value="Legacy Elementary School, Ashburn, Virginia" placeholder="Address or click the map">
+            <input id="address" name="address" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="address-suggestions" value="McIntire Park" placeholder="Start typing a street or place">
             <button class="icon-button" id="locate" type="button" aria-label="Use my location">
               <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
             </button>
           </div>
-          <input id="latitude" type="hidden">
-          <input id="longitude" type="hidden">
+          <ul class="suggestions" id="address-suggestions" role="listbox" aria-label="Address suggestions" hidden></ul>
+          <input id="latitude" type="hidden" value="38.045373">
+          <input id="longitude" type="hidden" value="-78.474949">
         </div>
 
         <div class="distance-row">
@@ -101,7 +102,7 @@
 
     <section class="map-panel" aria-label="Route map">
       <div id="map"></div>
-      <div class="map-tip" id="map-tip"><span></span>Click anywhere to set your start</div>
+      <div class="map-tip" id="map-tip"><span></span>Type a place, or click the map</div>
       <div class="selected-summary" id="selected-summary" hidden>
         <div><span id="summary-distance">5.02 mi</span><small id="summary-start">Start here</small></div>
         <div><span id="summary-gain">218 ft</span><small>Elevation</small></div>
