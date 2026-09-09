@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from collections import OrderedDict
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Callable
@@ -201,6 +202,54 @@ def measure_route(
 
 
 NODE_INDEX_KEY = "_runline_node_index"
+PREPARED_KEY = "_runline_prepared"
+
+# Crop/collapse/strongly-connected-core is identical for any start point in the
+# same neighbourhood, and Fluid Compute reuses warm instances across requests,
+# so the result is worth holding onto. Keyed by a coarse origin so that nearby
+# starts share an entry; a margin covers the rounding.
+PREPARED_CACHE_SIZE = 4
+_PREPARED_CACHE: "OrderedDict[tuple, nx.DiGraph]" = OrderedDict()
+ORIGIN_ROUNDING = 3
+ORIGIN_ROUNDING_MARGIN_METERS = 250.0
+
+
+def prepare_core(
+    origin: Coordinate,
+    radius_meters: float,
+    cache_directory: Path,
+    preferences: RoutePreferences,
+) -> nx.DiGraph:
+    """Return the collapsed, routable graph a request should search.
+
+    Rounding the origin means two starts on the same block share one prepared
+    graph. The crop radius is widened by the rounding error so the cached graph
+    still fully contains the disc the caller asked for.
+    """
+
+    key_origin = Coordinate(
+        round(origin.latitude, ORIGIN_ROUNDING), round(origin.longitude, ORIGIN_ROUNDING)
+    )
+    padded_radius = radius_meters + ORIGIN_ROUNDING_MARGIN_METERS
+    key = (
+        key_origin.latitude,
+        key_origin.longitude,
+        round(padded_radius),
+        preferences.surface.value,
+    )
+    cached = _PREPARED_CACHE.get(key)
+    if cached is not None:
+        _PREPARED_CACHE.move_to_end(key)
+        return cached
+
+    graph = load_graph(key_origin, padded_radius, cache_directory)
+    core = _routable_core(collapse_graph(graph, preferences))
+    core.graph[PREPARED_KEY] = True
+
+    _PREPARED_CACHE[key] = core
+    while len(_PREPARED_CACHE) > PREPARED_CACHE_SIZE:
+        _PREPARED_CACHE.popitem(last=False)
+    return core
 
 
 def _node_index(graph: nx.Graph) -> tuple[Any, Any, Any]:
@@ -307,8 +356,10 @@ def generate_loops(
 ) -> list[RouteCandidate]:
     """Generate triangular loop candidates across headings, widths, and radii."""
 
-    collapsed = collapse_graph(graph, preferences)
-    collapsed = _routable_core(collapsed)
+    if graph.graph.get(PREPARED_KEY):
+        collapsed = graph
+    else:
+        collapsed = _routable_core(collapse_graph(graph, preferences))
     origin_node = _nearest_node(collapsed, origin)
     outbound_paths = nx.single_source_dijkstra_path(
         collapsed, origin_node, weight="_cost"

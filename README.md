@@ -68,6 +68,9 @@ because a 40k-node graph loads in 0.9s against 6.3s, at a fifth of the peak
 memory. `requirements.txt` pins exact versions so the graphs load under the
 same library versions that built them.
 
+Coverage is currently Charlottesville only. Each added area costs build time,
+bundle size, and memory, so add one when you actually want to run there.
+
 **Choosing a radius.** Cost scales with node count, not area radius, so dense
 cities need smaller radii. Measured on a full 5 mile request: 57k nodes peaks
 near 490MB RSS, while 118k nodes peaks near 1186MB and will exhaust a 1GB
@@ -75,6 +78,20 @@ serverless function. The build script warns above 70k nodes; take the warning
 seriously and lower `radius_meters` for that area rather than raising the
 threshold. An area's radius also caps route length, since the whole route disc
 must fit inside it.
+
+**Caching.** One area graph is held in memory at a time, and the prepared graph
+(cropped, collapsed, reduced to its strongly connected core) is cached for the
+four most recent origin/surface combinations. Start points are rounded to about
+110m so two runs from the same block share an entry, with the crop widened to
+cover the rounding. Warm instances answer a repeat 3 mile request in roughly
+half the time of a first one.
+
+Elevation is baked into the graph at build time where possible, since the
+per-request Open-Meteo cache lives in `/tmp` and is wiped between serverless
+instances. Open-Meteo rate-limits bulk backfills, so the bake is best effort:
+if it fails the build still succeeds and the app falls back to fetching
+elevation per request. Rerun `--force` later to bake it; the cell cache in
+`build-cache/` resumes where it left off.
 
 Locally, an address outside every shipped area still falls back to a live
 Overpass download and caches it under `cache/`. That fallback is disabled
