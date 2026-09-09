@@ -11,7 +11,7 @@ def candidate_to_gpx(candidate: RouteCandidate, name: str | None = None) -> str:
         "gpx",
         {
             "version": "1.1",
-            "creator": "run-route-lab",
+            "creator": "runline",
             "xmlns": "http://www.topografix.com/GPX/1/1",
         },
     )

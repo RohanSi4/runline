@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from runroute.export import export_candidates
-from runroute.models import Coordinate, RouteCandidate, RouteMetrics, StartCandidate
+from runline.export import export_candidates
+from runline.models import Coordinate, RouteCandidate, RouteMetrics, StartCandidate
 
 
 def test_export_includes_interactive_preview(tmp_path) -> None:
@@ -17,7 +17,7 @@ def test_export_includes_interactive_preview(tmp_path) -> None:
     export_candidates([candidate], tmp_path)
 
     preview = (tmp_path / "preview.html").read_text(encoding="utf-8")
-    assert "Run Route Preview" in preview
+    assert "Runline Preview" in preview
     assert "route-test" in preview
     assert "tile.openstreetmap.org" in preview
     assert (tmp_path / "option-1.gpx").exists()

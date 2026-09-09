@@ -29,12 +29,12 @@ WEB_ROOT = PROJECT_ROOT / "web"
 
 def cache_root() -> Path:
     if os.environ.get("VERCEL"):
-        return Path(tempfile.gettempdir()) / "run-route-lab-cache"
+        return Path(tempfile.gettempdir()) / "runline-cache"
     local_cache = PROJECT_ROOT / "cache"
     try:
         local_cache.mkdir(parents=True, exist_ok=True)
     except OSError:
-        return Path(tempfile.gettempdir()) / "run-route-lab-cache"
+        return Path(tempfile.gettempdir()) / "runline-cache"
     return local_cache
 
 
@@ -152,4 +152,4 @@ async def demo() -> dict:
 def run() -> None:
     import uvicorn
 
-    uvicorn.run("runroute.api:app", host="127.0.0.1", port=8765, reload=True)
+    uvicorn.run("runline.api:app", host="127.0.0.1", port=8765, reload=True)

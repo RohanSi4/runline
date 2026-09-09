@@ -12,7 +12,7 @@ def preview_html(feature_collection: dict) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Run Route Preview</title>
+  <title>Runline Preview</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root {{ color-scheme: light dark; --bg: #f7f7f4; --panel: #ffffff; --text: #171717; --muted: #666; --border: #d9d9d4; --active: #ea580c; --route-1: #ea580c; --route-2: #2563eb; --route-3: #16a34a; --route-4: #9333ea; --route-5: #db2777; }}

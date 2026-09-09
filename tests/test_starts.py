@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from shapely.geometry import Point
 
-from runroute.models import Coordinate
-from runroute.starts import _feature_candidate
+from runline.models import Coordinate
+from runline.starts import _feature_candidate
 
 
 def test_public_trailhead_becomes_start_candidate() -> None:

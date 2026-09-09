@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
-from runroute.gpx import candidate_to_gpx
-from runroute.models import Coordinate, RouteCandidate, RouteMetrics
+from runline.gpx import candidate_to_gpx
+from runline.models import Coordinate, RouteCandidate, RouteMetrics
 
 
 def test_gpx_contains_route_points() -> None:

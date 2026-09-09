@@ -3,8 +3,8 @@ from __future__ import annotations
 import networkx as nx
 import pytest
 
-from runroute.models import Coordinate, ElevationPreference, RoutePreferences, SurfacePreference
-from runroute.osm import _nearest_node, collapse_graph, measure_route
+from runline.models import Coordinate, ElevationPreference, RoutePreferences, SurfacePreference
+from runline.osm import _nearest_node, collapse_graph, measure_route
 
 
 def _graph() -> nx.MultiDiGraph:

@@ -1,4 +1,4 @@
-# Run Route Lab
+# Runline
 
 Deterministic running-loop generation over OpenStreetMap data. The prototype
 optimizes for target distance and low interruption count, then lets the runner
@@ -34,7 +34,7 @@ routes, coordinates, map caches, and output files are also ignored.
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/runroute generate \
+.venv/bin/runline generate \
   --address "Legacy Elementary School, Ashburn, Virginia" \
   --distance 5 \
   --surface mixed \
@@ -49,7 +49,7 @@ comparison (the street tiles require an internet connection).
 ## Frontend
 
 ```bash
-.venv/bin/runroute-web
+.venv/bin/runline-web
 ```
 
 Open `http://127.0.0.1:8765`. The map-first interface can geocode an address,
