@@ -1,7 +1,7 @@
 const state = {
   surface: "mixed",
   elevation: "balanced",
-  drive: 1,
+  drive: 0,
   routes: [],
   layers: [],
   selected: 0,
