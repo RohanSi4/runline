@@ -16,7 +16,7 @@ use in a watch-compatible route app.
 - Prefer flat, balanced, or hilly candidates using cached Copernicus DEM
   elevation from Open-Meteo.
 - Export GPX, GeoJSON, and a JSON score breakdown.
-- Benchmark 3, 5, 8, and 12 mile routes in Charlottesville and Ashburn.
+- Benchmark 3, 5, 8, and 12 mile routes in Charlottesville.
 
 With `--drive-radius 1`, `3`, or `5`, the engine compares `start here` against
 nearby mapped trailheads, publicly accessible parking, and parks. It calculates
@@ -35,12 +35,16 @@ routes, coordinates, map caches, and output files are also ignored.
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/runline generate \
-  --address "Legacy Elementary School, Ashburn, Virginia" \
+  --latitude 38.035556 --longitude -78.503333 \
   --distance 5 \
   --surface mixed \
   --elevation balanced \
-  --output output/legacy-5
+  --output output/rotunda-5
 ```
+
+That start is the Rotunda at UVA, which is also what the web app prefills.
+`--address` works too and is geocoded through Nominatim, but coordinates skip
+that call and avoid its rate limit. The start has to sit inside a shipped area.
 
 The command writes `option-1.gpx`, `option-2.gpx`, `option-3.gpx`,
 `routes.geojson`, `routes.json`, and a self-contained `preview.html` route
@@ -59,7 +63,7 @@ Areas are declared in `config/areas.json` and built into `graphs/`:
 ```bash
 .venv/bin/python scripts/build_graphs.py             # build anything missing
 .venv/bin/python scripts/build_graphs.py --force     # rebuild everything
-.venv/bin/python scripts/build_graphs.py --only richmond-va
+.venv/bin/python scripts/build_graphs.py --only charlottesville-va
 ```
 
 The script writes one gzipped pickle per area plus `graphs/manifest.json`, all
@@ -110,12 +114,18 @@ four most recent origin/surface combinations. Start points are rounded to about
 cover the rounding. Warm instances answer a repeat 3 mile request in roughly
 half the time of a first one.
 
-Elevation is baked into the graph at build time where possible, since the
-per-request Open-Meteo cache lives in `/tmp` and is wiped between serverless
-instances. Open-Meteo rate-limits bulk backfills, so the bake is best effort:
-if it fails the build still succeeds and the app falls back to fetching
-elevation per request. Rerun `--force` later to bake it; the cell cache in
-`build-cache/` resumes where it left off.
+The build tries to bake elevation into the graph, since the per-request
+Open-Meteo cache lives in `/tmp` and is wiped between serverless instances.
+Open-Meteo rate-limits bulk backfills, so the bake is best effort: if it fails
+the build still succeeds and the app falls back to fetching elevation per
+request.
+
+**The shipped Charlottesville graph is not baked.** None of its 40,209 nodes
+carry an elevation, so every request pays for live elevation lookups. Routes
+are correct and report full elevation coverage, but this is on the critical
+path and is the next latency win after per-request graph preparation. Rerun
+`--force` to attempt the bake again; the cell cache in `build-cache/` resumes
+where it left off.
 
 Locally, an address outside every shipped area still falls back to a live
 Overpass download and caches it under `cache/`. That fallback is disabled
