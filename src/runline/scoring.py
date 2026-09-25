@@ -8,11 +8,11 @@ from .models import ElevationPreference, RouteCandidate, RoutePreferences, Surfa
 @dataclass(frozen=True)
 class ScoreWeights:
     distance: float = 7.0
-    traffic_signals: float = 8.0
+    traffic_signals: float = 6.0
     major_crossings: float = 4.0
     surface: float = 2.5
     elevation: float = 1.5
-    repeated_segments: float = 8.0
+    repeated_segments: float = 5.0
     driving: float = 0.35
 
 

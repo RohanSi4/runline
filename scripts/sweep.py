@@ -28,6 +28,7 @@ from runline.osm import (
     prepare_core,
 )
 from runline.scoring import rank_candidates
+from bench import origins_from_private
 
 
 def describe(route, target):
@@ -43,12 +44,13 @@ def describe(route, target):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--origin", choices=("rotunda", "center"), default="rotunda")
+    parser.add_argument("--origin", default="rotunda", help="an origin id from scripts/bench.py")
     parser.add_argument("--distances", nargs="+", type=int, default=(3, 5, 8, 12))
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    origin = (Coordinate(38.035556, -78.503333) if args.origin == "rotunda"
-              else Coordinate(38.029306, -78.4766781))
+    entry = next(item for item in origins_from_private(ROOT / ".private/benchmarks.local.json")[0]
+                 if item["id"] == args.origin)
+    origin = Coordinate(entry["latitude"], entry["longitude"])
     results = []
     for miles in args.distances:
         preferences = RoutePreferences(miles)

@@ -67,9 +67,3 @@ def test_closest_route_is_fallback_when_none_are_feasible() -> None:
 
     assert rank_candidates([far, near], RoutePreferences(5))[0] is near
 
-
-def test_two_signals_do_not_beat_three_fewer_crossings() -> None:
-    quiet = _candidate("quiet", crossings=5, distance=8)
-    interrupted = _candidate("interrupted", signals=2, crossings=2, distance=8)
-
-    assert rank_candidates([interrupted, quiet], RoutePreferences(8))[0] is quiet

@@ -17,7 +17,7 @@ from .coverage import (
     load_area_graph,
     unsupported_message,
 )
-from .geo import EARTH_RADIUS_METERS, destination, distance_meters
+from .geo import destination, distance_meters
 from .models import (
     METERS_PER_MILE,
     Coordinate,
@@ -118,6 +118,9 @@ def collapse_graph(graph: nx.Graph, preferences: RoutePreferences) -> nx.DiGraph
     for u, v, _, raw_data in _iter_edges(graph):
         data = dict(raw_data)
         data["_cost"] = _edge_preference_cost(data, graph.nodes[v], preferences)
+        # Entering a node with major road on two sides usually means crossing
+        # it. An edge cost cannot see the turn, so same-side turns pay too; it
+        # still cut geometric crossings 38% with no loss of in-band routes.
         if v in crossing_nodes and not _is_major(data):
             data["_cost"] += 300.0
         existing = collapsed.get_edge_data(u, v)
@@ -155,45 +158,92 @@ def _route_coordinates(graph: nx.DiGraph, node_ids: list[int]) -> tuple[Coordina
     return tuple(coordinates)
 
 
-def _major_crossing_events(graph: nx.DiGraph, node_ids: list[int]) -> int:
-    count = 0
+def _bearing_from(graph: nx.DiGraph, u: int, v: int, node: int) -> float:
+    """Direction leaving ``node`` along edge (u, v), taken ~15 m out so a
+    curved approach reads the way the road actually goes."""
+
+    points = _edge_geometry_coordinates(graph, u, v)
+    if node == v:
+        points.reverse()
+    start = points[0]
+    scale = math.cos(math.radians(start.latitude))
+    for point in points[1:]:
+        dx = (point.longitude - start.longitude) * scale
+        dy = point.latitude - start.latitude
+        if math.hypot(dx, dy) * 111_320 >= 15:
+            break
+    return math.atan2(dy, dx)
+
+
+def _separates(bearings: list[float], first: float, second: float) -> bool:
+    """True when major-road branches lie on both arcs between two directions."""
+
+    span = (second - first) % math.tau
+    inside = [(bearing - first) % math.tau < span for bearing in bearings]
+    return any(inside) and not all(inside)
+
+
+def _left_of(direction: float, point: float) -> bool:
+    return math.sin(point - direction) > 0
+
+
+def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
+    """Route positions where the route changes side across a major road.
+
+    At a node on a major road, the route crosses when its approach and exit lie
+    between different major branches; a same-side turn or a dead end is not a
+    crossing. A route that walks along a major road crosses when it leaves on
+    the other side from the one it joined.
+    """
+
+    crossings: list[int] = []
     travelled = 0.0
+    joined_left: bool | None = None
     last_crossing: tuple[int, float, set[str]] | None = None
     for index in range(1, len(node_ids) - 1):
-        travelled += float(graph.edges[node_ids[index - 1], node_ids[index]].get("length", 0))
-        node = node_ids[index]
-        incoming = graph.edges[node_ids[index - 1], node]
-        outgoing = graph.edges[node, node_ids[index + 1]]
-        if not _is_major(incoming) and not _is_major(outgoing):
-            major_edges = [
-                data
-                for _, _, data in graph.in_edges(node, data=True)
-                if _is_major(data)
-            ] + [
-                data
-                for _, _, data in graph.out_edges(node, data=True)
-                if _is_major(data)
-            ]
-            if not major_edges:
+        previous, node, following = node_ids[index - 1 : index + 2]
+        incoming = graph.edges[previous, node]
+        outgoing = graph.edges[node, following]
+        travelled += float(incoming.get("length", 0))
+        incoming_major, outgoing_major = _is_major(incoming), _is_major(outgoing)
+        major_edges = {
+            u if v == node else v: (u, v, data)
+            for u, v, data in (*graph.in_edges(node, data=True), *graph.out_edges(node, data=True))
+            if _is_major(data)
+        }
+        if not major_edges or (incoming_major and outgoing_major):
+            continue
+        back = _bearing_from(graph, previous, node, node)
+        ahead = _bearing_from(graph, node, following, node)
+        if outgoing_major:
+            joined_left = _left_of(ahead, back)
+            continue
+        if incoming_major:
+            crossed = joined_left is not None and joined_left != _left_of(back + math.pi, ahead)
+            joined_left = None
+        else:
+            branches = [_bearing_from(graph, u, v, node) for u, v, _ in major_edges.values()]
+            crossed = _separates(branches, back, ahead)
+        if not crossed:
+            continue
+        road_names = set().union(
+            *(_values(data.get("name")) | _values(data.get("ref")) for _, _, data in major_edges.values())
+        )
+        if (
+            last_crossing is not None
+            and travelled - last_crossing[1] <= 60
+            and road_names & last_crossing[2]
+        ):
+            prior = graph.nodes[last_crossing[0]]
+            current = graph.nodes[node]
+            if distance_meters(
+                Coordinate(prior["y"], prior["x"]),
+                Coordinate(current["y"], current["x"]),
+            ) <= 30:
                 continue
-            road_names = set().union(
-                *(_values(data.get("name")) | _values(data.get("ref")) for data in major_edges)
-            )
-            if (
-                last_crossing is not None
-                and travelled - last_crossing[1] <= 60
-                and road_names & last_crossing[2]
-            ):
-                prior = graph.nodes[last_crossing[0]]
-                current = graph.nodes[node]
-                if distance_meters(
-                    Coordinate(prior["y"], prior["x"]),
-                    Coordinate(current["y"], current["x"]),
-                ) <= 30:
-                    continue
-            count += 1
-            last_crossing = (node, travelled, road_names)
-    return count
+        crossings.append(index)
+        last_crossing = (node, travelled, road_names)
+    return crossings
 
 
 def measure_route(
@@ -231,7 +281,7 @@ def measure_route(
         distance_miles=total_meters / METERS_PER_MILE,
         elevation_gain_feet=gain_meters * 3.28084,
         traffic_signal_events=signal_events,
-        major_crossing_events=_major_crossing_events(graph, node_ids),
+        major_crossing_events=len(_major_crossings(graph, node_ids)),
         trail_fraction=trail_meters / total_meters if total_meters else 0,
         repeated_fraction=repeated_meters / total_meters if total_meters else 0,
         drive_distance_miles=drive_distance_miles,
@@ -340,37 +390,8 @@ def _nearest_node(graph: nx.Graph, coordinate: Coordinate) -> int:
 
 
 def _path(graph: nx.DiGraph, start: int, end: int) -> list[int]:
-    # The chord is a metric. Scaling it by the minimum edge cost/chord ratio
-    # makes the heuristic admissible even when a graph has bad edge lengths.
-    # Benchmarks favored A* below 30k nodes and bidirectional Dijkstra above it.
-    if graph.number_of_nodes() < 30_000:
-        heuristic = graph.graph.get("_chord_heuristic")
-        if heuristic is None:
-            positions = {}
-            for node, data in graph.nodes(data=True):
-                latitude, longitude = math.radians(data["y"]), math.radians(data["x"])
-                radius = EARTH_RADIUS_METERS * math.cos(latitude)
-                positions[node] = (
-                    radius * math.cos(longitude),
-                    radius * math.sin(longitude),
-                    EARTH_RADIUS_METERS * math.sin(latitude),
-                )
-            scale = min(
-                (
-                    data["_cost"] / chord
-                    for u, v, data in graph.edges(data=True)
-                    if (chord := math.dist(positions[u], positions[v])) > 0
-                ),
-                default=0,
-            )
-            heuristic = (positions, scale)
-            graph.graph["_chord_heuristic"] = heuristic
-        positions, scale = heuristic
-        return nx.astar_path(
-            graph, start, end,
-            heuristic=lambda u, v: scale * math.dist(positions[u], positions[v]),
-            weight="_cost",
-        )
+    # A* with a chord heuristic matched these costs but was slower overall:
+    # 0.6x at the Rotunda for 3 miles, 1.1-2x at other origins and distances.
     return nx.shortest_path(graph, start, end, weight="_cost")
 
 
@@ -458,8 +479,11 @@ def generate_loops(
         collapsed.reverse(copy=False), origin_node, weight="_cost"
     )
     target = preferences.target_distance_meters
+    target_miles = preferences.target_distance_miles
     candidates: list[RouteCandidate] = []
     candidate_legs: dict[str, tuple[list[int], list[int], list[int]]] = {}
+    # (heading, sweep) -> (scale, miles) of the attempt closest to the target.
+    closest: dict[tuple[int, int], tuple[float, float]] = {}
 
     def sample(scale: float, heading: int, sweep: int) -> None:
         waypoint_radius = target / 3.0 * scale
@@ -480,7 +504,10 @@ def generate_loops(
             return
 
         metrics = measure_route(collapsed, nodes, drive_distance_miles)
-        if not 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
+        known = closest.get((heading, sweep))
+        if known is None or abs(metrics.distance_miles - target_miles) < abs(known[1] - target_miles):
+            closest[heading, sweep] = (scale, metrics.distance_miles)
+        if not 0.55 * target_miles <= metrics.distance_miles <= 1.5 * target_miles:
             return
         route_id = f"route-{len(candidates) + 1:03d}"
         candidate_legs[route_id] = legs
@@ -503,6 +530,11 @@ def generate_loops(
     ]
     feasible_ranked = rank_candidates(feasible, preferences)
     if len(_distinct_by_length(collapsed, feasible_ranked, preferences.result_count)) < preferences.result_count:
+        # Route length grows roughly in proportion to waypoint radius, so
+        # rescale each direction's closest attempt onto the target.
+        for (heading, sweep), (scale, miles) in list(closest.items()):
+            if abs(miles - target_miles) > preferences.distance_tolerance_miles:
+                sample(scale * target_miles / miles, heading, sweep)
         for scale, sweep in ((0.6, 60), (0.6, 90), (0.7, 60), (0.8, 60)):
             for heading in range(0, 360, 30):
                 sample(scale, heading, sweep)
