@@ -1,0 +1,1002 @@
+[
+  {
+    "miles": 3,
+    "nodes": [
+      220653968,
+      220640746,
+      8620171458
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8465075704,
+      8465087928,
+      8171630229
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8465083549,
+      3327829917,
+      3327829912
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      3498343515,
+      3498343513,
+      6152803517
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8659502445,
+      8639252136,
+      8463683746
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8709740874,
+      5800404623,
+      8709740875
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      9101883342,
+      6896882758,
+      6896882757
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      6896882758,
+      6896882757,
+      8674525227
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      10905829108,
+      3427857185,
+      10905829111
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8171630229,
+      8465087928,
+      8465075704
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8620171458,
+      220640746,
+      220653968
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      12042617020,
+      12042702703,
+      12042617001
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      10905829110,
+      206078556,
+      10905829108
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      8822252867,
+      8822252870,
+      8822252871
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      6910559033,
+      6898741877,
+      6910559029
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      4467148074,
+      3894593289,
+      6900636165
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      6900636165,
+      3894593289,
+      4467148074
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      12164575751,
+      12164575752,
+      12164575753
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      10905829111,
+      3427857185,
+      10905829108
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      8709740875,
+      5800404623,
+      8709740874
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      13159942339,
+      13159942340,
+      3643511764
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      13159942340,
+      3643511764,
+      1549877828
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      220658159,
+      13940725811,
+      13940725812
+    ],
+    "proxy": true,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      8822252882,
+      10905812460,
+      8822252885
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      10905829108,
+      206078556,
+      10905829110
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      10905829110,
+      3427857187,
+      10905829109
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      8112545607,
+      7952267057,
+      8112545608
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      7952267057,
+      8112545608,
+      3355293936
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      3355293938,
+      7952267072,
+      7952267071
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 5,
+    "nodes": [
+      7952267072,
+      7952267071,
+      7952267073
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8596291903,
+      8596291910,
+      8615010610
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8191256656,
+      8191256673,
+      8191256671
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8191256673,
+      8191256671,
+      11177869668
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8619672624,
+      8191256670,
+      8191256668
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8191256670,
+      8191256668,
+      8561252985
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8561252985,
+      8191256668,
+      8191256670
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8191256668,
+      8191256670,
+      8619672624
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      7952267073,
+      7952267071,
+      7952267072
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      7952267071,
+      7952267072,
+      3355293938
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      3327829912,
+      3327829917,
+      8465083549
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      7955756056,
+      7952267052,
+      7952267053
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      7952267052,
+      7952267053,
+      8618642932
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8255349125,
+      8255349127,
+      8255349126
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8109536841,
+      8109536844,
+      8109536819
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      8822252885,
+      10905812460,
+      8822252882
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 8,
+    "nodes": [
+      10905829109,
+      3427857187,
+      10905829110
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 12,
+    "nodes": [
+      205989252,
+      205974406,
+      205974373
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 12,
+    "nodes": [
+      8561091567,
+      220653686,
+      220653227
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 12,
+    "nodes": [
+      206030986,
+      205622418,
+      205938088
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 12,
+    "nodes": [
+      9276522103,
+      3119347031,
+      9057279966
+    ],
+    "proxy": true,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      206025239,
+      4467148034,
+      6836297308
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      4467148034,
+      6836297308,
+      3465940134
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      6836297308,
+      3465940134,
+      9418367760
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      3465940134,
+      9418367760,
+      8589411479
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      9418367760,
+      8589411479,
+      2120132385
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8589411479,
+      2120132385,
+      4467158921
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      2120132385,
+      4467158921,
+      8589420630
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      4467158921,
+      8589420630,
+      8589420631
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8589420630,
+      8589420631,
+      8589420630
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8589420631,
+      8589420630,
+      8589420625
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8589420630,
+      8589420625,
+      8589420626
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8589420625,
+      8589420626,
+      3487327263
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8589420626,
+      3487327263,
+      8899439004
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      3487327263,
+      8899439004,
+      8672158134
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8899439004,
+      8672158134,
+      8672158135
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8672158134,
+      8672158135,
+      8674303327
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8672158135,
+      8674303327,
+      8899439003
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8674303327,
+      8899439003,
+      8618268168
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8899439003,
+      8618268168,
+      8618268161
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8618268168,
+      8618268161,
+      8618268162
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8618268161,
+      8618268162,
+      8618268160
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8618268162,
+      8618268160,
+      3466090356
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8618268160,
+      3466090356,
+      4467148074
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      3466090356,
+      4467148074,
+      4467148204
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      4467148074,
+      4467148204,
+      6152776872
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      4467148204,
+      6152776872,
+      8618604117
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      6152776872,
+      8618604117,
+      8674353079
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8618604117,
+      8674353079,
+      8674507859
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8674353079,
+      8674507859,
+      8674507883
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8674507859,
+      8674507883,
+      8674507868
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8674507883,
+      8674507868,
+      9101950715
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8674507868,
+      9101950715,
+      9101950716
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      9101950715,
+      9101950716,
+      8899434166
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      9101950716,
+      8899434166,
+      13534217987
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8899434166,
+      13534217987,
+      8444604971
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      220640746,
+      8620171458,
+      8620171456
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8620171458,
+      8620171456,
+      13534217988
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8620171456,
+      13534217988,
+      13534217989
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      13534217988,
+      13534217989,
+      9421421167
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      13534217989,
+      9421421167,
+      4467156987
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      9421421167,
+      4467156987,
+      4467158689
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      4467156987,
+      4467158689,
+      9033588323
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      2542343490,
+      2542343508,
+      8465075704
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      2542343508,
+      8465075704,
+      8465087928
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8465087928,
+      8171630229,
+      8465087927
+    ],
+    "proxy": false,
+    "geometry_crossing": true
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8171630229,
+      8465087927,
+      8465075705
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8465087927,
+      8465075705,
+      8659725472
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      8465075705,
+      8659725472,
+      9429742358
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      9429742358,
+      9101872789,
+      8465087926
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  },
+  {
+    "miles": 3,
+    "nodes": [
+      9101872789,
+      8465087926,
+      8465086950
+    ],
+    "proxy": false,
+    "geometry_crossing": false
+  }
+]
