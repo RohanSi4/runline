@@ -15,8 +15,12 @@ The ranking counts "major crossings", so the count has to mean something.
 Labels come from `scripts/audit_crossings.py`: the route's 15 m corridor is
 cut along every major-road centreline, and a crossing is the route moving from
 one piece to another. Same-side turns stay in one piece, dead ends do not cut
-it, and grade-separated passes are excluded. The label never looks at the
-rule it grades.
+it, and grade-separated passes are excluded. The label never calls the turn
+rule it grades. Both methods use the same shipped OSM graph and definition
+of a major road, so this is an independent geometric interpretation of those
+map data, not field-verified pedestrian crossing truth. The hand-labelled
+straight crossing and same-side turn in `tests/test_audit_crossings.py` check
+the geometric interpretation directly.
 
 The round-1 audit used Shapely's `crosses`, which is also true when a route
 touches a road's interior vertex and turns back to the same side, so every
@@ -29,46 +33,60 @@ Event-level agreement on the 96 top-3 routes of 8 origins x 4 distances:
 | --- | ---: | ---: |
 | Any node touching a major road (`c9a25de`) | .727 | .797 |
 | Same, plus same-name merge within 30 m (round 1) | .777 | .797 |
-| Side change: approach and exit between different major branches, or leaving a major road on the other side from where it was joined (now `_major_crossings`) | **.916** | **.960** |
+| Side change: approach and exit between different major branches, or leaving a major road on the other side from where it was joined (now `_major_crossings`) | **.912** | **.966** |
 
 Only the side rule meets the agreed 0.9/0.9 bar. The remaining misses are
 interchange ramps (`trunk_link` is not major), long walks along a primary
 road, and two path crossings that share no node with the road. The
-`tests/fixtures/crossing_audit.json` slices keep the rule above 0.9/0.9. Sol's
-rule scores .852/.738 on the same fixture, so the test does catch a
-regression. At a 60 m corridor the label hid real crossings, e.g. on Rugby
+`tests/fixtures/crossing_audit.json` stores crossing positions on 141 route
+slices (124 geometric events). The test matches positions and gets 117 true
+positives, 7 false positives, and 7 misses (.944/.944), keeping the rule above
+0.9/0.9. At a 60 m corridor the label hid a mapped side change, e.g. on Rugby
 Road at Beta Bridge, where the major-road segment ends nearby.
 
 ## Result
 
-Totals over each variant's served cases. "Real crossings" are geometric labels.
+Totals over each variant's served cases. Crossing counts are geometric labels.
 
-| Variant | Cases served | In-band top 3 | Real crossings | Signals | Mean repeated | Mean error, mi |
+| Variant | Cases served | In-band top 3 | Geometric crossings | Signals | Mean repeated | Mean error, mi |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `c9a25de` | 25 | 40/75 | 279 | 31 | 17.4% | .403 |
 | round 1 (Sol) | 32 | 92/96 | 240 | 37 | 11.9% | .116 |
 | final | 32 | **96/96** | **200** | **27** | 14.4% | .101 |
 
-On the 25 cases the baseline serves, real crossings fell 279 -> 130 and
-in-band routes rose 40 -> 75 of 75.
+On the 25 cases the baseline serves, geometric crossings fell 279 -> 130 and
+in-band routes rose 40 -> 75 of 75. The final version also serves seven
+additional 12-mile cases.
 
-| Miles | In-band, base -> final | Real crossings, base -> final (served cases) | Signals | Repeated |
+| Miles | In-band, base -> final | Geometric crossings, base -> final (served cases) | Signals | Repeated |
 | ---: | --- | --- | --- | --- |
 | 3 | 15/24 -> 24/24 | 28 -> 22 | 4 -> 7 | .199 -> .153 |
 | 5 | 14/24 -> 24/24 | 94 -> 33 | 14 -> 1 | .130 -> .165 |
 | 8 | 10/24 -> 24/24 | 134 -> 63 | 11 -> 8 | .188 -> .107 |
-| 12 | 1/3 (1 case) -> 24/24 (8 cases) | 23 -> 12 | 2 -> 0 | .213 -> .191 |
+| 12 | 1/3 -> 3/3 (1 paired case) | 23 -> 12 | 2 -> 0 | .213 -> .191 |
 
 The 3 mile signal and 5 mile repetition increases come from replacing
 out-of-band routes with in-band ones, which is the agreed ranking order.
 
-TIMING_TABLE
+Median seconds over three repeats per case, paired on the 25 cases served by
+the baseline. Preparation and generation are timed separately; the 12-mile
+row has one paired case.
+
+| Miles | Generation, base -> final | End to end, base -> final |
+| ---: | ---: | ---: |
+| 3 | .711 -> .729 | .803 -> .732 |
+| 5 | 1.375 -> 1.456 | 1.428 -> 1.551 |
+| 8 | 2.173 -> 2.300 | 2.204 -> 2.372 |
+| 12 | 3.100 -> 3.505 | 3.101 -> 3.505 |
+
+Across each version's served cases, median generation time is 1.405 s for
+the baseline (25 cases) and 1.791 s for the final version (32 cases).
 
 ## Decisions, each measured against the final code
 
 Paired over the 32 cases; each row removes or changes one thing.
 
-| Change from final | Real crossings | Signals | Repeated | Error | In-band |
+| Change from final | Geometric crossings | Signals | Repeated | Error | In-band |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | none | 200 | 27 | 14.4% | .101 | 96/96 |
 | no 300 m crossing charge | 324 | 33 | 13.0% | .105 | 96/96 |
@@ -80,7 +98,7 @@ Paired over the 32 cases; each row removes or changes one thing.
 | no radius rescaling (fixed refinement only) | 211 | 37 | 13.5% | .117 | 92/96 |
 | radius rescaling only | 226 | 47 | 17.3% | .128 | 91/96 |
 
-- **Crossing charge ships.** It cuts real crossings 38% (removing it adds
+- **Crossing charge ships.** It cuts geometric crossings 38% (removing it adds
   crossings in 25 of 32 cases, removes them in 3) with no loss of in-band
   routes, clearing the agreed 20% bar.
 - **Radius rescaling ships.** At `ring_180` every first-pass route was
