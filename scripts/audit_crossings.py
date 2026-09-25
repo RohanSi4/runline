@@ -1,8 +1,22 @@
-"""Build reproducible crossing labels from the shipped graph's local geometry.
+"""Label major-road crossings from geometry, independently of the route proxy.
 
-The label is an interior intersection of a 15 m route chord with a major-road
-line. Route edges tagged major are excluded. This is a geometric label, not a
-claim that every OSM road intersection has a pedestrian crossing facility.
+The route's 15 m corridor is cut along every major-road centreline from the
+full shipped area, leaving out bridges and tunnels the route never touches.
+The pieces are the local "sides" of those roads, and a crossing is the route
+moving from one piece to another, sampled every 4 m. Same-side turns stay in
+one piece and dead-end roads do not cut the corridor. A move made on a route
+bridge/tunnel, or under a major-road bridge, does not count unless the route
+touches the major road. Changes within 40 m of travel are one event if they
+end on a different side, so a divided road counts once.
+
+The corridor is narrow on purpose: at 60 m, sides joined around the end of a
+major-road segment tens of metres away (Rugby Road at Beta Bridge), hiding
+real crossings.
+
+This labels crossings of mapped centrelines. It does not know whether a
+crossing is marked, signalled, or busy.
+
+    .venv/bin/python scripts/audit_crossings.py   # rewrites the test fixture
 """
 
 from __future__ import annotations
@@ -11,128 +25,204 @@ import json
 import math
 import os
 import sys
-from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
+if __name__ == "__main__":
+    sys.path.insert(0, str(ROOT / "src"))
 os.environ["RUNLINE_ALLOW_OSM_DOWNLOAD"] = "0"
 
+import numpy as np
+import shapely
 from shapely.geometry import LineString
+from shapely.ops import unary_union
 
-from runline.geo import distance_meters
-from runline.models import Coordinate, RoutePreferences
-from runline.osm import (
-    _edge_geometry_coordinates,
-    _is_major,
-    generate_loops,
-    graph_radius_meters,
-    prepare_core,
-)
+CORRIDOR_METERS = 15.0
+STEP_METERS = 4.0
+MERGE_METERS = 40.0
+_GRADE = {"bridge", "tunnel"}
+_index = None
 
 
-def local_points(graph, u, v, node):
-    points = _edge_geometry_coordinates(graph, u, v)
-    if v == node:
-        points.reverse()
-    center = graph.nodes[node]
-    scale = math.cos(math.radians(center["y"])) * 111_320
-    return [((point.longitude - center["x"]) * scale,
-             (point.latitude - center["y"]) * 111_320) for point in points]
+def _separated(data) -> bool:
+    from runline.osm import _values
+
+    return any(_values(data.get(key)) - {"no"} for key in _GRADE)
 
 
-def direction(points, metres=15):
-    travelled = 0.0
-    for first, second in zip(points, points[1:]):
-        length = math.dist(first, second)
-        if length and travelled + length >= metres:
-            fraction = (metres - travelled) / length
-            return (first[0] + fraction * (second[0] - first[0]),
-                    first[1] + fraction * (second[1] - first[1]))
-        travelled += length
-    return points[-1]
+def _major_index():
+    """Projected major-road lines of the whole shipped area, with their ends
+    and whether they are bridges or tunnels."""
 
+    global _index
+    if _index is None:
+        from runline.coverage import areas, load_area_graph
+        from runline.osm import _is_major
 
-def geometry_label(graph, a, b, c, nearby_major_nodes):
-    if _is_major(graph.edges[a, b]) or _is_major(graph.edges[b, c]):
-        return False
-    before = direction(local_points(graph, a, b, b))
-    after = direction(local_points(graph, b, c, b))
-    if math.dist(before, after) < 1:
-        return False
-    route = LineString([before, (0, 0), after])
-    for road_node in nearby_major_nodes:
-        directions = []
-        visited = set()
-        for u, v, data in list(graph.in_edges(road_node, data=True)) + list(graph.out_edges(road_node, data=True)):
-            other = u if v == road_node else v
-            if other in visited or not _is_major(data):
+        area = areas()[0]
+        graph = load_area_graph(area)
+        scale = (math.cos(math.radians(area.center.latitude)) * 111_320, 111_320)
+        origin = (area.center.longitude, area.center.latitude)
+        lines, ends, seen = [], [], set()
+        for u, v, _, data in graph.edges(keys=True, data=True):
+            if not _is_major(data) or (min(u, v), max(u, v)) in seen:
                 continue
-            visited.add(other)
-            points = local_points(graph, u, v, road_node)
-            outward = direction(points)
-            center = graph.nodes[b]
-            road = graph.nodes[road_node]
-            scale = math.cos(math.radians(center["y"])) * 111_320
-            offset = ((road["x"] - center["x"]) * scale,
-                      (road["y"] - center["y"]) * 111_320)
-            directions.append((offset[0] + outward[0], offset[1] + outward[1], offset))
-        for i, first in enumerate(directions):
-            for second in directions[i + 1:]:
-                center = first[2]
-                v1 = (first[0] - center[0], first[1] - center[1])
-                v2 = (second[0] - center[0], second[1] - center[1])
-                norms = math.hypot(*v1) * math.hypot(*v2)
-                if norms == 0 or (v1[0] * v2[0] + v1[1] * v2[1]) / norms > -.7:
-                    continue
-                major = LineString([(first[0], first[1]), center,
-                                    (second[0], second[1])])
-                if route.crosses(major):
-                    return True
-    return False
+            seen.add((min(u, v), max(u, v)))
+            geometry = data.get("geometry")
+            points = (list(geometry.coords) if geometry is not None else
+                      [(graph.nodes[n]["x"], graph.nodes[n]["y"]) for n in (u, v)])
+            lines.append(LineString([((x - origin[0]) * scale[0], (y - origin[1]) * scale[1])
+                                     for x, y in points]))
+            ends.append((u, v, _separated(data)))
+        _index = (shapely.STRtree(lines), lines, ends, origin, scale)
+    return _index
+
+
+def _samples(graph, node_ids):
+    """Points every ~4 m, tagged with the route edge they lie on."""
+
+    from runline.osm import _edge_geometry_coordinates
+
+    _, _, _, origin, scale = _major_index()
+    xs, ys, edge_index, lines = [], [], [], []
+    for i, (u, v) in enumerate(zip(node_ids, node_ids[1:])):
+        points = [((c.longitude - origin[0]) * scale[0], (c.latitude - origin[1]) * scale[1])
+                  for c in _edge_geometry_coordinates(graph, u, v)]
+        line = LineString(points)
+        lines.append(line)
+        count = max(1, round(line.length / STEP_METERS))
+        for k in range(count):
+            point = line.interpolate((k + 0.5) * line.length / count)
+            xs.append(point.x)
+            ys.append(point.y)
+            edge_index.append(i)
+    return np.array(xs), np.array(ys), edge_index, lines
+
+
+def side_trace(graph, node_ids):
+    """(side piece id or None, route edge index, travel metres) per sample."""
+
+    tree, majors, ends, _, _ = _major_index()
+    xs, ys, edge_index, lines = _samples(graph, node_ids)
+    corridor = unary_union(lines).buffer(CORRIDOR_METERS)
+    # A bridge or tunnel the route shares a node with is at the route's grade.
+    on_route = set(node_ids)
+    nearby = [majors[i] for i in tree.query(corridor)
+              if not ends[i][2] or ends[i][0] in on_route or ends[i][1] in on_route]
+    pieces = corridor.difference(unary_union(nearby).buffer(1.0)) if nearby else corridor
+    pieces = list(getattr(pieces, "geoms", [pieces]))
+    side = np.full(len(xs), -1)
+    for number, piece in enumerate(pieces):
+        side[shapely.contains_xy(piece, xs, ys)] = number
+    travel = np.concatenate([[0], np.cumsum(np.hypot(np.diff(xs), np.diff(ys)))])
+    return [(None if s < 0 else int(s), e, float(t)) for s, e, t in zip(side, edge_index, travel)]
+
+
+def _changes(graph, node_ids, trace):
+    """Side changes as (travel, from, to, last edge before, first edge after)."""
+
+    from runline.osm import _is_major
+
+    separated = [_separated(graph.edges[u, v]) for u, v in zip(node_ids, node_ids[1:])]
+    touches = [any(_is_major(data) for data in graph.succ[node].values()) for node in node_ids]
+    changes, previous = [], None
+    for side, edge, travel in trace:
+        if side is None:
+            continue
+        if previous is not None and side != previous[0]:
+            # Passing over or under on a route bridge/tunnel is not a crossing,
+            # unless the route touches the major road on the way.
+            if not any(separated[previous[1]:edge + 1]) or any(touches[previous[1] + 1:edge + 1]):
+                changes.append((travel, previous[0], side, previous[1], edge))
+        previous = (side, edge)
+    return changes
+
+
+def label_events(graph, node_ids) -> list[tuple[int, int]]:
+    """Geometric crossings as (first, last) route positions of the nodes involved."""
+
+    changes = _changes(graph, node_ids, side_trace(graph, node_ids))
+    events, cluster = [], []
+    for change in changes + [None]:
+        if cluster and (change is None or change[0] - cluster[-1][0] > MERGE_METERS):
+            if cluster[0][1] != cluster[-1][2]:
+                first = cluster[0][3] + 1
+                events.append((first, max(first, cluster[-1][4])))
+            cluster = []
+        if change is not None:
+            cluster.append(change)
+    return events
+
+
+def geometric_crossings(graph, node_ids) -> int:
+    return len(label_events(graph, node_ids))
+
+
+def match(proxy: list[int], labels: list[tuple[int, int]]) -> tuple[int, int, int]:
+    """(true positive, false positive, false negative) events, one node of slack."""
+
+    remaining = list(labels)
+    tp = 0
+    for position in proxy:
+        hit = next((event for event in remaining if event[0] - 1 <= position <= event[1] + 1), None)
+        if hit:
+            remaining.remove(hit)
+            tp += 1
+    return tp, len(proxy) - tp, len(remaining)
+
+
+def windows(graph, node_ids, labels):
+    """Route slices around every node on a major road, each with its label count.
+
+    Slices extend three nodes past any major-road stretch so a crossing that
+    walks along the road keeps the side it joined from.
+    """
+
+    from runline.osm import _is_major
+
+    spans = [(first - 3, last + 3) for first, last in labels]
+    for j, node in enumerate(node_ids):
+        if any(_is_major(data) for data in graph.succ[node].values()):
+            spans.append((j - 3, j + 3))
+    merged = []
+    for lo, hi in sorted((max(lo, 0), min(hi, len(node_ids) - 1)) for lo, hi in spans):
+        if merged and lo <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], hi)
+        else:
+            merged.append([lo, hi])
+    return [{"nodes": list(node_ids[lo:hi + 1]),
+             "geometry_crossings": sum(lo <= first and last <= hi for first, last in labels)}
+            for lo, hi in merged]
 
 
 def main():
-    origin = Coordinate(38.035556, -78.503333)
-    positives, negatives = [], []
-    seen = set()
-    for miles in (3, 5, 8, 12):
-        preference = RoutePreferences(miles, result_count=10)
-        graph = prepare_core(origin, graph_radius_meters(preference), ROOT / "cache/audit", preference)
-        major_nodes = set()
-        for u, v, data in graph.edges(data=True):
-            if _is_major(data):
-                major_nodes.update((u, v))
-        bins = defaultdict(list)
-        for node in major_nodes:
-            data = graph.nodes[node]
-            bins[(round(data["y"] * 1000), round(data["x"] * 1000))].append(node)
-        for route in generate_loops(graph, origin, preference):
-            for a, b, c in zip(route.node_ids, route.node_ids[1:], route.node_ids[2:]):
-                if (a, b, c) in seen:
-                    continue
-                seen.add((a, b, c))
-                data = graph.nodes[b]
-                cell = (round(data["y"] * 1000), round(data["x"] * 1000))
-                nearby = [node for dy in (-1, 0, 1) for dx in (-1, 0, 1)
-                          for node in bins.get((cell[0] + dy, cell[1] + dx), ())
-                          if distance_meters(Coordinate(data["y"], data["x"]),
-                                             Coordinate(graph.nodes[node]["y"], graph.nodes[node]["x"])) <= 30]
-                if not nearby:
-                    continue
-                proxy = b in major_nodes and not _is_major(graph.edges[a, b]) and not _is_major(graph.edges[b, c])
-                label = geometry_label(graph, a, b, c, nearby)
-                item = {"miles": miles, "nodes": [a, b, c], "proxy": proxy, "geometry_crossing": label}
-                (positives if proxy else negatives).append(item)
-    sample = positives[:50] + negatives[:50]
-    output = ROOT / "tests/fixtures/crossing_audit.json"
-    output.parent.mkdir(exist_ok=True)
-    output.write_text(json.dumps(sample, indent=2) + "\n")
-    tp = sum(item["proxy"] and item["geometry_crossing"] for item in sample)
-    fp = sum(item["proxy"] and not item["geometry_crossing"] for item in sample)
-    fn = sum(not item["proxy"] and item["geometry_crossing"] for item in sample)
-    print(f"sample={len(sample)} positive_pool={len(positives)} negative_pool={len(negatives)} "
-          f"tp={tp} fp={fp} fn={fn} precision={tp/(tp+fp):.3f} recall={tp/(tp+fn):.3f}")
+    from runline.geo import destination
+    from runline.models import Coordinate, RoutePreferences
+    from runline.osm import _major_crossings, generate_loops, graph_radius_meters, prepare_core
+
+    center = Coordinate(38.029306, -78.4766781)
+    origins = [Coordinate(38.035556, -78.503333), center] + [
+        destination(center, bearing, 2_500) for bearing in range(0, 360, 60)
+    ]
+    totals = [0, 0, 0]
+    slices = []
+    for origin in origins:
+        for miles in (3, 5, 8, 12):
+            preference = RoutePreferences(miles)
+            graph = prepare_core(origin, graph_radius_meters(preference), ROOT / "cache/audit", preference)
+            for route in generate_loops(graph, origin, preference):
+                nodes = list(route.node_ids)
+                labels = label_events(graph, nodes)
+                for i, value in enumerate(match(_major_crossings(graph, nodes), labels)):
+                    totals[i] += value
+                slices += [dict(item, miles=miles) for item in windows(graph, nodes, labels)]
+    tp, fp, fn = totals
+    print(f"routes, event level: tp={tp} fp={fp} fn={fn} "
+          f"precision={tp / (tp + fp):.3f} recall={tp / (tp + fn):.3f}")
+    unique = list({tuple(item["nodes"]): item for item in slices}.values())
+    (ROOT / "tests/fixtures/crossing_audit.json").write_text(json.dumps(unique) + "\n")
+    print(f"fixture: {len(unique)} route slices, "
+          f"{sum(item['geometry_crossings'] for item in unique)} geometric crossings")
 
 
 if __name__ == "__main__":

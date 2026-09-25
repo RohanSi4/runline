@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import resource
 import statistics
@@ -31,6 +32,14 @@ def origins_from_private(path: Path) -> tuple[list[dict], list[str]]:
     origins = [{"id": "rotunda", "latitude": 38.035556, "longitude": -78.503333}]
     center = json.loads((ROOT / "graphs/manifest.json").read_text())["areas"][0]
     origins.append({"id": "map_center", "latitude": center["latitude"], "longitude": center["longitude"]})
+    # Public, deterministic spread: 2.5 km from the centre every 60 degrees.
+    for bearing in range(0, 360, 60):
+        radians, lat = math.radians(bearing), math.radians(center["latitude"])
+        origins.append({
+            "id": f"ring_{bearing:03d}",
+            "latitude": center["latitude"] + 2_500 * math.cos(radians) / 111_320,
+            "longitude": center["longitude"] + 2_500 * math.sin(radians) / (111_320 * math.cos(lat)),
+        })
     public = json.loads((ROOT / "config/benchmarks.public.json").read_text())
     private = json.loads(path.read_text()) if path.exists() else {}
     entries = private.get("origins", []) if isinstance(private, dict) else private
@@ -63,6 +72,9 @@ def main() -> None:
     from runline.coverage import CoverageError
     from runline.models import Coordinate, RoutePreferences
     from runline.osm import generate_loops, graph_radius_meters, prepare_core
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from audit_crossings import geometric_crossings
 
     def shared_fraction(first, second, graph):
         def lengths(route):
@@ -109,6 +121,7 @@ def main() -> None:
                         "abs_error_miles": abs(route.metrics.distance_miles - miles),
                         "signals": route.metrics.traffic_signal_events,
                         "crossings_proxy": route.metrics.major_crossing_events,
+                        "crossings_geometry": geometric_crossings(graph, list(route.node_ids)),
                         "repeated_fraction": route.metrics.repeated_fraction,
                     } for route in routes],
                     "generation_p50_s": statistics.median(generation),
