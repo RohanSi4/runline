@@ -17,6 +17,7 @@ from runline.models import (
 )
 from runline.osm import (
     _distinct_by_length,
+    _major_crossings,
     _nearest_node,
     _routable_core,
     collapse_graph,
@@ -120,13 +121,17 @@ def test_crossing_count_against_geometry_labels() -> None:
     fixture = Path(__file__).parent / "fixtures/crossing_audit.json"
     slices = json.loads(fixture.read_text())
     graph = collapse_graph(load_area_graph(areas()[0]), RoutePreferences(3))
+    # Match positions, not just counts: an extra crossing cannot cancel a miss.
+    from scripts.audit_crossings import match
+
     counted = labelled = agreed = 0
     for route_slice in slices:
-        count = measure_route(graph, route_slice["nodes"]).major_crossing_events
-        label = route_slice["geometry_crossings"]
-        counted += count
-        labelled += label
-        agreed += min(count, label)
+        proxy = _major_crossings(graph, route_slice["nodes"])
+        labels = [tuple(event) for event in route_slice["events"]]
+        tp, fp, fn = match(proxy, labels)
+        counted += tp + fp
+        labelled += tp + fn
+        agreed += tp
 
     assert labelled >= 100
     assert agreed / counted >= 0.9

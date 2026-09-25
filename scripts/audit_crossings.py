@@ -30,7 +30,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 if __name__ == "__main__":
     sys.path.insert(0, str(ROOT / "src"))
-os.environ["RUNLINE_ALLOW_OSM_DOWNLOAD"] = "0"
 
 import numpy as np
 import shapely
@@ -191,11 +190,13 @@ def windows(graph, node_ids, labels):
         else:
             merged.append([lo, hi])
     return [{"nodes": list(node_ids[lo:hi + 1]),
-             "geometry_crossings": sum(lo <= first and last <= hi for first, last in labels)}
+             "events": [[first - lo, last - lo] for first, last in labels
+                        if lo <= first and last <= hi]}
             for lo, hi in merged]
 
 
 def main():
+    os.environ["RUNLINE_ALLOW_OSM_DOWNLOAD"] = "0"
     from runline.geo import destination
     from runline.models import Coordinate, RoutePreferences
     from runline.osm import _major_crossings, generate_loops, graph_radius_meters, prepare_core
@@ -222,7 +223,7 @@ def main():
     unique = list({tuple(item["nodes"]): item for item in slices}.values())
     (ROOT / "tests/fixtures/crossing_audit.json").write_text(json.dumps(unique) + "\n")
     print(f"fixture: {len(unique)} route slices, "
-          f"{sum(item['geometry_crossings'] for item in unique)} geometric crossings")
+          f"{sum(len(item['events']) for item in unique)} geometric crossings")
 
 
 if __name__ == "__main__":
