@@ -27,22 +27,48 @@ touches a road's interior vertex and turns back to the same side, so every
 transition through a major-road node was labelled a crossing by construction.
 Its 98%/98% result was circular and has been replaced.
 
-Event-level agreement on the 96 top-3 routes of 8 origins x 4 distances:
+Event-level agreement on the 96 top-3 routes of 8 origins x 4 distances.
+Each row is scored against the labels in force at the time; the last two use
+the local labels described below.
 
-| Rule | Precision | Recall |
-| --- | ---: | ---: |
-| Any node touching a major road (`c9a25de`) | .727 | .797 |
-| Same, plus same-name merge within 30 m (round 1) | .777 | .797 |
-| Side change: approach and exit between different major branches, or leaving a major road on the other side from where it was joined (now `_major_crossings`) | **.912** | **.966** |
+| Rule | Labels | Precision | Recall |
+| --- | --- | ---: | ---: |
+| Any node touching a major road (`c9a25de`) | whole-route | .727 | .797 |
+| Same, plus same-name merge within 30 m (round 1) | whole-route | .777 | .797 |
+| Side change at a node, or leaving a major road on the far side (Sol, round 1) | whole-route | .912 | .966 |
+| Same | local | .959 | .972 |
+| Plus major branches passed while walking along, merging crossings of branches that meet at one node within 100 m (final `_major_crossings`) | local | **.969** | **.986** |
 
-Only the side rule meets the agreed 0.9/0.9 bar. The remaining misses are
-interchange ramps (`trunk_link` is not major), long walks along a primary
-road, and two path crossings that share no node with the road. The
-`tests/fixtures/crossing_audit.json` stores crossing positions on 141 route
-slices (124 geometric events). The test matches positions and gets 117 true
-positives, 7 false positives, and 7 misses (.944/.944), keeping the rule above
-0.9/0.9. At a 60 m corridor the label hid a mapped side change, e.g. on Rugby
-Road at Beta Bridge, where the major-road segment ends nearby.
+**Local labels.** The first corridor labeller cut one corridor for the whole
+route. Wherever the route passed under a major-road bridge or around a road end
+elsewhere, that corridor joined the road's two sides, so an at-grade crossing
+somewhere else went unlabelled. Plotting all 17 distinct disagreements showed 8
+of Sol's 19 "false positives" were this kind of labeller error, among them a
+residential street straight across East High Street and a footway across the
+John W. Warner Parkway. Every stretch of route that touches a major road is now
+labelled on its own corridor, with at least 50 m of travel either side
+(`_spans`). The one crossing that only the whole-route labeller found came
+from a trail 12-18 m from the end of a major-road bridge, sharing no node with
+it. It was not a crossing.
+
+**Walking along a road.** The side-numbering check (`/tmp` script, not shipped:
+which side of the walked road the route is on 10/15/25 m before joining and
+after leaving) showed every remaining walk-along miss joined and left on the
+same side. Each one passed a major side road on that side, e.g. Old Garth
+Road where it leaves Ivy Road, which a pedestrian on that side must cross.
+The rule now counts any major branch between approach and exit on the walking
+side (`test_walking_along_a_major_road_past_a_major_side_road_crosses_it`).
+Dual-carriageway junctions put two branches that meet at one node within
+~75 m of travel, so crossings whose branches share a node within 100 m count once.
+
+Of the 7 remaining false positives, one is two different major roads crossed
+diagonally at a four-arm junction. The proxy's 2 is right there; the label
+merges changes within 40 m. Both methods still share OSM geometry and the
+definition of a major road, so none of this is field-verified.
+
+The fixture `tests/fixtures/crossing_audit.json` stores 137 local slices
+(121 geometric events). The test matches positions and gets 119 true
+positives, 3 false positives, and 2 misses (.975/.983).
 
 ## Result
 
@@ -81,6 +107,30 @@ row has one paired case.
 
 Across each version's served cases, median generation time is 1.405 s for
 the baseline (25 cases) and 1.791 s for the final version (32 cases).
+
+## Crossing-rule change (round 2), paired against Sol's round 1
+
+Same 32 cases, geometric counts from the local labels, `--repeat 3`:
+
+| Version | In-band | Geometric crossings | Signals | Crossings + signals | Mean repeated | Proxy = label, per route |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| round 1 (Sol) | 96/96 | 210 | 27 | 237 | 14.4% | 84/96 |
+| + branch rule | 96/96 | 214 | 25 | 239 | 14.2% | 85/96 |
+| + shared-node merge (final) | 96/96 | 217 | 25 | 242 | 14.3% | 87/96 |
+
+Only 3 of the 32 cases changed routes. It was not a counting error: the new
+rule scores round 1's three Rotunda 8 mile routes 2/4/3, the same as the
+labels, but those routes never enter the new candidate pool. Candidate
+generation branches on the ranked feasible set (rescale vs. 0.65 refinement,
+and which routes get an alternate return), so any change to the counts
+reshuffles which candidates exist. To test whether the +5 is systematic, both
+versions were run on 48 held-out cases (origins 1.5 km and 4 km from the centre
+at bearings 30, 90, ... 330; 3/5/8/12 miles). Identical in 47; the final
+version has one fewer interruption in the other (334 vs 335, in-band 134/143
+both). The change ships: it makes the ranking's input more accurate and is
+neutral on routes it was not tuned on.
+
+The tables below predate this change.
 
 ## Decisions, each measured against the final code
 

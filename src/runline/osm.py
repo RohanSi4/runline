@@ -193,13 +193,15 @@ def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
     At a node on a major road, the route crosses when its approach and exit lie
     between different major branches; a same-side turn or a dead end is not a
     crossing. A route that walks along a major road crosses when it leaves on
-    the other side from the one it joined.
+    the other side from the one it joined, and at every major branch it passes
+    on its side. Crossings of branches meeting at one node within 100 m count
+    once (dual-carriageway junctions).
     """
 
     crossings: list[int] = []
     travelled = 0.0
     joined_left: bool | None = None
-    last_crossing: tuple[int, float, set[str]] | None = None
+    last_crossing: tuple[int, float, set[str], set[int]] | None = None
     for index in range(1, len(node_ids) - 1):
         previous, node, following = node_ids[index - 1 : index + 2]
         incoming = graph.edges[previous, node]
@@ -211,24 +213,46 @@ def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
             for u, v, data in (*graph.in_edges(node, data=True), *graph.out_edges(node, data=True))
             if _is_major(data)
         }
-        if not major_edges or (incoming_major and outgoing_major):
+        if not major_edges:
             continue
         back = _bearing_from(graph, previous, node, node)
         ahead = _bearing_from(graph, node, following, node)
-        if outgoing_major:
-            joined_left = _left_of(ahead, back)
-            continue
-        if incoming_major:
-            crossed = joined_left is not None and joined_left != _left_of(back + math.pi, ahead)
-            joined_left = None
-        else:
+        if not (incoming_major or outgoing_major):
             branches = [_bearing_from(graph, u, v, node) for u, v, _ in major_edges.values()]
             crossed = _separates(branches, back, ahead)
+        else:
+            if outgoing_major and not incoming_major:
+                joined_left = _left_of(ahead, back)
+            # Walking along a major road on one side, the route crosses any
+            # other major branch it passes on that side, and the road itself
+            # when it leaves on the far side.
+            others = [
+                _bearing_from(graph, u, v, node)
+                for other, (u, v, _) in major_edges.items()
+                if other not in (previous, following)
+            ]
+            if joined_left is None:
+                crossed = False
+            elif joined_left:
+                crossed = any((b - ahead) % math.tau < (back - ahead) % math.tau for b in others)
+            else:
+                crossed = any((b - back) % math.tau < (ahead - back) % math.tau for b in others)
+            if not outgoing_major:
+                crossed = crossed or (
+                    joined_left is not None and joined_left != _left_of(back + math.pi, ahead)
+                )
+                joined_left = None
         if not crossed:
             continue
         road_names = set().union(
             *(_values(data.get("name")) | _values(data.get("ref")) for _, _, data in major_edges.values())
         )
+        if (
+            last_crossing is not None
+            and travelled - last_crossing[1] <= 100
+            and set(major_edges) & last_crossing[3]
+        ):
+            continue
         if (
             last_crossing is not None
             and travelled - last_crossing[1] <= 60
@@ -242,7 +266,7 @@ def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
             ) <= 30:
                 continue
         crossings.append(index)
-        last_crossing = (node, travelled, road_names)
+        last_crossing = (node, travelled, road_names, set(major_edges))
     return crossings
 
 
