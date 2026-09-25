@@ -39,6 +39,7 @@ from shapely.ops import unary_union
 CORRIDOR_METERS = 15.0
 STEP_METERS = 4.0
 MERGE_METERS = 40.0
+CONTEXT_METERS = 50.0
 _GRADE = {"bridge", "tunnel"}
 _index = None
 
@@ -137,9 +138,7 @@ def _changes(graph, node_ids, trace):
     return changes
 
 
-def label_events(graph, node_ids) -> list[tuple[int, int]]:
-    """Geometric crossings as (first, last) route positions of the nodes involved."""
-
+def _label_slice(graph, node_ids) -> list[tuple[int, int]]:
     changes = _changes(graph, node_ids, side_trace(graph, node_ids))
     events, cluster = [], []
     for change in changes + [None]:
@@ -151,6 +150,18 @@ def label_events(graph, node_ids) -> list[tuple[int, int]]:
         if change is not None:
             cluster.append(change)
     return events
+
+
+def label_events(graph, node_ids) -> list[tuple[int, int]]:
+    """Geometric crossings as (first, last) route positions of the nodes involved.
+
+    Each slice around a major road is labelled on its own corridor. A whole-route
+    corridor joins the two sides of a road wherever the route passes under a
+    bridge or around a road end elsewhere, which hid 8 real crossings.
+    """
+
+    return [(lo + first, lo + last) for lo, hi in _spans(graph, node_ids)
+            for first, last in _label_slice(graph, node_ids[lo:hi + 1])]
 
 
 def geometric_crossings(graph, node_ids) -> int:
@@ -170,29 +181,41 @@ def match(proxy: list[int], labels: list[tuple[int, int]]) -> tuple[int, int, in
     return tp, len(proxy) - tp, len(remaining)
 
 
-def windows(graph, node_ids, labels):
-    """Route slices around every node on a major road, each with its label count.
-
-    Slices extend three nodes past any major-road stretch so a crossing that
-    walks along the road keeps the side it joined from.
-    """
+def _spans(graph, node_ids):
+    """Merged (first, last) route positions around every node on a major road,
+    extended at least CONTEXT_METERS of travel each way."""
 
     from runline.osm import _is_major
 
-    spans = [(first - 3, last + 3) for first, last in labels]
+    lengths = [float(graph.edges[u, v].get("length", 0)) for u, v in zip(node_ids, node_ids[1:])]
+    spans = []
     for j, node in enumerate(node_ids):
-        if any(_is_major(data) for data in graph.succ[node].values()):
-            spans.append((j - 3, j + 3))
+        if not any(_is_major(data) for data in graph.succ[node].values()):
+            continue
+        lo, hi, back, ahead = j, j, 0.0, 0.0
+        while lo > 0 and back < CONTEXT_METERS:
+            lo -= 1
+            back += lengths[lo]
+        while hi < len(node_ids) - 1 and ahead < CONTEXT_METERS:
+            ahead += lengths[hi]
+            hi += 1
+        spans.append((lo, hi))
     merged = []
-    for lo, hi in sorted((max(lo, 0), min(hi, len(node_ids) - 1)) for lo, hi in spans):
+    for lo, hi in sorted(spans):
         if merged and lo <= merged[-1][1]:
             merged[-1][1] = max(merged[-1][1], hi)
         else:
             merged.append([lo, hi])
+    return merged
+
+
+def windows(graph, node_ids, labels):
+    """The labelled route slices, each with its crossings."""
+
     return [{"nodes": list(node_ids[lo:hi + 1]),
              "events": [[first - lo, last - lo] for first, last in labels
                         if lo <= first and last <= hi]}
-            for lo, hi in merged]
+            for lo, hi in _spans(graph, node_ids)]
 
 
 def main():

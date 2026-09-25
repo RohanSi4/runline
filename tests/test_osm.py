@@ -169,6 +169,24 @@ def test_leaving_a_major_road_on_the_other_side_is_a_crossing() -> None:
     assert measure_route(graph, [1, 2, 3, 5]).major_crossing_events == 0
 
 
+def test_walking_along_a_major_road_past_a_major_side_road_crosses_it() -> None:
+    graph = nx.DiGraph()
+    # The route walks north along the west side of Main Street; Side Road
+    # branches west at node 3 and east at node 4.
+    for node, (x, y) in {1: (-.0003, 0), 2: (0, 0), 3: (0, .0003), 4: (0, .0006),
+                         5: (0, .0009), 6: (-.0003, .0009), 7: (-.0003, .0003),
+                         8: (.0003, .0006)}.items():
+        graph.add_node(node, x=x, y=y)
+    graph.add_edge(1, 2, length=26, highway="residential")
+    for u, v in ((2, 3), (3, 4), (4, 5)):
+        graph.add_edge(u, v, length=33, highway="primary", name="Main Street")
+    graph.add_edge(5, 6, length=26, highway="residential")
+    graph.add_edge(3, 7, length=26, highway="primary", name="Side Road")
+    graph.add_edge(4, 8, length=26, highway="primary", name="East Road")
+
+    assert measure_route(graph, [1, 2, 3, 4, 5, 6]).major_crossing_events == 1
+
+
 def test_weighted_dedup_keeps_better_route_with_same_long_edges() -> None:
     graph = nx.DiGraph()
     for u, v, length in ((1, 2, 1000), (2, 3, 1000), (3, 4, 1), (4, 5, 1)):
