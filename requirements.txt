@@ -1,9 +1,9 @@
-# Production runtime only. Serving a precomputed area needs no osmnx, and
-# therefore none of geopandas/pandas/pyogrio/pyproj/shapely, which are ~70MB
-# a serverless instance downloads on every cold start. osmnx stays in
-# pyproject.toml for local development, where it builds the shipped graphs.
+# Production runtime only. The shipped pickle contains Shapely geometries, so
+# Shapely is required to load it. Building graphs additionally needs osmnx and
+# its larger geo stack; those remain local development dependencies.
 fastapi==0.141.1
 networkx==3.6.1
 numpy==2.5.2
+shapely==2.1.2
 requests==2.34.2
 uvicorn==0.52.4

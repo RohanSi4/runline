@@ -10,16 +10,16 @@ from runline.models import (
 from runline.scoring import rank_candidates
 
 
-def _candidate(route_id: str, *, signals: int = 0, gain: float = 100) -> RouteCandidate:
+def _candidate(route_id: str, *, signals: int = 0, crossings: int = 0, gain: float = 100, distance: float = 5) -> RouteCandidate:
     return RouteCandidate(
         route_id=route_id,
         node_ids=(1, 2, 1),
         coordinates=(Coordinate(38, -78), Coordinate(38.01, -78.01)),
         metrics=RouteMetrics(
-            distance_miles=5,
+            distance_miles=distance,
             elevation_gain_feet=gain,
             traffic_signal_events=signals,
-            major_crossing_events=0,
+            major_crossing_events=crossings,
             trail_fraction=0.5,
             repeated_fraction=0,
         ),
@@ -52,3 +52,24 @@ def test_elevation_preference_changes_ranking() -> None:
 
     assert flat_ranked[0].route_id == "flat"
     assert hilly_ranked[0].route_id == "hilly"
+
+
+def test_feasible_distance_band_takes_priority() -> None:
+    feasible = _candidate("feasible", signals=8, distance=5.24)
+    missed = _candidate("missed", distance=5.26)
+
+    assert rank_candidates([missed, feasible], RoutePreferences(5))[0] is feasible
+
+
+def test_closest_route_is_fallback_when_none_are_feasible() -> None:
+    near = _candidate("near", signals=8, distance=5.3)
+    far = _candidate("far", distance=5.4)
+
+    assert rank_candidates([far, near], RoutePreferences(5))[0] is near
+
+
+def test_two_signals_do_not_beat_three_fewer_crossings() -> None:
+    quiet = _candidate("quiet", crossings=5, distance=8)
+    interrupted = _candidate("interrupted", signals=2, crossings=2, distance=8)
+
+    assert rank_candidates([interrupted, quiet], RoutePreferences(8))[0] is quiet

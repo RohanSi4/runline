@@ -8,11 +8,11 @@ from .models import ElevationPreference, RouteCandidate, RoutePreferences, Surfa
 @dataclass(frozen=True)
 class ScoreWeights:
     distance: float = 7.0
-    traffic_signals: float = 6.0
+    traffic_signals: float = 8.0
     major_crossings: float = 4.0
     surface: float = 2.5
     elevation: float = 1.5
-    repeated_segments: float = 5.0
+    repeated_segments: float = 8.0
     driving: float = 0.35
 
 
@@ -54,8 +54,8 @@ def rank_candidates(
 ) -> list[RouteCandidate]:
     """Rank candidates using transparent, runner-facing score components.
 
-    Traffic controls intentionally outweigh surface and elevation. Distance remains
-    the strongest term, while repeated segments are allowed but discouraged.
+    Routes within the distance tolerance are feasible; among them interruptions
+    and repeated segments matter more than small distance differences.
     """
 
     if not candidates:
@@ -68,7 +68,11 @@ def rank_candidates(
     for candidate in candidates:
         metrics = candidate.metrics
         distance_error = abs(metrics.distance_miles - preferences.target_distance_miles)
-        distance_penalty = distance_error / preferences.distance_tolerance_miles
+        feasible = distance_error <= preferences.distance_tolerance_miles
+        distance_penalty = (
+            0.15 * distance_error / preferences.distance_tolerance_miles
+            if feasible else distance_error / preferences.distance_tolerance_miles
+        )
         signal_penalty = metrics.traffic_signal_events / max(metrics.distance_miles, 1)
         crossing_penalty = metrics.major_crossing_events / max(metrics.distance_miles, 1)
         surface_penalty = _surface_penalty(preferences.surface, metrics.trail_fraction)
@@ -92,4 +96,11 @@ def rank_candidates(
         candidate.score_components = components
         candidate.score = sum(components.values())
 
-    return sorted(candidates, key=lambda candidate: candidate.score)
+    def ranking_key(candidate: RouteCandidate) -> tuple[float, ...]:
+        error = abs(candidate.metrics.distance_miles - preferences.target_distance_miles)
+        if error <= preferences.distance_tolerance_miles:
+            return (0, candidate.score, error)
+        # If every option misses the target, the closest route is the honest fallback.
+        return (1, error, candidate.score)
+
+    return sorted(candidates, key=ranking_key)

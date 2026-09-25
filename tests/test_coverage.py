@@ -84,6 +84,16 @@ def test_load_graph_refuses_to_download_when_disabled(graphs_dir, tmp_path, monk
     assert "Charlottesville, VA" in str(error.value)
 
 
+def test_load_graph_uses_partial_area_with_limited_coverage(graphs_dir, tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("RUNLINE_ALLOW_OSM_DOWNLOAD", "0")
+    origin = Coordinate(38.03, -78.48)
+
+    graph = load_graph(origin, 20_000, tmp_path / "cache")
+
+    assert graph.number_of_nodes() == 1
+    assert graph.graph["coverage_limited"] is True
+
+
 def test_downloads_are_disabled_on_vercel(monkeypatch) -> None:
     monkeypatch.delenv("RUNLINE_ALLOW_OSM_DOWNLOAD", raising=False)
     monkeypatch.setenv("VERCEL", "1")

@@ -106,6 +106,8 @@ def plan_routes(
         # per request is pure latency, and on a serverless host the Open-Meteo
         # cache is wiped between instances so it would never amortise.
         start_loader = None if graph.graph.get("elevation_baked") else elevation_loader
+        if graph.graph.get("coverage_limited"):
+            warnings.append(f"Map coverage is limited near {start.label}; routes may use fewer streets.")
         start_routes = generate_loops(
             graph,
             start.coordinate,
@@ -118,6 +120,12 @@ def plan_routes(
         candidates.extend(start_routes)
 
     ranked = rank_candidates(candidates, preferences)[: preferences.result_count]
+    if ranked and not any(
+        abs(candidate.metrics.distance_miles - preferences.target_distance_miles)
+        <= preferences.distance_tolerance_miles
+        for candidate in ranked
+    ):
+        warnings.append("No route is within the requested distance tolerance; showing the closest available options.")
     return PlanResult(
         candidates=ranked,
         discovered_starts=max(0, len(starts) - 1),

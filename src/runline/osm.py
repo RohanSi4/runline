@@ -11,12 +11,13 @@ import networkx as nx
 
 from .coverage import (
     CoverageError,
+    containing_area,
     downloads_allowed,
     find_area,
     load_area_graph,
     unsupported_message,
 )
-from .geo import destination, distance_meters
+from .geo import EARTH_RADIUS_METERS, destination, distance_meters
 from .models import (
     METERS_PER_MILE,
     Coordinate,
@@ -106,9 +107,19 @@ def collapse_graph(graph: nx.Graph, preferences: RoutePreferences) -> nx.DiGraph
     collapsed = nx.DiGraph()
     collapsed.graph.update(graph.graph)
     collapsed.add_nodes_from(graph.nodes(data=True))
+    major_neighbours: dict[int, set[int]] = {}
+    for u, v, _, data in _iter_edges(graph):
+        if _is_major(data):
+            major_neighbours.setdefault(u, set()).add(v)
+            major_neighbours.setdefault(v, set()).add(u)
+    crossing_nodes = {
+        node for node, neighbours in major_neighbours.items() if len(neighbours) >= 2
+    }
     for u, v, _, raw_data in _iter_edges(graph):
         data = dict(raw_data)
         data["_cost"] = _edge_preference_cost(data, graph.nodes[v], preferences)
+        if v in crossing_nodes and not _is_major(data):
+            data["_cost"] += 300.0
         existing = collapsed.get_edge_data(u, v)
         if existing is None or data["_cost"] < existing["_cost"]:
             collapsed.add_edge(u, v, **data)
@@ -146,15 +157,42 @@ def _route_coordinates(graph: nx.DiGraph, node_ids: list[int]) -> tuple[Coordina
 
 def _major_crossing_events(graph: nx.DiGraph, node_ids: list[int]) -> int:
     count = 0
+    travelled = 0.0
+    last_crossing: tuple[int, float, set[str]] | None = None
     for index in range(1, len(node_ids) - 1):
+        travelled += float(graph.edges[node_ids[index - 1], node_ids[index]].get("length", 0))
         node = node_ids[index]
-        incident_major = any(_is_major(data) for _, _, data in graph.in_edges(node, data=True)) or any(
-            _is_major(data) for _, _, data in graph.out_edges(node, data=True)
-        )
         incoming = graph.edges[node_ids[index - 1], node]
         outgoing = graph.edges[node, node_ids[index + 1]]
-        if incident_major and not _is_major(incoming) and not _is_major(outgoing):
+        if not _is_major(incoming) and not _is_major(outgoing):
+            major_edges = [
+                data
+                for _, _, data in graph.in_edges(node, data=True)
+                if _is_major(data)
+            ] + [
+                data
+                for _, _, data in graph.out_edges(node, data=True)
+                if _is_major(data)
+            ]
+            if not major_edges:
+                continue
+            road_names = set().union(
+                *(_values(data.get("name")) | _values(data.get("ref")) for data in major_edges)
+            )
+            if (
+                last_crossing is not None
+                and travelled - last_crossing[1] <= 60
+                and road_names & last_crossing[2]
+            ):
+                prior = graph.nodes[last_crossing[0]]
+                current = graph.nodes[node]
+                if distance_meters(
+                    Coordinate(prior["y"], prior["x"]),
+                    Coordinate(current["y"], current["x"]),
+                ) <= 30:
+                    continue
             count += 1
+            last_crossing = (node, travelled, road_names)
     return count
 
 
@@ -302,6 +340,37 @@ def _nearest_node(graph: nx.Graph, coordinate: Coordinate) -> int:
 
 
 def _path(graph: nx.DiGraph, start: int, end: int) -> list[int]:
+    # The chord is a metric. Scaling it by the minimum edge cost/chord ratio
+    # makes the heuristic admissible even when a graph has bad edge lengths.
+    # Benchmarks favored A* below 30k nodes and bidirectional Dijkstra above it.
+    if graph.number_of_nodes() < 30_000:
+        heuristic = graph.graph.get("_chord_heuristic")
+        if heuristic is None:
+            positions = {}
+            for node, data in graph.nodes(data=True):
+                latitude, longitude = math.radians(data["y"]), math.radians(data["x"])
+                radius = EARTH_RADIUS_METERS * math.cos(latitude)
+                positions[node] = (
+                    radius * math.cos(longitude),
+                    radius * math.sin(longitude),
+                    EARTH_RADIUS_METERS * math.sin(latitude),
+                )
+            scale = min(
+                (
+                    data["_cost"] / chord
+                    for u, v, data in graph.edges(data=True)
+                    if (chord := math.dist(positions[u], positions[v])) > 0
+                ),
+                default=0,
+            )
+            heuristic = (positions, scale)
+            graph.graph["_chord_heuristic"] = heuristic
+        positions, scale = heuristic
+        return nx.astar_path(
+            graph, start, end,
+            heuristic=lambda u, v: scale * math.dist(positions[u], positions[v]),
+            weight="_cost",
+        )
     return nx.shortest_path(graph, start, end, weight="_cost")
 
 
@@ -312,16 +381,37 @@ def _join_paths(paths: list[list[int]]) -> list[int]:
     return joined
 
 
-def _edge_set(node_ids: list[int]) -> set[tuple[int, int]]:
-    return {(min(u, v), max(u, v)) for u, v in zip(node_ids, node_ids[1:])}
+# At 0.82, two selected 5-mile options shared 78% of their road length.
+MAX_SHARED_LENGTH_FRACTION = 0.7
 
 
-def _is_distinct(edge_sets: list[set[tuple[int, int]]], candidate: set[tuple[int, int]]) -> bool:
-    for existing in edge_sets:
-        union = existing | candidate
-        if union and len(existing & candidate) / len(union) >= 0.82:
-            return False
-    return True
+def _edge_lengths(graph: nx.DiGraph, node_ids: tuple[int, ...]) -> dict[tuple[int, int], float]:
+    return {
+        (min(u, v), max(u, v)): float(graph.edges[u, v].get("length", 0))
+        for u, v in zip(node_ids, node_ids[1:])
+    }
+
+
+def _distinct_by_length(
+    graph: nx.DiGraph, ranked: list[RouteCandidate], limit: int
+) -> list[RouteCandidate]:
+    selected: list[RouteCandidate] = []
+    selected_edges: list[dict[tuple[int, int], float]] = []
+    for candidate in ranked:
+        edges = _edge_lengths(graph, candidate.node_ids)
+        duplicate = False
+        for existing in selected_edges:
+            shared = sum(min(length, existing.get(edge, 0)) for edge, length in edges.items())
+            union = sum(edges.values()) + sum(existing.values()) - shared
+            if union and shared / union >= MAX_SHARED_LENGTH_FRACTION:
+                duplicate = True
+                break
+        if not duplicate:
+            selected.append(candidate)
+            selected_edges.append(edges)
+            if len(selected) >= limit:
+                break
+    return selected
 
 
 def _routable_core(graph: nx.DiGraph) -> nx.DiGraph:
@@ -369,47 +459,88 @@ def generate_loops(
     )
     target = preferences.target_distance_meters
     candidates: list[RouteCandidate] = []
-    accepted_edge_sets: list[set[tuple[int, int]]] = []
+    candidate_legs: dict[str, tuple[list[int], list[int], list[int]]] = {}
 
-    for scale in (0.72, 0.9, 1.08, 1.26):
+    def sample(scale: float, heading: int, sweep: int) -> None:
         waypoint_radius = target / 3.0 * scale
+        first = destination(origin, heading - sweep / 2, waypoint_radius)
+        second = destination(origin, heading + sweep / 2, waypoint_radius)
+        first_node = _nearest_node(collapsed, first)
+        second_node = _nearest_node(collapsed, second)
+        if len({origin_node, first_node, second_node}) < 3:
+            return
+        try:
+            legs = (
+                outbound_paths[first_node],
+                _path(collapsed, first_node, second_node),
+                list(reversed(inbound_reversed_paths[second_node])),
+            )
+            nodes = _join_paths(list(legs))
+        except (KeyError, nx.NetworkXNoPath, nx.NodeNotFound):
+            return
+
+        metrics = measure_route(collapsed, nodes, drive_distance_miles)
+        if not 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
+            return
+        route_id = f"route-{len(candidates) + 1:03d}"
+        candidate_legs[route_id] = legs
+        candidates.append(RouteCandidate(route_id, tuple(nodes), (), metrics))
+
+    scales = (
+        (0.6, 0.72, 0.9, 1.08, 1.26)
+        if collapsed.graph.get("coverage_limited")
+        else (0.72, 0.9, 1.08, 1.26)
+    )
+    for scale in scales:
         for heading in range(0, 360, 30):
             for sweep in (80, 120):
-                first = destination(origin, heading - sweep / 2, waypoint_radius)
-                second = destination(origin, heading + sweep / 2, waypoint_radius)
-                first_node = _nearest_node(collapsed, first)
-                second_node = _nearest_node(collapsed, second)
-                if len({origin_node, first_node, second_node}) < 3:
-                    continue
-                try:
-                    nodes = _join_paths(
-                        [
-                            outbound_paths[first_node],
-                            _path(collapsed, first_node, second_node),
-                            list(reversed(inbound_reversed_paths[second_node])),
-                        ]
-                    )
-                except (KeyError, nx.NetworkXNoPath, nx.NodeNotFound):
-                    continue
+                sample(scale, heading, sweep)
 
-                metrics = measure_route(collapsed, nodes, drive_distance_miles)
-                if not 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
-                    continue
-                edges = _edge_set(nodes)
-                if not _is_distinct(accepted_edge_sets, edges):
-                    continue
-                accepted_edge_sets.append(edges)
-                candidates.append(
-                    RouteCandidate(
-                        route_id=f"route-{len(candidates) + 1:03d}",
-                        node_ids=tuple(nodes),
-                        coordinates=_route_coordinates(collapsed, nodes),
-                        metrics=metrics,
-                    )
-                )
+    feasible = [
+        candidate for candidate in candidates
+        if abs(candidate.metrics.distance_miles - preferences.target_distance_miles)
+        <= preferences.distance_tolerance_miles
+    ]
+    feasible_ranked = rank_candidates(feasible, preferences)
+    if len(_distinct_by_length(collapsed, feasible_ranked, preferences.result_count)) < preferences.result_count:
+        for scale, sweep in ((0.6, 60), (0.6, 90), (0.7, 60), (0.8, 60)):
+            for heading in range(0, 360, 30):
+                sample(scale, heading, sweep)
+    elif (
+        feasible_ranked
+        and abs(feasible_ranked[0].metrics.distance_miles - preferences.target_distance_miles)
+        > 0.4 * preferences.distance_tolerance_miles
+    ):
+        for heading in range(0, 360, 30):
+            sample(0.65, heading, 90)
 
-    preliminary = rank_candidates(candidates, preferences)
-    pool = preliminary[: max(20, preferences.result_count * 6)]
+    preliminary = _distinct_by_length(
+        collapsed, rank_candidates(candidates, preferences), preferences.result_count
+    )
+    for candidate in preliminary:
+        if candidate.metrics.repeated_fraction < 0.12:
+            continue
+        first, middle, last = candidate_legs[candidate.route_id]
+        outbound = _join_paths([first, middle])
+        used = {(min(u, v), max(u, v)) for u, v in zip(outbound, outbound[1:])}
+
+        def return_cost(u: int, v: int, data: dict[str, Any]) -> float:
+            return data["_cost"] * (3 if (min(u, v), max(u, v)) in used else 1)
+
+        try:
+            alternate = nx.shortest_path(collapsed, last[0], origin_node, weight=return_cost)
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            continue
+        if alternate == last:
+            continue
+        nodes = _join_paths([first, middle, alternate])
+        metrics = measure_route(collapsed, nodes, drive_distance_miles)
+        if 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
+            candidates.append(RouteCandidate(f"route-{len(candidates) + 1:03d}", tuple(nodes), (), metrics))
+
+    pool = _distinct_by_length(
+        collapsed, rank_candidates(candidates, preferences), max(20, preferences.result_count * 6)
+    )
     if elevation_loader and pool:
         elevation_loader(
             collapsed,
@@ -420,8 +551,10 @@ def generate_loops(
                 collapsed, list(candidate.node_ids), drive_distance_miles
             )
 
-    ranked = rank_candidates(pool, preferences)
-    return ranked[: preferences.result_count]
+    ranked = _distinct_by_length(collapsed, rank_candidates(pool, preferences), preferences.result_count)
+    for candidate in ranked:
+        candidate.coordinates = _route_coordinates(collapsed, list(candidate.node_ids))
+    return ranked
 
 
 def crop_to_radius(
@@ -459,12 +592,12 @@ def crop_to_radius(
 
 
 def load_graph(origin: Coordinate, radius_meters: float, cache_directory: Path) -> nx.Graph:
-    """Return a walk graph covering ``radius_meters`` around ``origin``.
+    """Return a walk graph around ``origin``, marking limited map coverage.
 
-    Precomputed areas are preferred, then the local download cache, then a live
-    Overpass fetch. The fetch is disabled on serverless hosts, where it would
-    outlive the function's time budget; there an uncovered location raises
-    ``CoverageError`` instead of hanging.
+    A fully covering precomputed area is preferred. When downloads are
+    disabled, an area containing the start can still serve the intersection
+    of its map and the requested crop. An origin outside every area raises
+    ``CoverageError``.
     """
 
     area = find_area(origin, radius_meters)
@@ -472,7 +605,12 @@ def load_graph(origin: Coordinate, radius_meters: float, cache_directory: Path) 
         return crop_to_radius(load_area_graph(area), origin, radius_meters)
 
     if not downloads_allowed():
-        raise CoverageError(unsupported_message(origin, radius_meters))
+        partial_area = containing_area(origin)
+        if partial_area is None:
+            raise CoverageError(unsupported_message(origin, radius_meters))
+        graph = crop_to_radius(load_area_graph(partial_area), origin, radius_meters)
+        graph.graph["coverage_limited"] = True
+        return graph
 
     import osmnx as ox
 
