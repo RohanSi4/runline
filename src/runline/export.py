@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict
 from pathlib import Path
 
@@ -35,7 +36,17 @@ def candidate_feature(candidate: RouteCandidate) -> dict:
     }
 
 
-def export_candidates(candidates: list[RouteCandidate], output_directory: Path) -> None:
+def export_candidates(
+    candidates: list[RouteCandidate],
+    output_directory: Path,
+    *,
+    elevations_meters: Mapping[str, Sequence[float | None]] | None = None,
+) -> None:
+    """Export candidates with optional GPX elevations keyed by route_id.
+
+    Each sequence aligns with that candidate's coordinates; missing routes or
+    None entries omit elevation for the corresponding track points.
+    """
     output_directory.mkdir(parents=True, exist_ok=True)
     summary = []
     features = []
@@ -52,7 +63,15 @@ def export_candidates(candidates: list[RouteCandidate], output_directory: Path) 
         )
         features.append(candidate_feature(candidate))
         (output_directory / f"{public_id}.gpx").write_text(
-            candidate_to_gpx(candidate, name=f"Running loop option {index}"),
+            candidate_to_gpx(
+                candidate,
+                name=f"Running loop option {index}",
+                elevations_meters=(
+                    elevations_meters.get(candidate.route_id)
+                    if elevations_meters is not None
+                    else None
+                ),
+            ),
             encoding="utf-8",
         )
 
