@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 from pathlib import Path
@@ -82,9 +81,13 @@ async def health() -> dict[str, str]:
 async def routes(request: RouteRequest) -> dict:
     try:
         if request.address and request.address.strip():
-            origin = await run_in_threadpool(
-                geocode_address, request.address.strip(), CACHE_ROOT
-            )
+            try:
+                origin = await run_in_threadpool(
+                    geocode_address, request.address.strip(), CACHE_ROOT
+                )
+            except ValueError as error:
+                # An address Nominatim cannot place is a user error, not a fault.
+                raise HTTPException(status_code=422, detail=str(error)) from error
         else:
             origin = Coordinate(float(request.latitude), float(request.longitude))
         preferences = RoutePreferences(
@@ -101,6 +104,8 @@ async def routes(request: RouteRequest) -> dict:
             cache_directory=CACHE_ROOT,
             start_candidate_limit=2,
         )
+    except HTTPException:
+        raise
     except CoverageError as error:
         # Expected outcome for an unsupported location, not a fault.
         raise HTTPException(status_code=422, detail=str(error)) from error
@@ -160,35 +165,6 @@ async def places() -> JSONResponse:
         {"places": entries},
         headers={"Cache-Control": "public, max-age=86400, immutable"},
     )
-
-
-@app.get("/api/demo")
-async def demo() -> dict:
-    demo_directory = PROJECT_ROOT / "output" / "legacy-3-drive-1"
-    geojson_path = demo_directory / "routes.geojson"
-    if not geojson_path.exists():
-        raise HTTPException(status_code=404, detail="Demo routes have not been generated.")
-    collection = json.loads(geojson_path.read_text(encoding="utf-8"))
-    routes = []
-    starts: set[str] = set()
-    for index, feature in enumerate(collection["features"], start=1):
-        start = feature["properties"].get("start") or {}
-        if start.get("kind") != "origin" and start.get("label"):
-            starts.add(start["label"])
-        routes.append(
-            {
-                "feature": feature,
-                "gpx": (demo_directory / f"option-{index}.gpx").read_text(
-                    encoding="utf-8"
-                ),
-            }
-        )
-    return {
-        "origin": {"latitude": 38.9798655, "longitude": -77.5257475},
-        "discovered_starts": len(starts),
-        "warnings": [],
-        "routes": routes,
-    }
 
 
 def run() -> None:
