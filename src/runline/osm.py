@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import threading
 from collections import OrderedDict
 from collections.abc import Iterable
 from pathlib import Path
@@ -322,6 +323,7 @@ PREPARED_KEY = "_runline_prepared"
 # starts share an entry; a margin covers the rounding.
 PREPARED_CACHE_SIZE = 4
 _PREPARED_CACHE: "OrderedDict[tuple, nx.DiGraph]" = OrderedDict()
+_PREPARED_CACHE_LOCK = threading.Lock()
 ORIGIN_ROUNDING = 3
 ORIGIN_ROUNDING_MARGIN_METERS = 250.0
 
@@ -349,18 +351,20 @@ def prepare_core(
         round(padded_radius),
         preferences.surface.value,
     )
-    cached = _PREPARED_CACHE.get(key)
-    if cached is not None:
-        _PREPARED_CACHE.move_to_end(key)
-        return cached
+    with _PREPARED_CACHE_LOCK:
+        cached = _PREPARED_CACHE.get(key)
+        if cached is not None:
+            _PREPARED_CACHE.move_to_end(key)
+            return cached
 
     graph = load_graph(key_origin, padded_radius, cache_directory)
     core = _routable_core(collapse_graph(graph, preferences))
     core.graph[PREPARED_KEY] = True
 
-    _PREPARED_CACHE[key] = core
-    while len(_PREPARED_CACHE) > PREPARED_CACHE_SIZE:
-        _PREPARED_CACHE.popitem(last=False)
+    with _PREPARED_CACHE_LOCK:
+        _PREPARED_CACHE[key] = core
+        while len(_PREPARED_CACHE) > PREPARED_CACHE_SIZE:
+            _PREPARED_CACHE.popitem(last=False)
     return core
 
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -27,13 +29,25 @@ def _batched(values: list[str], size: int) -> Iterable[list[str]]:
 def _read_cache(path: Path) -> dict[str, float]:
     if not path.exists():
         return {}
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    return {str(key): float(value) for key, value in raw.items()}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return {str(key): float(value) for key, value in raw.items()}
+    except (ValueError, AttributeError):
+        # A damaged cache is only lost work; refetching beats disabling elevation.
+        return {}
 
 
 def _write_cache(path: Path, cache: dict[str, float]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(cache, sort_keys=True) + "\n", encoding="utf-8")
+    # Concurrent requests share this file, so never leave it half-written.
+    handle, temporary = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(cache, sort_keys=True) + "\n")
+        os.replace(temporary, path)
+    except BaseException:
+        Path(temporary).unlink(missing_ok=True)
+        raise
 
 
 def enrich_graph_open_meteo(
