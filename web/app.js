@@ -4,6 +4,7 @@ const state = {
   drive: 0,
   routes: [],
   layers: [],
+  casing: null,
   selected: 0,
   startMarker: null,
 };
@@ -17,7 +18,7 @@ const map = L.map("map", { zoomControl: false }).setView(
   [startLatitude, startLongitude],
   13,
 );
-L.control.zoom({ position: "bottomright" }).addTo(map);
+L.control.zoom({ position: "topright" }).addTo(map);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "&copy; OpenStreetMap contributors",
@@ -182,7 +183,7 @@ document.querySelectorAll(".segmented").forEach((group) => {
   group.addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (!button) return;
-    group.querySelectorAll("button").forEach((item) => item.classList.toggle("active", item === button));
+    group.querySelectorAll("button").forEach((item) => setPressed(item, item === button));
     state[group.dataset.control] = group.dataset.control === "drive" ? Number(button.dataset.value) : button.dataset.value;
   });
 });
@@ -190,13 +191,18 @@ document.querySelectorAll(".segmented").forEach((group) => {
 document.querySelectorAll("[data-distance]").forEach((button) => {
   button.addEventListener("click", () => {
     distanceInput.value = button.dataset.distance;
-    document.querySelectorAll("[data-distance]").forEach((item) => item.classList.toggle("active", item === button));
+    document.querySelectorAll("[data-distance]").forEach((item) => setPressed(item, item === button));
   });
 });
 
 distanceInput.addEventListener("input", () => {
-  document.querySelectorAll("[data-distance]").forEach((button) => button.classList.toggle("active", button.dataset.distance === distanceInput.value));
+  document.querySelectorAll("[data-distance]").forEach((button) => setPressed(button, button.dataset.distance === distanceInput.value));
 });
+
+function setPressed(button, pressed) {
+  button.classList.toggle("active", pressed);
+  button.setAttribute("aria-pressed", pressed ? "true" : "false");
+}
 
 function showStatus(message, isError = false) {
   status.textContent = message;
@@ -207,6 +213,8 @@ function clearRoutes() {
   state.layers.forEach((layer) => layer.remove());
   state.layers = [];
   state.routes = [];
+  if (state.casing) state.casing.remove();
+  state.casing = null;
 }
 
 function routeMetrics(route) {
@@ -216,9 +224,14 @@ function routeMetrics(route) {
 function selectRoute(index, fit = true) {
   state.selected = index;
   state.layers.forEach((layer, layerIndex) => {
-    layer.setStyle({ opacity: layerIndex === index ? 1 : 0.25, weight: layerIndex === index ? 6 : 3 });
-    if (layerIndex === index) layer.bringToFront();
+    layer.setStyle({ opacity: layerIndex === index ? 1 : 0.35, weight: layerIndex === index ? 5 : 3 });
   });
+  // A white casing under the selected line keeps it legible over busy streets.
+  if (state.casing) state.casing.remove();
+  state.casing = L.polyline(state.layers[index].getLatLngs(), {
+    color: "#fff", weight: 10, opacity: 1, className: "route-casing", interactive: false,
+  }).addTo(map);
+  state.layers[index].bringToFront();
   document.querySelectorAll(".route-card").forEach((card, cardIndex) => card.classList.toggle("active", cardIndex === index));
   const route = state.routes[index];
   const metrics = routeMetrics(route);
@@ -239,7 +252,7 @@ function renderRoutes(payload) {
 
   state.routes.forEach((route, index) => {
     const coordinates = route.feature.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
-    const layer = L.polyline(coordinates, { color: routeColors[index], weight: index === 0 ? 6 : 3, opacity: index === 0 ? 1 : 0.25 }).addTo(map);
+    const layer = L.polyline(coordinates, { color: routeColors[index], weight: index === 0 ? 5 : 3, opacity: index === 0 ? 1 : 0.35, className: "route-line" }).addTo(map);
     layer.on("click", () => selectRoute(index));
     state.layers.push(layer);
     allBounds.extend(layer.getBounds());
@@ -249,6 +262,7 @@ function renderRoutes(payload) {
     card.type = "button";
     card.className = `route-card${index === 0 ? " active" : ""}`;
     card.style.setProperty("--route-color", routeColors[index]);
+    card.style.setProperty("--i", index);
     const swatch = document.createElement("span");
     swatch.className = "route-swatch";
     const main = document.createElement("span");
@@ -276,6 +290,7 @@ function renderRoutes(payload) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   generateButton.disabled = true;
+  generateButton.setAttribute("aria-busy", "true");
   generateButton.querySelector("span").textContent = "Exploring loops…";
   showStatus("Reading streets, trails, crossings, and elevation…");
   const body = {
@@ -298,14 +313,18 @@ form.addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const payload = await response.json();
+    // A platform timeout or 502 returns HTML, not the API's JSON error body.
+    const payload = await response.json().catch(() => ({
+      detail: `Server error (${response.status}). Try again shortly.`,
+    }));
     if (!response.ok) throw new Error(payload.detail || "Could not generate routes.");
     renderRoutes(payload);
-    showStatus(payload.warnings?.[0] || "");
+    showStatus((payload.warnings || []).join(" "));
   } catch (error) {
     showStatus(error.message, true);
   } finally {
     generateButton.disabled = false;
+    generateButton.removeAttribute("aria-busy");
     generateButton.querySelector("span").textContent = "Generate routes";
   }
 });
@@ -335,16 +354,8 @@ async function loadCoverage() {
   }
 }
 
-async function loadDemo() {
-  try {
-    const response = await fetch("/api/demo");
-    if (!response.ok) return;
-    renderRoutes(await response.json());
-  } catch (_error) {
-    // The planner remains fully usable when no precomputed demo is present.
-  }
-}
+// Show the prefilled start so the map opens with a visible origin.
+setStart(startLatitude, startLongitude, address.value);
 
 loadCoverage();
 loadPlaces();
-loadDemo();
