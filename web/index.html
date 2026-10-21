@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Manrope:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/styles.css?v=3">
 </head>
 <body>
   <main class="app-shell">
@@ -23,7 +23,6 @@
       </header>
 
       <div class="intro">
-        <p class="eyebrow">Build a better run</p>
         <h1>Your distance. Fewer interruptions.</h1>
         <p>Routes shaped around the way you actually want to run.</p>
       </div>
@@ -49,38 +48,38 @@
             <div class="distance-input"><input id="distance" type="number" min="1" max="30" step="0.5" value="3"><span>miles</span></div>
           </div>
           <div class="quick-distances" aria-label="Quick distances">
-            <button class="active" type="button" data-distance="3">3</button>
-            <button type="button" data-distance="5">5</button>
-            <button type="button" data-distance="8">8</button>
-            <button type="button" data-distance="12">12</button>
+            <button class="active" type="button" data-distance="3" aria-pressed="true">3</button>
+            <button type="button" data-distance="5" aria-pressed="false">5</button>
+            <button type="button" data-distance="8" aria-pressed="false">8</button>
+            <button type="button" data-distance="12" aria-pressed="false">12</button>
           </div>
         </div>
 
         <fieldset>
           <legend>Surface</legend>
           <div class="segmented" data-control="surface">
-            <button type="button" data-value="road">Road</button>
-            <button class="active" type="button" data-value="mixed">Mixed</button>
-            <button type="button" data-value="trail">Trail</button>
+            <button type="button" aria-pressed="false" data-value="road">Road</button>
+            <button class="active" type="button" aria-pressed="true" data-value="mixed">Mixed</button>
+            <button type="button" aria-pressed="false" data-value="trail">Trail</button>
           </div>
         </fieldset>
 
         <fieldset>
           <legend>Elevation</legend>
           <div class="segmented" data-control="elevation">
-            <button type="button" data-value="flat">Flat</button>
-            <button class="active" type="button" data-value="balanced">Balanced</button>
-            <button type="button" data-value="hilly">Hilly</button>
+            <button type="button" aria-pressed="false" data-value="flat">Flat</button>
+            <button class="active" type="button" aria-pressed="true" data-value="balanced">Balanced</button>
+            <button type="button" aria-pressed="false" data-value="hilly">Hilly</button>
           </div>
         </fieldset>
 
         <fieldset>
           <legend>Better starts <span>max drive</span></legend>
           <div class="segmented four" data-control="drive">
-            <button class="active" type="button" data-value="0">Here</button>
-            <button type="button" data-value="1">1 mi</button>
-            <button type="button" data-value="3">3 mi</button>
-            <button type="button" data-value="5">5 mi</button>
+            <button class="active" type="button" aria-pressed="true" data-value="0">Here</button>
+            <button type="button" aria-pressed="false" data-value="1">1 mi</button>
+            <button type="button" aria-pressed="false" data-value="3">3 mi</button>
+            <button type="button" aria-pressed="false" data-value="5">5 mi</button>
           </div>
         </fieldset>
 
@@ -104,15 +103,15 @@
       <div id="map"></div>
       <div class="map-tip" id="map-tip"><span></span>Type a place, or click the map</div>
       <div class="selected-summary" id="selected-summary" hidden>
-        <div><span id="summary-distance">5.02 mi</span><small id="summary-start">Start here</small></div>
-        <div><span id="summary-gain">218 ft</span><small>Elevation</small></div>
-        <div><span id="summary-signals">1</span><small>Signals</small></div>
+        <div><span id="summary-distance">—</span><small id="summary-start">Start here</small></div>
+        <div><span id="summary-gain">—</span><small>Elevation</small></div>
+        <div><span id="summary-signals">—</span><small>Signals</small></div>
         <button id="download-gpx" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>GPX</button>
       </div>
     </section>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/assets/app.js"></script>
+  <script src="/assets/app.js?v=3"></script>
 </body>
 </html>
