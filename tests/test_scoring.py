@@ -10,7 +10,7 @@ from runline.models import (
 from runline.scoring import rank_candidates
 
 
-def _candidate(route_id: str, *, signals: int = 0, crossings: int = 0, gain: float = 100, distance: float = 5) -> RouteCandidate:
+def _candidate(route_id: str, *, signals: int = 0, crossings: int = 0, gain: float = 100, distance: float = 5, compactness: float = 1) -> RouteCandidate:
     return RouteCandidate(
         route_id=route_id,
         node_ids=(1, 2, 1),
@@ -22,6 +22,7 @@ def _candidate(route_id: str, *, signals: int = 0, crossings: int = 0, gain: flo
             major_crossing_events=crossings,
             trail_fraction=0.5,
             repeated_fraction=0,
+            compactness=compactness,
         ),
     )
 
@@ -67,3 +68,23 @@ def test_closest_route_is_fallback_when_none_are_feasible() -> None:
 
     assert rank_candidates([far, near], RoutePreferences(5))[0] is near
 
+
+
+def test_round_loop_beats_a_sliver_with_the_same_interruptions() -> None:
+    sliver = _candidate("sliver", compactness=0.15)
+    loop = _candidate("loop", compactness=0.5)
+
+    ranked = rank_candidates([sliver, loop], RoutePreferences(target_distance_miles=5))
+
+    assert [candidate.route_id for candidate in ranked] == ["loop", "sliver"]
+    assert loop.score_components["shape"] == 0
+
+
+def test_a_rounder_loop_buys_no_extra_signals() -> None:
+    # Shape only penalises slivers, so it never outweighs interruptions on real loops.
+    quiet_triangle = _candidate("quiet", compactness=0.4)
+    busy_circle = _candidate("busy", compactness=0.95, signals=2)
+
+    ranked = rank_candidates([busy_circle, quiet_triangle], RoutePreferences(target_distance_miles=5))
+
+    assert ranked[0].route_id == "quiet"

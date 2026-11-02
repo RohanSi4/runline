@@ -19,7 +19,9 @@ from runline.osm import (
     _distinct_by_length,
     _major_crossings,
     _nearest_node,
+    _compactness,
     _routable_core,
+    _trim_spurs,
     collapse_graph,
     measure_route,
 )
@@ -256,3 +258,27 @@ def test_rotunda_12_miles_is_served_with_limited_coverage(tmp_path, monkeypatch)
     assert len(result.candidates) == 3
     assert all(abs(route.metrics.distance_miles - 12) <= 0.25 for route in result.candidates)
     assert any("coverage is limited" in warning for warning in result.warnings)
+
+
+def test_trim_spurs_removes_dead_end_detours() -> None:
+    # 1 -> 2 -> 3 -> 9 (dead end) -> 3 -> 4 -> 1, with a two-edge spur at 4.
+    route = [1, 2, 3, 9, 3, 4, 7, 8, 7, 4, 1]
+    assert _trim_spurs(route) == [1, 2, 3, 4, 1]
+
+
+def test_trim_spurs_keeps_a_loop_around_a_block() -> None:
+    route = [1, 2, 3, 4, 2, 5, 1]
+    assert _trim_spurs(route) == route
+
+
+def test_compactness_tells_a_square_from_a_sliver() -> None:
+    graph = nx.DiGraph()
+    corners = {1: (0, 0), 2: (0.01, 0), 3: (0.01, 0.01), 4: (0, 0.01), 5: (0.01, 0.0005), 6: (0, 0.0005)}
+    for node, (x, y) in corners.items():
+        graph.add_node(node, x=x, y=y)
+
+    square = _compactness(graph, [1, 2, 3, 4, 1])
+    sliver = _compactness(graph, [1, 2, 5, 6, 1])
+
+    assert 0.7 < square < 0.85
+    assert sliver < 0.2

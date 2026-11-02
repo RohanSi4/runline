@@ -73,6 +73,9 @@ class RouteMetrics:
     repeated_fraction: float
     drive_distance_miles: float = 0
     elevation_coverage: float = 1
+    # 4*pi*area / perimeter^2: 1 for a circle, ~0.6 for a triangle, ~0 for a
+    # sliver that runs out and back on neighbouring streets.
+    compactness: float = 1
 
     def __post_init__(self) -> None:
         if self.distance_miles <= 0:

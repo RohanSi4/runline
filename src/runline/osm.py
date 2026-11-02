@@ -271,6 +271,27 @@ def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
     return crossings
 
 
+def _compactness(graph: nx.DiGraph, node_ids: list[int]) -> float:
+    """Isoperimetric ratio of the route's outline, in local metres."""
+
+    if len(node_ids) < 4:
+        return 0.0
+    latitude = float(graph.nodes[node_ids[0]]["y"])
+    x_scale = 111_320.0 * math.cos(math.radians(latitude))
+    points = [
+        (float(graph.nodes[node]["x"]) * x_scale, float(graph.nodes[node]["y"]) * 110_540.0)
+        for node in node_ids
+    ]
+    area = 0.0
+    perimeter = 0.0
+    for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1]):
+        area += x1 * y2 - x2 * y1
+        perimeter += math.hypot(x2 - x1, y2 - y1)
+    if perimeter == 0:
+        return 0.0
+    return min(1.0, 4 * math.pi * abs(area) / 2 / perimeter**2)
+
+
 def measure_route(
     graph: nx.DiGraph,
     node_ids: list[int],
@@ -311,6 +332,7 @@ def measure_route(
         repeated_fraction=repeated_meters / total_meters if total_meters else 0,
         drive_distance_miles=drive_distance_miles,
         elevation_coverage=elevation_meters / total_meters if total_meters else 0,
+        compactness=_compactness(graph, node_ids),
     )
 
 
@@ -430,6 +452,23 @@ def _join_paths(paths: list[list[int]]) -> list[int]:
     return joined
 
 
+def _trim_spurs(node_ids: list[int]) -> list[int]:
+    """Drop out-and-back detours, so A-B-C-B-A becomes A.
+
+    A waypoint that snaps onto a dead end makes the route run up the street and
+    straight back out. Each reversal is undone as soon as it appears, so nested
+    spurs unwind fully. Only exact reversals go: a lap of a block stays.
+    """
+
+    trimmed: list[int] = []
+    for node in node_ids:
+        if len(trimmed) >= 2 and trimmed[-2] == node:
+            trimmed.pop()
+        else:
+            trimmed.append(node)
+    return trimmed
+
+
 # At 0.82, two selected 5-mile options shared 78% of their road length.
 MAX_SHARED_LENGTH_FRACTION = 0.7
 
@@ -527,8 +566,11 @@ def generate_loops(
                 _path(collapsed, first_node, second_node),
                 list(reversed(inbound_reversed_paths[second_node])),
             )
-            nodes = _join_paths(list(legs))
+            nodes = _trim_spurs(_join_paths(list(legs)))
         except (KeyError, nx.NetworkXNoPath, nx.NodeNotFound):
+            return
+        if len(nodes) < 4:
+            # Nothing left but an out-and-back once the spurs are gone.
             return
 
         metrics = measure_route(collapsed, nodes, drive_distance_miles)
@@ -593,7 +635,7 @@ def generate_loops(
             continue
         if alternate == last:
             continue
-        nodes = _join_paths([first, middle, alternate])
+        nodes = _trim_spurs(_join_paths([first, middle, alternate]))
         metrics = measure_route(collapsed, nodes, drive_distance_miles)
         if 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
             candidates.append(RouteCandidate(f"route-{len(candidates) + 1:03d}", tuple(nodes), (), metrics))

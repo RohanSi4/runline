@@ -13,7 +13,13 @@ class ScoreWeights:
     surface: float = 2.5
     elevation: float = 1.5
     repeated_segments: float = 5.0
+    shape: float = 4.0
     driving: float = 0.35
+
+
+# Waypoint loops are roughly triangular (~0.6). Below this a route stops
+# reading as a loop and starts reading as an out-and-back on parallel streets.
+ROUND_ENOUGH = 0.35
 
 
 def _normalized(value: float, minimum: float, maximum: float) -> float:
@@ -91,6 +97,7 @@ def rank_candidates(
             "surface": weights.surface * surface_penalty,
             "elevation": weights.elevation * elevation_penalty,
             "repeated_segments": weights.repeated_segments * metrics.repeated_fraction,
+            "shape": weights.shape * max(0.0, ROUND_ENOUGH - metrics.compactness) / ROUND_ENOUGH,
             "driving": weights.driving * metrics.drive_distance_miles,
         }
         candidate.score_components = components
