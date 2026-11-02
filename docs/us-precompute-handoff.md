@@ -48,11 +48,18 @@ Done:
 - `scripts/precompute_pools.py`, `scripts/merge_pools.py`, `slurm/`.
 - Cluster setup works (`slurm/setup.sh`, uv-managed Python 3.12).
 
+- **A (code):** `src/runline/tiling.py`, `scripts/build_metros.py`,
+  `tests/test_tiling.py` on branch `metro-tiling`. The cell grid moved to
+  `src/runline/grid.py` (same ids; `precompute_pools.py` re-exports it).
+
 In progress:
 - Charlottesville pilot. Single-shard test is job 6788169 on Krish's account.
   Next: full 400-task array and merge, then fill in **Measured** below.
+- **A (data):** run `build_metros.py` on the real Census files and commit
+  `config/metros.json` + `config/metro-boundaries.geojson` (see A below).
+  Until then the committed-config test is skipped.
 
-Not started: everything under **Remaining work**.
+Not started: everything else under **Remaining work**.
 
 ## Measured
 
@@ -140,6 +147,71 @@ cell's needed disc fits in one tile. Output: a config generator for
 `config/areas.json` (or a new `config/metros.json`) and a test that every
 cell of a metro is covered by some tile at the 12 mi radius.
 
+*Done (code), branch `metro-tiling`.* How it works:
+- A metro's cells are the 200 m grid cells touching its boundary (Census
+  polygon, holes filled so interior parks count, grown 150 m, simplified).
+- Tiles are discs of `radius = needed + cell half-diagonal + core`, where
+  `needed = graph_radius_meters(12 mi)` = 10,622 m and `core` defaults to
+  3 km, so tiles are 13.8 km. A tile **owns** cells within its `reach`
+  (`radius - needed - half-diagonal`, about 3.0 km), which guarantees the
+  cell's whole 12 mi disc is inside the tile. Centres are a hex lattice,
+  every cell is then checked with haversine, gaps get an extra tile, and
+  tiles owning nothing are dropped.
+- Each cell's owner is the nearest tile centre among tiles that reach it
+  (`tiling.assign_cells`). **D should group cells with exactly this rule**,
+  over all tiles in `config/metros.json` (adjacent metros' tiles overlap, so
+  run it over every metro's tiles at once and each cell gets one owner).
+- Tile entries have the keys of a `config/areas.json` entry (slug, label,
+  latitude, longitude, radius_meters) plus `reach_meters` and `cells`, so B
+  can build a tile like any area. `config/areas.json` is untouched; it is
+  still what ships to Vercel.
+- `tests/test_tiling.py` checks synthetic metros (concave, islands, a
+  200 m sliver, 25-61 degrees N) including a brute-force check independent
+  of the vectorised code, and re-verifies the committed config. The needed
+  radius comes from `graph_radius_meters`, so raising it fails the test until
+  tiles are regenerated.
+
+To generate the config (Census servers are reachable from a laptop, not
+from every sandbox):
+1. Boundaries: census.gov TIGER/Line Shapefiles, any year 2023 or later,
+   layer *Urban Areas*, file `tl_<year>_us_uac20.zip` (2020 urban areas;
+   older years carry the 2010 ones). Leave it zipped.
+2. Populations, any one of:
+   `https://api.census.gov/data/2020/dec/dhc?get=NAME,P1_001N&for=urban%20area:*`
+   saved as `.json`; or a `.csv` with a population column and a GEOID or
+   name column; or the Federal Register list of 2020 urban areas
+   (FR doc 2022-28286 on govinfo.gov) saved as `.txt` (joins by name).
+3. ```bash
+   mkdir -p build-cache/census   # gitignored; put both downloads here
+   .venv/bin/python scripts/build_metros.py \
+       --urban-areas build-cache/census/tl_2024_us_uac20.zip \
+       --population build-cache/census/ua_population.json --top 50
+   .venv/bin/python scripts/build_metros.py --check
+   ```
+   It prints per-metro cells and tiles and the total unique cells (replace
+   the 1.2M estimate in H with it). Puerto Rico and other territories are
+   skipped because the Geofabrik US extract does not include them
+   (`--include-territories` to keep them).
+
+Measured on synthetic shapes: a NYC-sized 4,800 km^2 metro is 120k cells
+and 521 / 246 / 98 tiles at a 2 / 3 / 5 km core, in under a second.
+
+Found while doing A, for whoever picks these up:
+- **Pools go to 15 mi but tiles are sized for 12.** `DEFAULT_TARGETS` is
+  1-15, and a 15 mi crop is 13.3 km. A 15 mi loop from a cell at the edge of
+  a tile's reach can be clipped. Either cap tile pools at 12 mi or run with
+  `--max-miles 15` (tiles grow to 16.5 km). Decide before F.
+- **Dense tiles will be big.** Tile size is dominated by the 10.6 km needed
+  radius, not the core, so even a minimal tile is about 370 km^2. With
+  sidewalks mapped separately, a Manhattan-like tile could reach 1M+ walk
+  nodes; at today's ~8 MB per 1,000 nodes that is too much memory per
+  SLURM task. B should report node counts per tile; D may want to crop each
+  target to its own `graph_radius_meters` instead of preparing the whole
+  tile once.
+- The core width trades tile count (graph builds, storage) against tile
+  size (Dijkstra time per call, memory). 3 km is a starting point; revisit
+  with F's seconds-per-cell numbers.
+
 **B. Graph builder from the Geofabrik US extract.** `build_graphs.py` uses
 Overpass, which cannot serve the US. Read `us-latest.osm.pbf` (about 11 GB),
 cut each tile with osmium, build the walk graph, drive graph, start
@@ -194,6 +266,7 @@ several arrays. Write shards to `/bigtemp`.
 - Targets: whole miles (current) vs half miles (about 2x compute, better
   coverage of half-mile requests).
 - Grid: 200 m (current) vs 300 m (2.25x fewer cells, start up to 210 m away).
+- Tile sizing: `--max-miles` 12 vs 15 and `--core-meters` (see A).
 - Live fallback architecture (see G).
 - Pool hosting (R2 proposed).
 - OSM data is ODbL and pools are a derived database: attribution, and

@@ -36,6 +36,8 @@ os.environ.setdefault("RUNLINE_ALLOW_OSM_DOWNLOAD", "0")
 
 from runline.coverage import areas, load_area_graph
 from runline.geo import distance_meters
+# Re-exported: the grid moved to the package so tiling and serving share it.
+from runline.grid import DEFAULT_GRID_METERS, cell_centre, cell_id
 from runline.models import Coordinate, RoutePreferences, SurfacePreference
 from runline.osm import (
     PREPARED_KEY,
@@ -51,35 +53,8 @@ from runline.osm import (
 # miles; whole miles covered 3-17 at twice the time. Requests that miss the
 # pool fall back to live generation.
 DEFAULT_TARGETS = tuple(range(1, 16))
-DEFAULT_GRID_METERS = 200.0
 POOL_SIZE_PER_TARGET = 20
-METERS_PER_DEGREE_LATITUDE = 110_540.0
-METERS_PER_DEGREE_LONGITUDE = 111_320.0
 POOL_FORMAT_VERSION = 1
-
-
-def cell_id(latitude: float, longitude: float, grid_meters: float) -> str:
-    """Global grid cell containing a point, the same for every area.
-
-    Rows are fixed in latitude; each row's column width is set at the row's
-    centre latitude, so cells stay roughly square. The server computes the
-    same id from a request's start point to find its pool.
-    """
-
-    row_height = grid_meters / METERS_PER_DEGREE_LATITUDE
-    row = math.floor(latitude / row_height)
-    centre_latitude = (row + 0.5) * row_height
-    column_width = grid_meters / (METERS_PER_DEGREE_LONGITUDE * math.cos(math.radians(centre_latitude)))
-    column = math.floor(longitude / column_width)
-    return f"{int(grid_meters)}:{row}:{column}"
-
-
-def cell_centre(cell: str) -> Coordinate:
-    grid, row, column = (int(part) for part in cell.split(":"))
-    row_height = grid / METERS_PER_DEGREE_LATITUDE
-    centre_latitude = (row + 0.5) * row_height
-    column_width = grid / (METERS_PER_DEGREE_LONGITUDE * math.cos(math.radians(centre_latitude)))
-    return Coordinate(centre_latitude, (column + 0.5) * column_width)
 
 
 def area_cells(area, graph, grid_meters: float) -> list[str]:

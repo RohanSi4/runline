@@ -9,5 +9,6 @@ cache/
 .vercel
 .env*
 /build-cache/dem/
+/build-cache/census/
 /pools/
 /slurm/logs/
