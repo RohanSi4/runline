@@ -20,6 +20,9 @@ class ScoreWeights:
 # Waypoint loops are roughly triangular (~0.6). Below this a route stops
 # reading as a loop and starts reading as an out-and-back on parallel streets.
 ROUND_ENOUGH = 0.35
+# Below this a loop is a thin out-and-back. It ranks after every rounder route
+# that fits the distance, but still ahead of any route that misses it.
+MIN_COMPACTNESS = 0.2
 
 
 def _normalized(value: float, minimum: float, maximum: float) -> float:
@@ -106,7 +109,8 @@ def rank_candidates(
     def ranking_key(candidate: RouteCandidate) -> tuple[float, ...]:
         error = abs(candidate.metrics.distance_miles - preferences.target_distance_miles)
         if error <= preferences.distance_tolerance_miles:
-            return (0, candidate.score, error)
+            sliver = candidate.metrics.compactness < MIN_COMPACTNESS
+            return (0, sliver, candidate.score, error)
         # If every option misses the target, the closest route is the honest fallback.
         return (1, error, candidate.score)
 

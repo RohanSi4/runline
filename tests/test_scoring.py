@@ -88,3 +88,21 @@ def test_a_rounder_loop_buys_no_extra_signals() -> None:
     ranked = rank_candidates([busy_circle, quiet_triangle], RoutePreferences(target_distance_miles=5))
 
     assert ranked[0].route_id == "quiet"
+
+
+def test_a_sliver_ranks_after_a_quieter_round_loop_even_with_fewer_signals() -> None:
+    sliver = _candidate("sliver", compactness=0.05)
+    busy_loop = _candidate("loop", compactness=0.5, signals=3)
+
+    ranked = rank_candidates([sliver, busy_loop], RoutePreferences(target_distance_miles=5))
+
+    assert [candidate.route_id for candidate in ranked] == ["loop", "sliver"]
+
+
+def test_an_in_band_sliver_beats_a_round_loop_that_misses_the_distance() -> None:
+    sliver = _candidate("sliver", compactness=0.05, distance=5.0)
+    long_loop = _candidate("long", compactness=0.6, distance=6.0)
+
+    ranked = rank_candidates([long_loop, sliver], RoutePreferences(target_distance_miles=5))
+
+    assert [candidate.route_id for candidate in ranked] == ["sliver", "long"]

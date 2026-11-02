@@ -27,7 +27,7 @@ from .models import (
     RoutePreferences,
     SurfacePreference,
 )
-from .scoring import rank_candidates
+from .scoring import MIN_COMPACTNESS, ROUND_ENOUGH, rank_candidates
 
 
 TRAIL_HIGHWAYS = {"bridleway", "footway", "path", "track"}
@@ -469,6 +469,24 @@ def _trim_spurs(node_ids: list[int]) -> list[int]:
     return trimmed
 
 
+def _separated_return(
+    graph: nx.DiGraph, outbound: list[int], start: int, end: int
+) -> list[int]:
+    """Shortest way home that avoids the streets the outbound legs used.
+
+    The cheapest return is usually the quiet street the route went out on, so
+    plain loops come back on themselves or on the next street over. Tripling
+    the cost of used edges keeps them available but pushes the return away.
+    """
+
+    used = {(min(u, v), max(u, v)) for u, v in zip(outbound, outbound[1:])}
+
+    def return_cost(u: int, v: int, data: dict[str, Any]) -> float:
+        return data["_cost"] * (3 if (min(u, v), max(u, v)) in used else 1)
+
+    return nx.shortest_path(graph, start, end, weight=return_cost)
+
+
 # At 0.82, two selected 5-mile options shared 78% of their road length.
 MAX_SHARED_LENGTH_FRACTION = 0.7
 
@@ -593,10 +611,13 @@ def generate_loops(
             for sweep in (80, 120):
                 sample(scale, heading, sweep)
 
+    # Slivers do not count towards a full set, so a direction that only
+    # produced thin loops gets the extra sampling below.
     feasible = [
         candidate for candidate in candidates
         if abs(candidate.metrics.distance_miles - preferences.target_distance_miles)
         <= preferences.distance_tolerance_miles
+        and candidate.metrics.compactness >= MIN_COMPACTNESS
     ]
     feasible_ranked = rank_candidates(feasible, preferences)
     if len(_distinct_by_length(collapsed, feasible_ranked, preferences.result_count)) < preferences.result_count:
@@ -616,32 +637,38 @@ def generate_loops(
         for heading in range(0, 360, 30):
             sample(0.65, heading, 90)
 
-    preliminary = _distinct_by_length(
-        collapsed, rank_candidates(candidates, preferences), preferences.result_count
+    # Re-route the return of shortlisted loops that come back on themselves or
+    # run out and back on neighbouring streets. Doing this per sample instead
+    # cost up to 40% more time at 12 miles for the same shapes.
+    shortlist = _distinct_by_length(
+        collapsed, rank_candidates(candidates, preferences), preferences.result_count * 2
     )
-    for candidate in preliminary:
-        if candidate.metrics.repeated_fraction < 0.12:
+    for candidate in shortlist:
+        if (
+            candidate.metrics.repeated_fraction < 0.12
+            and candidate.metrics.compactness >= ROUND_ENOUGH
+        ):
             continue
         first, middle, last = candidate_legs[candidate.route_id]
-        outbound = _join_paths([first, middle])
-        used = {(min(u, v), max(u, v)) for u, v in zip(outbound, outbound[1:])}
-
-        def return_cost(u: int, v: int, data: dict[str, Any]) -> float:
-            return data["_cost"] * (3 if (min(u, v), max(u, v)) in used else 1)
-
         try:
-            alternate = nx.shortest_path(collapsed, last[0], origin_node, weight=return_cost)
+            alternate = _separated_return(
+                collapsed, _join_paths([first, middle]), last[0], origin_node
+            )
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             continue
         if alternate == last:
             continue
         nodes = _trim_spurs(_join_paths([first, middle, alternate]))
+        if len(nodes) < 4:
+            continue
         metrics = measure_route(collapsed, nodes, drive_distance_miles)
         if 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
             candidates.append(RouteCandidate(f"route-{len(candidates) + 1:03d}", tuple(nodes), (), metrics))
 
     pool = _distinct_by_length(
-        collapsed, rank_candidates(candidates, preferences), max(20, preferences.result_count * 6)
+        collapsed,
+        rank_candidates(candidates, preferences),
+        max(20, preferences.result_count * 6),
     )
     if elevation_loader and pool:
         elevation_loader(

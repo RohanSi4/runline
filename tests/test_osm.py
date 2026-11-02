@@ -21,6 +21,7 @@ from runline.osm import (
     _nearest_node,
     _compactness,
     _routable_core,
+    _separated_return,
     _trim_spurs,
     collapse_graph,
     measure_route,
@@ -282,3 +283,14 @@ def test_compactness_tells_a_square_from_a_sliver() -> None:
 
     assert 0.7 < square < 0.85
     assert sliver < 0.2
+
+
+def test_separated_return_stays_off_the_way_out() -> None:
+    # Out 1 -> 2 -> 3. Home is 3 -> 2 -> 1 (cost 2) or 3 -> 4 -> 1 (cost 3).
+    graph = nx.DiGraph()
+    for u, v, cost in ((1, 2, 1), (2, 3, 1), (3, 2, 1), (2, 1, 1), (3, 4, 1.5), (4, 1, 1.5)):
+        graph.add_edge(u, v, _cost=cost)
+
+    assert nx.shortest_path(graph, 3, 1, weight="_cost") == [3, 2, 1]
+    assert _separated_return(graph, [1, 2, 3], 3, 1) == [3, 4, 1]
+
