@@ -8,25 +8,28 @@
 #
 #   rsync -av --exclude .venv --exclude cache --exclude pools --exclude build-cache \
 #       ~/Desktop/RunLine/runline/ vaq5gp@portal.cs.virginia.edu:~/runline/
+#
+# Python comes from uv rather than the cluster's modules: on portal09 the
+# python/3.12.3 module loads, but the directory it points at does not exist,
+# and Ubuntu's own python3 is 3.10. uv installs a standalone 3.12 under the
+# home directory, which every compute node mounts.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-module purge
-module load python
-
-python3 - <<'EOF'
-import sys
-if sys.version_info < (3, 11):
-    sys.exit(f"Python {sys.version.split()[0]} is too old; runline needs 3.11+. Try `module avail python`.")
-EOF
+UV="$HOME/.local/bin/uv"
+if [ ! -x "$UV" ]; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+"$UV" python install 3.12
 
 mkdir -p slurm/logs
-python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
+rm -rf .venv
+"$UV" venv --python 3.12 .venv
+.venv/bin/python --version
 # The precompute only reads shipped graphs, so the runtime set is enough;
 # osmnx is needed only to build new areas.
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m pip install -e . --no-deps
+"$UV" pip install --python .venv/bin/python -r requirements.txt
+"$UV" pip install --python .venv/bin/python -e . --no-deps
 
 for slug in $(.venv/bin/python -c "import json; print(' '.join(a['slug'] for a in json.load(open('graphs/manifest.json'))['areas']))"); do
     .venv/bin/python scripts/precompute_pools.py --area "$slug" --list --shard-count 400

@@ -17,6 +17,5 @@ set -euo pipefail
 : "${AREA:?pass --export=AREA=<slug>}"
 
 cd "$SLURM_SUBMIT_DIR"
-module purge
-module load python
+# .venv runs uv's standalone Python 3.12 (see setup.sh), so no modules.
 .venv/bin/python scripts/merge_pools.py --area "$AREA" --expect-shards "${SHARDS:-400}"

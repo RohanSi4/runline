@@ -21,8 +21,7 @@ set -euo pipefail
 SHARDS=${SHARDS:-400}
 
 cd "$SLURM_SUBMIT_DIR"
-module purge
-module load python
+# .venv runs uv's standalone Python 3.12 (see setup.sh), so no modules.
 # One core per task: keep numpy/scipy from starting extra threads.
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 
