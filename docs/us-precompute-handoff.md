@@ -51,13 +51,12 @@ Done:
 - **A (code):** `src/runline/tiling.py`, `scripts/build_metros.py`,
   `tests/test_tiling.py` on branch `metro-tiling`. The cell grid moved to
   `src/runline/grid.py` (same ids; `precompute_pools.py` re-exports it).
+- **A (data):** `config/metros.json` generated from 2020 Census urban areas:
+  top 50 metros, 8,677 tiles, 3,347,052 unique cells at 200 m.
 
 In progress:
 - Charlottesville pilot. Single-shard test is job 6788169 on Krish's account.
   Next: full 400-task array and merge, then fill in **Measured** below.
-- **A (data):** run `build_metros.py` on the real Census files and commit
-  `config/metros.json` + `config/metro-boundaries.geojson` (see A below).
-  Until then the committed-config test is skipped.
 
 Not started: everything else under **Remaining work**.
 
@@ -256,8 +255,9 @@ either a small routing server that loads tile graphs from R2, or answer
 
 ### Step 4
 
-**H. US run.** Estimate before measuring: about 1.2M cells (top 50 metros at
-200 m) x 27 s = 9,000 CPU-hours, about 22 h on 400 cores, if D is done. Check
+**H. US run.** Estimate before measuring: 3.35M cells (top 50
+metros at 200 m, from `config/metros.json`) x 27 s = 25,103 CPU-hours,
+about 63 h on 400 cores, if D is done. Check
 `scontrol show config | grep -i MaxArraySize` (often 1001) and split into
 several arrays. Write shards to `/bigtemp`.
 
