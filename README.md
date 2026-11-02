@@ -114,24 +114,39 @@ four most recent origin/surface combinations. Start points are rounded to about
 cover the rounding. Warm instances answer a repeat 3 mile request in roughly
 half the time of a first one.
 
-The build tries to bake elevation into the graph, since the per-request
-Open-Meteo cache lives in `/tmp` and is wiped between serverless instances.
-Open-Meteo rate-limits bulk backfills, so the bake is best effort: if it fails
-the build still succeeds and the app falls back to fetching elevation per
-request.
+The build bakes elevation into the graph from the Copernicus GLO-90 DEM, read
+straight from the public AWS tiles (cached under `build-cache/dem/`, about 5MB
+per one-degree tile). Open-Meteo serves the same DEM but rate-limits bulk
+backfills, and its per-request cache lives in `/tmp`, which is wiped between
+serverless instances. All 40,209 Charlottesville nodes bake in about three
+seconds. To bake an already built graph without downloading it again:
 
-**The shipped Charlottesville graph is not baked.** None of its 40,209 nodes
-carry an elevation, so every request pays for live elevation lookups. Routes
-are correct and report full elevation coverage, but this is on the critical
-path and is the next latency win after per-request graph preparation. Rerun
-`--force` to attempt the bake again; the cell cache in `build-cache/` resumes
-where it left off.
+```bash
+.venv/bin/python scripts/build_graphs.py --bake-only
+```
 
 Locally, an address outside every shipped area still falls back to a live
 Overpass download and caches it under `cache/`. That fallback is disabled
 whenever `VERCEL` is set, and can be forced either way with
 `RUNLINE_ALLOW_OSM_DOWNLOAD=1` or `=0`. Uncovered requests return HTTP 422 with
 a message naming the supported areas.
+
+## Precomputed route pools
+
+`scripts/precompute_pools.py` runs the planner from every 200 m start cell in
+an area, for each surface and for whole-mile targets from 1 to 15, and keeps
+every distinct loop it finds. Distance and elevation preference only affect
+ranking, so a request whose distance band a pool covers can be answered by
+filtering and ranking the pool. The work is split into shards for a SLURM
+array; `slurm/` has the setup, array and merge scripts for the UVA CS cluster,
+and `scripts/merge_pools.py` turns the shards into `pools/<area>.sqlite`.
+
+```bash
+.venv/bin/python scripts/precompute_pools.py --area charlottesville-va --list --shard-count 400
+sbatch --export=AREA=charlottesville-va slurm/precompute.sbatch
+```
+
+The app does not read pools yet.
 
 ## Frontend
 

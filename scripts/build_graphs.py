@@ -26,8 +26,8 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 CONFIG_PATH = PROJECT_ROOT / "config" / "areas.json"
 GRAPHS_DIR = PROJECT_ROOT / "graphs"
-# Kept outside graphs/ so it is not shipped in the function bundle, but
-# committed so a rebuild does not refetch tens of thousands of cells.
+# DEM tiles live here, outside graphs/ so they are not shipped in the function
+# bundle. They are about 5MB per one-degree tile and are fetched on demand.
 ELEVATION_CACHE_DIR = PROJECT_ROOT / "build-cache"
 
 # Measured on a full 5 mile request: 57k nodes peaks near 490MB RSS, 118k nodes
@@ -37,35 +37,22 @@ ELEVATION_CACHE_DIR = PROJECT_ROOT / "build-cache"
 NODE_WARNING_THRESHOLD = 70_000
 
 
-class ThrottledSession:
-    """Polite Open-Meteo client for bulk backfills.
+def bake_elevation(slug: str, graph) -> None:
+    """Attach Copernicus GLO-90 elevation from tiles cached in build-cache/dem.
 
-    Baking a whole area asks for tens of thousands of elevation cells in one
-    run, which trips Open-Meteo's rate limit and returns 429. Requests are
-    spaced out and retried with exponential backoff. This is build-time only;
-    the runtime path never calls the service.
+    Open-Meteo serves the same DEM but rate-limits bulk backfills, which is
+    why the shipped Charlottesville graph was never baked. Reading the public
+    tiles directly has no limit and takes seconds per area.
     """
 
-    def __init__(self, delay: float = 2.5, attempts: int = 8) -> None:
-        self.delay = delay
-        self.attempts = attempts
+    from runline.elevation import enrich_graph_copernicus
 
-    def get(self, url: str, **kwargs):
-        import requests
-
-        for attempt in range(self.attempts):
-            time.sleep(self.delay)
-            response = requests.get(url, **kwargs)
-            if response.status_code != 429:
-                return response
-            backoff = min(60.0, self.delay * (2**attempt))
-            print(f"    rate limited, waiting {backoff:.0f}s")
-            time.sleep(backoff)
-        return response
-
-
-def nodes_with_elevation(graph) -> int:
-    return sum(1 for _, data in graph.nodes(data=True) if "elevation" in data)
+    baked = enrich_graph_copernicus(graph, ELEVATION_CACHE_DIR / "dem")
+    total = graph.number_of_nodes()
+    # The planner refuses to rank on elevation below 95% coverage, so only a
+    # near-complete bake may skip the per-request fallback.
+    graph.graph["elevation_baked"] = baked >= 0.95 * total
+    print(f"  {slug}: baked elevation for {baked} of {total} nodes")
 
 
 def build_place_index(slug: str, graph, start_entries: list) -> None:
@@ -222,27 +209,10 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
             simplify=True,
             retain_all=True,
         )
-        # Bake terrain elevation into the graph. Open-Meteo is cached per ~110m
-        # cell, but that cache lives in /tmp on a serverless host and is wiped
-        # between instances, so an unbaked graph refetches on every request.
-        from runline.elevation import enrich_graph_open_meteo
-
-        ELEVATION_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        elevation_cache = ELEVATION_CACHE_DIR / f"elevation-{slug}.json"
-        try:
-            fetched = enrich_graph_open_meteo(
-                graph, elevation_cache, session=ThrottledSession()
-            )
-            graph.graph["elevation_baked"] = True
-            print(
-                f"  {slug}: baked elevation for {nodes_with_elevation(graph)} nodes "
-                f"({fetched} cells fetched)"
-            )
-        except Exception as error:
-            # Open-Meteo rate-limits large backfills. A graph without baked
-            # elevation still works; the app falls back to fetching per request.
-            print(f"  {slug}: elevation NOT baked ({error.__class__.__name__}). "
-                  "Rerun --force later to bake it; the cell cache resumes.")
+        # Bake terrain elevation into the graph. The per-request Open-Meteo
+        # cache lives in /tmp on a serverless host and is wiped between
+        # instances, so an unbaked graph refetches on every request.
+        bake_elevation(slug, graph)
 
         payload = gzip.compress(pickle.dumps(graph, protocol=5), 6)
         GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
@@ -280,6 +250,11 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="rebuild existing graphs")
     parser.add_argument("--only", help="build a single area by slug")
     parser.add_argument(
+        "--bake-only",
+        action="store_true",
+        help="bake elevation into already built graphs without downloading them again",
+    )
+    parser.add_argument(
         "--starts-only",
         action="store_true",
         help="rebuild only the start candidates and drive graph",
@@ -304,7 +279,15 @@ def main() -> int:
             for entry in json.loads(manifest_path.read_text(encoding="utf-8"))["areas"]
         }
 
-    if arguments.starts_only:
+    if arguments.bake_only:
+        for area in selected:
+            path = GRAPHS_DIR / existing[area["slug"]]["file"]
+            with gzip.open(path, "rb") as handle:
+                graph = pickle.load(handle)
+            bake_elevation(area["slug"], graph)
+            path.write_bytes(gzip.compress(pickle.dumps(graph, protocol=5), 6))
+        entries = [existing[area["slug"]] for area in selected]
+    elif arguments.starts_only:
         import osmnx as ox
 
         for area in selected:

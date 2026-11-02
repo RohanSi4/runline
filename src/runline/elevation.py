@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import tempfile
 from collections.abc import Iterable
@@ -97,3 +98,88 @@ def enrich_graph_open_meteo(
         for node in nodes:
             graph.nodes[node]["elevation"] = cache[key]
     return len(missing)
+
+
+COPERNICUS_TILE_URL = (
+    "https://copernicus-dem-90m.s3.amazonaws.com/{name}/{name}.tif"
+)
+
+
+def _copernicus_tile_name(latitude: int, longitude: int) -> str:
+    # Tiles are named by their south-west corner in whole degrees.
+    north = f"{'N' if latitude >= 0 else 'S'}{abs(latitude):02d}_00"
+    east = f"{'E' if longitude >= 0 else 'W'}{abs(longitude):03d}_00"
+    return f"Copernicus_DSM_COG_30_{north}_{east}_DEM"
+
+
+def _copernicus_tile(latitude: int, longitude: int, tile_directory: Path, session: Any) -> Path | None:
+    """Download one GLO-90 tile once. Returns None for tiles with no land."""
+
+    name = _copernicus_tile_name(latitude, longitude)
+    path = tile_directory / f"{name}.tif"
+    missing = tile_directory / f"{name}.missing"
+    if path.exists():
+        return path
+    if missing.exists():
+        return None
+    tile_directory.mkdir(parents=True, exist_ok=True)
+    response = session.get(COPERNICUS_TILE_URL.format(name=name), timeout=120)
+    if response.status_code in (403, 404):
+        # Open ocean has no tile; remember that instead of asking again.
+        missing.touch()
+        return None
+    response.raise_for_status()
+    temporary = path.with_suffix(".tmp")
+    temporary.write_bytes(response.content)
+    os.replace(temporary, path)
+    return path
+
+
+def enrich_graph_copernicus(
+    graph: nx.Graph, tile_directory: Path, *, session: Any = requests
+) -> int:
+    """Attach elevation in meters from local Copernicus GLO-90 tiles.
+
+    This is the same DEM Open-Meteo serves, read straight from the public AWS
+    copy, so a bulk bake has no rate limit: Charlottesville needs one tile of
+    about 10MB. Values are bilinearly interpolated between the four nearest
+    cells. Nodes on tiles with no land keep no elevation, so coverage checks
+    still see the gap. Returns the number of nodes given an elevation.
+    """
+
+    import numpy as np
+    import rasterio
+
+    nodes_by_tile: dict[tuple[int, int], list[Any]] = {}
+    for node, data in graph.nodes(data=True):
+        tile = (math.floor(float(data["y"])), math.floor(float(data["x"])))
+        nodes_by_tile.setdefault(tile, []).append(node)
+
+    baked = 0
+    for (latitude, longitude), nodes in nodes_by_tile.items():
+        path = _copernicus_tile(latitude, longitude, tile_directory, session)
+        if path is None:
+            continue
+        with rasterio.open(path) as dataset:
+            heights = dataset.read(1).astype(np.float64)
+            nodata = dataset.nodata
+            inverse = ~dataset.transform
+        rows_max, columns_max = heights.shape[0] - 1, heights.shape[1] - 1
+        for node in nodes:
+            data = graph.nodes[node]
+            column, row = inverse * (float(data["x"]), float(data["y"]))
+            # The transform maps to cell corners; centres are half a cell in.
+            column, row = column - 0.5, row - 0.5
+            c0 = min(max(int(math.floor(column)), 0), columns_max)
+            r0 = min(max(int(math.floor(row)), 0), rows_max)
+            c1, r1 = min(c0 + 1, columns_max), min(r0 + 1, rows_max)
+            fx = min(max(column - c0, 0.0), 1.0)
+            fy = min(max(row - r0, 0.0), 1.0)
+            corners = heights[[r0, r0, r1, r1], [c0, c1, c0, c1]]
+            if nodata is not None and np.any(corners == nodata):
+                continue
+            top = corners[0] * (1 - fx) + corners[1] * fx
+            bottom = corners[2] * (1 - fx) + corners[3] * fx
+            data["elevation"] = float(top * (1 - fy) + bottom * fy)
+            baked += 1
+    return baked

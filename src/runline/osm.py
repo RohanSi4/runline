@@ -439,10 +439,102 @@ def _nearest_node(graph: nx.Graph, coordinate: Coordinate) -> int:
     )
 
 
+COST_MATRIX_KEY = "_runline_cost_matrix"
+
+
+class _CostMatrix:
+    """The graph's ``_cost`` weights as a sparse matrix for scipy's Dijkstra.
+
+    NetworkX runs Dijkstra in Python, and point-to-point searches were 75% of
+    an 8 mile request (3.3 of 4.4s). scipy's compiled single-source search is
+    about 5x faster per call on a 32k-node graph, even though it does not stop
+    at the target.
+    """
+
+    def __init__(self, graph: nx.DiGraph) -> None:
+        import numpy as np
+        from scipy.sparse import csr_matrix
+
+        self.nodes = list(graph.nodes)
+        self.index = {node: position for position, node in enumerate(self.nodes)}
+        rows, columns, costs = [], [], []
+        for u, v, data in graph.edges(data=True):
+            rows.append(self.index[u])
+            columns.append(self.index[v])
+            # csgraph treats an explicit zero as a missing edge.
+            costs.append(max(float(data["_cost"]), 1e-9))
+        size = len(self.nodes)
+        self.forward = csr_matrix(
+            (np.asarray(costs), (np.asarray(rows), np.asarray(columns))), shape=(size, size)
+        )
+        self.forward.sort_indices()
+        self.backward = self.forward.T.tocsr()
+
+    def _position(self, matrix, u: int, v: int) -> int:
+        row = self.index[u]
+        start, end = matrix.indptr[row], matrix.indptr[row + 1]
+        return start + int((matrix.indices[start:end] == self.index[v]).nonzero()[0][0])
+
+    def tree(self, source: int, *, reverse: bool = False, matrix=None) -> "_PathTree":
+        from scipy.sparse.csgraph import dijkstra
+
+        if source not in self.index:
+            raise nx.NodeNotFound(f"node {source} is not in the graph")
+        graph = matrix if matrix is not None else (self.backward if reverse else self.forward)
+        _, predecessors = dijkstra(
+            graph, indices=self.index[source], return_predecessors=True
+        )
+        return _PathTree(self, self.index[source], predecessors)
+
+    def penalized(self, edges: set[tuple[int, int]], factor: float):
+        """A copy of the forward matrix with ``edges`` (either direction) scaled."""
+
+        matrix = self.forward.copy()
+        for u, v in edges:
+            for a, b in ((u, v), (v, u)):
+                if a in self.index and b in self.index and self.forward[self.index[a], self.index[b]]:
+                    matrix.data[self._position(matrix, a, b)] *= factor
+        return matrix
+
+
+class _PathTree:
+    """Shortest paths from one source, read out per target like a dict."""
+
+    def __init__(self, costs: _CostMatrix, source: int, predecessors) -> None:
+        self._costs = costs
+        self._source = source
+        self._predecessors = predecessors
+
+    def __getitem__(self, target: int) -> list[int]:
+        index = self._costs.index.get(target)
+        if index is None:
+            raise KeyError(target)
+        path = [index]
+        while index != self._source:
+            index = int(self._predecessors[index])
+            if index < 0:
+                raise KeyError(target)
+            path.append(index)
+        nodes = self._costs.nodes
+        return [nodes[position] for position in reversed(path)]
+
+
+def _cost_matrix(graph: nx.DiGraph) -> _CostMatrix:
+    cached = graph.graph.get(COST_MATRIX_KEY)
+    if cached is not None and len(cached.nodes) == graph.number_of_nodes():
+        return cached
+    costs = _CostMatrix(graph)
+    graph.graph[COST_MATRIX_KEY] = costs
+    return costs
+
+
 def _path(graph: nx.DiGraph, start: int, end: int) -> list[int]:
     # A* with a chord heuristic matched these costs but was slower overall:
     # 0.6x at the Rotunda for 3 miles, 1.1-2x at other origins and distances.
-    return nx.shortest_path(graph, start, end, weight="_cost")
+    try:
+        return _cost_matrix(graph).tree(start)[end]
+    except KeyError:
+        raise nx.NetworkXNoPath(f"no path from {start} to {end}") from None
 
 
 def _join_paths(paths: list[list[int]]) -> list[int]:
@@ -479,12 +571,12 @@ def _separated_return(
     the cost of used edges keeps them available but pushes the return away.
     """
 
-    used = {(min(u, v), max(u, v)) for u, v in zip(outbound, outbound[1:])}
-
-    def return_cost(u: int, v: int, data: dict[str, Any]) -> float:
-        return data["_cost"] * (3 if (min(u, v), max(u, v)) in used else 1)
-
-    return nx.shortest_path(graph, start, end, weight=return_cost)
+    costs = _cost_matrix(graph)
+    used = set(zip(outbound, outbound[1:]))
+    try:
+        return costs.tree(start, matrix=costs.penalized(used, 3))[end]
+    except KeyError:
+        raise nx.NetworkXNoPath(f"no path from {start} to {end}") from None
 
 
 # At 0.82, two selected 5-mile options shared 78% of their road length.
@@ -540,6 +632,7 @@ def _routable_core(graph: nx.DiGraph) -> nx.DiGraph:
 
     trimmed = graph.subgraph(core).copy()
     trimmed.graph.pop(NODE_INDEX_KEY, None)
+    trimmed.graph.pop(COST_MATRIX_KEY, None)
     return trimmed
 
 
@@ -549,20 +642,23 @@ def generate_loops(
     preferences: RoutePreferences,
     drive_distance_miles: float = 0,
     elevation_loader: Callable[[nx.Graph, set[int]], None] | None = None,
+    pool_size: int | None = None,
 ) -> list[RouteCandidate]:
-    """Generate triangular loop candidates across headings, widths, and radii."""
+    """Generate triangular loop candidates across headings, widths, and radii.
+
+    With ``pool_size``, return up to that many distinct candidates, ranked but
+    without coordinates, instead of the final ``result_count`` routes. The
+    route-pool precompute uses this to keep loops of every length it finds.
+    """
 
     if graph.graph.get(PREPARED_KEY):
         collapsed = graph
     else:
         collapsed = _routable_core(collapse_graph(graph, preferences))
     origin_node = _nearest_node(collapsed, origin)
-    outbound_paths = nx.single_source_dijkstra_path(
-        collapsed, origin_node, weight="_cost"
-    )
-    inbound_reversed_paths = nx.single_source_dijkstra_path(
-        collapsed.reverse(copy=False), origin_node, weight="_cost"
-    )
+    costs = _cost_matrix(collapsed)
+    outbound_paths = costs.tree(origin_node)
+    inbound_reversed_paths = costs.tree(origin_node, reverse=True)
     target = preferences.target_distance_meters
     target_miles = preferences.target_distance_miles
     candidates: list[RouteCandidate] = []
@@ -668,7 +764,7 @@ def generate_loops(
     pool = _distinct_by_length(
         collapsed,
         rank_candidates(candidates, preferences),
-        max(20, preferences.result_count * 6),
+        pool_size or max(20, preferences.result_count * 6),
     )
     if elevation_loader and pool:
         elevation_loader(
@@ -679,6 +775,8 @@ def generate_loops(
             candidate.metrics = measure_route(
                 collapsed, list(candidate.node_ids), drive_distance_miles
             )
+    if pool_size is not None:
+        return pool
 
     ranked = _distinct_by_length(collapsed, rank_candidates(pool, preferences), preferences.result_count)
     for candidate in ranked:
@@ -717,6 +815,7 @@ def crop_to_radius(
     ]
     cropped = graph.subgraph(keep).copy()
     cropped.graph.pop(NODE_INDEX_KEY, None)
+    cropped.graph.pop(COST_MATRIX_KEY, None)
     return cropped
 
 

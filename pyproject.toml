@@ -12,6 +12,7 @@ dependencies = [
   "networkx>=3.4,<4",
   "osmnx>=2.0,<3",
   "requests>=2.32,<3",
+  "scipy>=1.14,<2",
   "uvicorn>=0.35,<1",
 ]
 

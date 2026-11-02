@@ -8,3 +8,6 @@ output/
 cache/
 .vercel
 .env*
+/build-cache/dem/
+/pools/
+/slurm/logs/
