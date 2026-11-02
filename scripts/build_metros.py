@@ -22,6 +22,10 @@ Outputs, both committed:
         --urban-areas build-cache/census/tl_2024_us_uac20.zip \\
         --population build-cache/census/ua_population.json --top 50
     python scripts/build_metros.py --check   # re-verify the committed config
+
+Reading the shapefile needs geopandas, which the cluster and Vercel installs
+(requirements.txt) leave out. Use the full development install:
+``pip install -e '.[dev]'``. ``--check`` needs only shapely.
 """
 
 from __future__ import annotations

@@ -180,7 +180,9 @@ from every sandbox):
    saved as `.json`; or a `.csv` with a population column and a GEOID or
    name column; or the Federal Register list of 2020 urban areas
    (FR doc 2022-28286 on govinfo.gov) saved as `.txt` (joins by name).
-3. ```bash
+3. Needs geopandas: `pip install -e '.[dev]'`, not `requirements.txt`
+   (the generator tests skip without it).
+   ```bash
    mkdir -p build-cache/census   # gitignored; put both downloads here
    .venv/bin/python scripts/build_metros.py \
        --urban-areas build-cache/census/tl_2024_us_uac20.zip \
@@ -256,8 +258,11 @@ either a small routing server that loads tile graphs from R2, or answer
 ### Step 4
 
 **H. US run.** Estimate before measuring: 3.35M cells (top 50
-metros at 200 m, from `config/metros.json`) x 27 s = 25,103 CPU-hours,
-about 63 h on 400 cores, if D is done. Check
+metros at 200 m, from `config/metros.json`) x 81.5 s (cluster, Charlottesville
+test shard; the 27 s figure was a laptop) = about 76,000 CPU-hours, about
+190 h on 400 cores. That is an upper bound: `config/metros.json` counts every
+cell touching a boundary, and cells with no walkable node are skipped. C and a
+re-measure in F set the real number. Check
 `scontrol show config | grep -i MaxArraySize` (often 1001) and split into
 several arrays. Write shards to `/bigtemp`.
 
