@@ -7,9 +7,12 @@ hills you asked for. Export to GPX for your watch.
 **Live:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
 capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 
+<img src="docs/readme/hero.svg" alt="A running loop on a street grid: the chosen loop in orange leaves the start pin and returns to it, with two alternatives in blue and purple" width="100%">
+
 ## How it fits together
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "DM Sans, -apple-system, Segoe UI, sans-serif", "primaryColor": "#fbfaf6", "primaryBorderColor": "#2f6348", "primaryTextColor": "#20221f", "lineColor": "#62655d", "clusterBkg": "#f1f6dc", "clusterBorder": "#2f6348", "titleColor": "#193c2c", "edgeLabelBackground": "#f4f1e9", "tertiaryColor": "#f4f1e9"}}}%%
 flowchart LR
     subgraph Browser["Frontend · web/"]
         UI["Leaflet map<br/>start, distance, surface, hills"]
@@ -41,24 +44,20 @@ flowchart LR
 
 ## How a loop is found
 
-```mermaid
-flowchart TD
-    A["Start point + target distance"] --> B["Snap to nearest walkable node"]
-    B --> C["Pick 2 waypoints:<br/>12 headings × 2 widths × 4-5 sizes"]
-    C --> D["Shortest paths:<br/>start → A → B → start<br/>(scipy Dijkstra on runner costs)"]
-    D --> E["Trim out-and-back spurs"]
-    E --> F{"Within 55-150%<br/>of target?"}
-    F -- no --> C
-    F -- yes --> G["Measure: distance, signals, crossings,<br/>trail %, repeats, climb, roundness"]
-    G --> H["Re-route slivers home on<br/>different streets"]
-    H --> I["Score + rank, drop near-duplicates"]
-    I --> J["Top 3 loops"]
-```
+<img src="docs/readme/loop.svg" alt="Three steps: two waypoints on a ring around the start; shortest paths start to A to B and back, with a dead-end spur at A; the spur trimmed and the loop's area shaded" width="100%">
 
-**Edges cost what they cost a runner**: metres, plus penalties for a traffic
-signal (+450 m), a major road (+1.8× its length), entering a node with major road on two
-sides (+300 m), and the wrong surface for the request. Shortest paths on
-those costs already avoid lights and busy roads.
+1. **Place waypoints.** Two points on a ring about a third of the target from
+   the start, tried at 12 headings × 2 widths × 4–5 ring sizes.
+2. **Connect them.** Shortest paths start → A → B → start on runner costs
+   (scipy Dijkstra), then trim any dead-end spur the waypoints landed on.
+3. **Measure and rank.** Keep loops within 55–150% of the target; measure
+   distance, signals, crossings, trail share, repeats, climb and roundness;
+   send sliver-shaped loops home on different streets; return the top 3.
+
+**Edges cost what they cost a runner**: meters, plus penalties for a traffic
+signal (+450 m), a major road (+1.8× its length), entering a node with major
+road on two sides (+300 m), and the wrong surface for the request. Shortest
+paths on those costs already avoid lights and busy roads.
 
 **Scoring** adds weighted penalties; lowest wins:
 
@@ -66,9 +65,9 @@ those costs already avoid lights and busy roads.
 |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 7.0 | 6.0 | 5.0 | 4.0 | 4.0 | 2.5 | 1.5 |
 
-*Shape* is roundness (4π·area / perimeter²): a circle is 1, the planner's
-triangles about 0.6, and a loop under 0.2 is an out-and-back in disguise, so
-it ranks after every round loop. Two options sharing over 70% of their length
+*Shape* is roundness, 4π·area / length², the shaded area above: a circle is
+1, the planner's triangles about 0.6, and a loop under 0.2 is an out-and-back
+in disguise, so it ranks after every round loop. Two options sharing over 70% of their length
 count as one.
 
 ## Precomputing routes
@@ -78,6 +77,7 @@ change the *ranking*, so every loop a start can have is computed ahead of time
 and a request becomes a lookup.
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "DM Sans, -apple-system, Segoe UI, sans-serif", "primaryColor": "#fbfaf6", "primaryBorderColor": "#2f6348", "primaryTextColor": "#20221f", "lineColor": "#62655d", "clusterBkg": "#f1f6dc", "clusterBorder": "#2f6348", "titleColor": "#193c2c", "edgeLabelBackground": "#f4f1e9", "tertiaryColor": "#f4f1e9"}}}%%
 flowchart LR
     P["US OSM extract<br/>(Geofabrik, 11 GB)"] --> X["Cut tiles<br/>osmium"]
     M["Top 50 metros<br/>(Census urban areas)"] --> T["8,675 tiles of 13.8 km<br/>each owns its centre 3 km"]

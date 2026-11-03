@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 300" role="img" aria-labelledby="title">
+  <title id="title">Three steps of finding a loop: two waypoints placed on a ring around the start; shortest paths start to A to B and back, with a dead-end spur at A; the spur trimmed and the loop's enclosed area shaded, which is what the roundness score measures</title>
+  <defs>
+    <g id="grid" stroke="#deddd6" stroke-width="2" stroke-linecap="round">
+      <path d="M14 50 H346 M14 90 H346 M14 130 H346 M14 170 H346 M14 210 H346 M14 250 H346"/>
+      <path d="M30 34 V286 M70 34 V286 M110 34 V286 M150 34 V286 M190 34 V286 M230 34 V286 M270 34 V286 M310 34 V286"/>
+    </g>
+    <g id="start">
+      <circle r="12" fill="#193c2c"/>
+      <circle r="4.5" fill="#c8e663"/>
+    </g>
+    <style>
+      text { font-family: "DM Sans", "Inter", -apple-system, "Segoe UI", sans-serif; font-weight: 600; font-size: 13px; fill: #20221f; }
+      .tag { fill: #fbfaf6; font-size: 11px; }
+    </style>
+  </defs>
+
+  <!-- 1 · waypoints on a ring -->
+  <g>
+    <rect x="0.5" y="0.5" width="359" height="299" rx="16" fill="#fbfaf6" stroke="#deddd6"/>
+    <use href="#grid"/>
+    <path d="M70 78 A172 172 0 0 1 242 250" fill="none" stroke="#8a8d84" stroke-width="1.5" stroke-dasharray="3 5"/>
+    <path d="M70 250 L114.5 83.9 L219 164 Z" fill="none" stroke="#62655d" stroke-width="1.5" stroke-dasharray="6 5"/>
+    <g fill="#235f9f">
+      <circle cx="114.5" cy="83.9" r="10"/>
+      <circle cx="219" cy="164" r="10"/>
+    </g>
+    <text class="tag" x="114.5" y="88" text-anchor="middle">A</text>
+    <text class="tag" x="219" y="168" text-anchor="middle">B</text>
+    <use href="#start" x="70" y="250"/>
+  </g>
+
+  <!-- 2 · shortest paths, with a spur at A -->
+  <g transform="translate(390 0)">
+    <rect x="0.5" y="0.5" width="359" height="299" rx="16" fill="#fbfaf6" stroke="#deddd6"/>
+    <use href="#grid"/>
+    <g fill="none" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M70 250 V170 H110 V130 H230 V170 V250 H70" stroke="#fbfaf6" stroke-width="11"/>
+      <path d="M70 250 V170 H110 V130 H230 V170 V250 H70" stroke="#e2552f" stroke-width="5"/>
+      <path d="M110 130 V90" stroke="#a33225" stroke-width="5" stroke-dasharray="2 7"/>
+    </g>
+    <g fill="#235f9f">
+      <circle cx="110" cy="90" r="10"/>
+      <circle cx="230" cy="170" r="10"/>
+    </g>
+    <text class="tag" x="110" y="94" text-anchor="middle">A</text>
+    <text class="tag" x="230" y="174" text-anchor="middle">B</text>
+    <text x="126" y="112" style="fill:#a33225">dead end</text>
+    <use href="#start" x="70" y="250"/>
+  </g>
+
+  <!-- 3 · trimmed, measured -->
+  <g transform="translate(780 0)">
+    <rect x="0.5" y="0.5" width="359" height="299" rx="16" fill="#fbfaf6" stroke="#deddd6"/>
+    <use href="#grid"/>
+    <path d="M70 250 V170 H110 V130 H230 V250 Z" fill="#f1f6dc"/>
+    <g fill="none" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M70 250 V170 H110 V130 H230 V250 H70" stroke="#fbfaf6" stroke-width="11"/>
+      <path d="M70 250 V170 H110 V130 H230 V250 H70" stroke="#e2552f" stroke-width="5"/>
+    </g>
+    <text x="150" y="205" text-anchor="middle" style="fill:#2f6348">area</text>
+    <use href="#start" x="70" y="250"/>
+  </g>
+</svg>
