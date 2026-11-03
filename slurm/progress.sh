@@ -17,7 +17,15 @@ printf '%-14s %6s running  %6s pending\n' "SLURM tasks" \
     "$(squeue -u "$USER" -h -t R | wc -l)" "$(squeue -u "$USER" -h -t PD -r | wc -l)"
 squeue -u "$USER" -h -t R -o '%P' | sort | uniq -c | awk '{printf "  on %-10s %6d\n", $2, $1}'
 echo
-printf '%-14s %6d of %d\n' "Extracts" "$(count "$EXTRACTS" '*.osm.pbf' | awk '{print $1}')" "$expected"
+# osmium opens every tile's output when it starts, so files existing says
+# nothing; the extract job's state does.
+extract_state=$(squeue -u "$USER" -h -n runline-extract -o '%T' | head -1)
+tiles=$(find "$EXTRACTS" -maxdepth 1 -name '*.osm.pbf' ! -name highways.osm.pbf 2>/dev/null | wc -l)
+if [ -n "$extract_state" ]; then
+    printf '%-14s %s (%d tiles)\n' "Extracts" "${extract_state,,}" "$expected"
+else
+    printf '%-14s %6d of %d tiles\n' "Extracts" "$tiles" "$expected"
+fi
 printf '%-14s %6d built, %d in progress\n' "Tile graphs" \
     "$(count "$GRAPHS" '*.json')" "$(count "$GRAPHS" '*.pkl.gz.tmp')"
 if [ -f "$POOLS/plan.json.gz" ]; then
