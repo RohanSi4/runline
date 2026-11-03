@@ -9,11 +9,13 @@
 # TASKS (default 4000) is how many tasks share the plan, ARRAY (default 1000)
 # the size of each array, CONCURRENT (default 800) how many run at once per
 # array, PARTITION (default cpu,gpu) where they run. cpu and gpu each allow 400
-# cores per user, so up to 800 tasks run at once and the rest queue.
+# cores per user, so up to 800 tasks run at once and the rest queue. AFTER
+# (e.g. afterany:<tile build job>) holds the arrays until that job finishes.
 set -euo pipefail
 PLAN=${1:?plan.json.gz} GRAPHS=${2:?tile graph directory} OUT=${3:?output directory}
 TASKS=${TASKS:-4000} ARRAY=${ARRAY:-1000} CONCURRENT=${CONCURRENT:-800}
 PARTITION=${PARTITION:-cpu,gpu}
+AFTER=${AFTER:-}
 cd "$(dirname "$0")/.."
 mkdir -p slurm/logs "$OUT"
 
@@ -21,11 +23,12 @@ jobs=()
 for ((offset = 0; offset < TASKS; offset += ARRAY)); do
     last=$((offset + ARRAY < TASKS ? ARRAY - 1 : TASKS - offset - 1))
     jobs+=("$(sbatch --parsable --partition="$PARTITION" --array="0-${last}%${CONCURRENT}" \
+        ${AFTER:+--dependency=$AFTER} \
         --export="ALL,PLAN=$PLAN,GRAPHS=$GRAPHS,OUT=$OUT,TASKS=$TASKS,TASK_OFFSET=$offset" \
         slurm/precompute_tiles.sbatch)")
 done
 dependency=$(IFS=:; echo "afterok:${jobs[*]}")
-merge=$(sbatch --parsable --dependency="$dependency" --mem=16G --time=12:00:00 \
+merge=$(sbatch --parsable --partition="$PARTITION" --dependency="$dependency" --mem=16G --time=12:00:00 \
     --wrap=".venv/bin/python scripts/merge_pools.py --plan $PLAN --input $OUT" \
     --job-name=runline-merge --output=slurm/logs/%x-%j.out)
 echo "arrays: ${jobs[*]}"
