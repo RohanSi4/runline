@@ -1,71 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 290" role="img" aria-labelledby="title">
-  <title id="title">Precompute pipeline: the 11 GB US OpenStreetMap extract and the top 50 metros, cut into 8,675 tiles, become tile walk graphs with elevation; every 200 meter cell is pooled for three surfaces at 1 to 12 miles, ten loops per target, into pools.sqlite</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 250" role="img" aria-labelledby="title">
+  <title id="title">Precomputing routes in four steps. Built: generate candidate loops for every starting area ahead of time on the cluster, then save them. Planned: when a request arrives, filter the saved loops to the requested distance and rank them by the runner's preferences</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#62655d"/>
     </marker>
     <style>
       text { font-family: "DM Sans", "Inter", -apple-system, "Segoe UI", sans-serif; fill: #20221f; }
-      .name { font-size: 16px; font-weight: 600; }
-      .sub { font-size: 12.5px; fill: #62655d; }
-      .node { fill: #fbfaf6; stroke: #deddd6; stroke-width: 1.5; }
+      .name { font-size: 19px; font-weight: 600; }
+      .what { font-size: 13.5px; }
+      .tech { font-size: 12px; fill: #62655d; }
+      .tag { font-size: 13px; font-weight: 600; fill: #2f6348; }
     </style>
   </defs>
-  <rect width="1140" height="290" rx="22" fill="#f4f1e9"/>
+  <rect width="1140" height="250" rx="22" fill="#f4f1e9"/>
 
-  <!-- top row: data flow -->
-  <rect class="node" x="20" y="24" width="190" height="96" rx="12"/>
-  <text class="name" x="38" y="66">US OSM extract</text>
-  <text class="sub" x="38" y="90">Geofabrik · 11 GB</text>
+  <text class="tag" x="28" y="40">Built · ahead of time, on the cluster</text>
+  <text class="tag" x="604" y="40" style="fill:#62655d">Planned · when a request arrives</text>
 
-  <rect class="node" x="250" y="24" width="190" height="96" rx="12"/>
-  <text class="name" x="268" y="66">Tile extracts</text>
-  <text class="sub" x="268" y="90">osmium · 14 per job</text>
-
-  <rect class="node" x="480" y="24" width="190" height="96" rx="12"/>
-  <text class="name" x="498" y="66">Tile graphs</text>
-  <text class="sub" x="498" y="90">walk graph + elevation</text>
-
-  <rect class="node" x="710" y="24" width="190" height="96" rx="12" fill="#f1f6dc" stroke="#c8e663"/>
-  <text class="name" x="728" y="66">Every 200 m cell</text>
-  <text class="sub" x="728" y="90">3 surfaces × 1–12 mi</text>
-
-  <rect x="940" y="24" width="180" height="96" rx="12" fill="#193c2c"/>
-  <text class="name" x="958" y="66" style="fill:#fbfaf6">pools.sqlite</text>
-  <text class="sub" x="958" y="90" style="fill:#dfe9c4">a row per cell + surface</text>
-
-  <!-- bottom row: where the tiles come from -->
-  <rect class="node" x="20" y="170" width="190" height="96" rx="12"/>
-  <text class="name" x="38" y="212">Top 50 metros</text>
-  <text class="sub" x="38" y="236">Census urban areas</text>
-
-  <rect class="node" x="250" y="170" width="190" height="96" rx="12"/>
-  <text class="name" x="268" y="212">8,675 tiles</text>
-  <text class="sub" x="268" y="236">13.8 km, each owns 3 km</text>
-
-  <!-- tile discs: overlapping graphs, owned centres -->
-  <g transform="translate(560 218)">
-    <g fill="none" stroke="#c8e663" stroke-width="1.5">
-      <circle cx="0" cy="0" r="40"/>
-      <circle cx="52" cy="0" r="40"/>
-      <circle cx="26" cy="-30" r="40" opacity="0.55"/>
-    </g>
-    <g fill="#2f6348">
-      <circle cx="0" cy="0" r="9"/>
-      <circle cx="52" cy="0" r="9"/>
-      <circle cx="26" cy="-30" r="9" opacity="0.55"/>
-    </g>
+  <g fill="#fbfaf6" stroke="#deddd6" stroke-width="1.5">
+    <rect x="28" y="58" width="236" height="160" rx="14"/>
+    <rect x="316" y="58" width="236" height="160" rx="14"/>
   </g>
-  <text class="sub" x="684" y="214">big discs overlap so every cell's</text>
-  <text class="sub" x="684" y="232">12 mile loop fits; each cell has one owner</text>
+  <g fill="none" stroke="#8a8d84" stroke-width="1.5" stroke-dasharray="6 5">
+    <rect x="604" y="58" width="236" height="160" rx="14"/>
+    <rect x="892" y="58" width="220" height="160" rx="14"/>
+  </g>
 
-  <!-- edges -->
+  <text class="name" x="50" y="96">Generate</text>
+  <text class="what" x="50" y="124">Candidate loops at 1–12</text>
+  <text class="what" x="50" y="143">miles from every starting</text>
+  <text class="what" x="50" y="162">area, for each surface</text>
+  <text class="tech" x="50" y="198">10 per target, duplicates removed</text>
+
+  <text class="name" x="338" y="96">Save</text>
+  <text class="what" x="338" y="124">One compact record per</text>
+  <text class="what" x="338" y="143">starting area and surface</text>
+  <text class="tech" x="338" y="198">route pool · pools.sqlite</text>
+
+  <text class="name" x="626" y="96">Filter</text>
+  <text class="what" x="626" y="124">Keep loops near the</text>
+  <text class="what" x="626" y="143">requested distance</text>
+  <text class="tech" x="626" y="198">within ±0.25 mi</text>
+
+  <text class="name" x="914" y="96">Rank</text>
+  <text class="what" x="914" y="124">Order by the runner's</text>
+  <text class="what" x="914" y="143">preferences, show 3</text>
+  <text class="tech" x="914" y="198">same scoring as live routes</text>
+
   <g fill="none" stroke="#62655d" stroke-width="1.6">
-    <path d="M210 72 H246" marker-end="url(#arrow)"/>
-    <path d="M440 72 H476" marker-end="url(#arrow)"/>
-    <path d="M670 72 H706" marker-end="url(#arrow)"/>
-    <path d="M900 72 H936" marker-end="url(#arrow)"/>
-    <path d="M210 218 H246" marker-end="url(#arrow)"/>
-    <path d="M345 170 V124" marker-end="url(#arrow)"/>
+    <path d="M264 138 H312" marker-end="url(#arrow)"/>
+    <path d="M552 138 H600" marker-end="url(#arrow)"/>
+    <path d="M840 138 H888" marker-end="url(#arrow)"/>
   </g>
 </svg>

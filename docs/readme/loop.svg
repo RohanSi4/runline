@@ -3,7 +3,7 @@
   <defs>
     <g id="grid" stroke="#deddd6" stroke-width="2" stroke-linecap="round">
       <path d="M14 50 H346 M14 90 H346 M14 130 H346 M14 170 H346 M14 210 H346 M14 250 H346"/>
-      <path d="M30 34 V286 M70 34 V286 M110 34 V286 M150 34 V286 M190 34 V286 M230 34 V286 M270 34 V286 M310 34 V286"/>
+      <path d="M30 44 V286 M70 44 V286 M110 44 V286 M150 44 V286 M190 44 V286 M230 44 V286 M270 44 V286 M310 44 V286"/>
     </g>
     <g id="start">
       <circle r="12" fill="#193c2c"/>
@@ -12,6 +12,8 @@
     <style>
       text { font-family: "DM Sans", "Inter", -apple-system, "Segoe UI", sans-serif; font-weight: 600; font-size: 13px; fill: #20221f; }
       .tag { fill: #fbfaf6; font-size: 11px; }
+      .step { font-size: 15px; font-weight: 600; }
+      .note { font-size: 12.5px; font-weight: 500; fill: #62655d; }
     </style>
   </defs>
 
@@ -28,6 +30,8 @@
     <text class="tag" x="114.5" y="88" text-anchor="middle">A</text>
     <text class="tag" x="219" y="168" text-anchor="middle">B</text>
     <use href="#start" x="70" y="250"/>
+    <text class="note" x="88" y="276">Start / finish</text>
+    <text class="step" x="20" y="28">1  Choose waypoints</text>
   </g>
 
   <!-- 2 · shortest paths, with a spur at A -->
@@ -47,6 +51,7 @@
     <text class="tag" x="230" y="174" text-anchor="middle">B</text>
     <text x="126" y="112" style="fill:#a33225">dead end</text>
     <use href="#start" x="70" y="250"/>
+    <text class="step" x="20" y="28">2  Connect streets</text>
   </g>
 
   <!-- 3 · trimmed, measured -->
@@ -60,5 +65,6 @@
     </g>
     <text x="150" y="205" text-anchor="middle" style="fill:#2f6348">area</text>
     <use href="#start" x="70" y="250"/>
+    <text class="step" x="20" y="28">3  Remove backtracking</text>
   </g>
 </svg>
