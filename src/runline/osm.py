@@ -188,6 +188,40 @@ def _left_of(direction: float, point: float) -> bool:
     return math.sin(point - direction) > 0
 
 
+MAJOR_EDGES_KEY = "_runline_major_edges"
+
+
+def _major_edge_index(graph: nx.DiGraph) -> dict[int, dict[int, tuple[int, int, dict[str, Any]]]]:
+    """Per-node memo of major-road edges, keyed by the neighbour, cached on the graph.
+
+    ``_major_crossings`` needs these at every node of every candidate route,
+    and rebuilding them from ``in_edges``/``out_edges`` each time was most of
+    ``measure_route``. Filled lazily, so a one-off request graph only pays for
+    the nodes its routes visit.
+    """
+
+    cached = graph.graph.get(MAJOR_EDGES_KEY)
+    if cached is not None and cached[0] == graph.number_of_nodes():
+        return cached[1]
+    index: dict[int, dict[int, tuple[int, int, dict[str, Any]]]] = {}
+    graph.graph[MAJOR_EDGES_KEY] = (graph.number_of_nodes(), index)
+    return index
+
+
+def _major_edges_at(graph: nx.DiGraph, index: dict, node: int) -> dict[int, tuple[int, int, dict[str, Any]]]:
+    edges = index.get(node)
+    if edges is None:
+        # In-edges first, then out-edges; a later edge to the same neighbour
+        # replaces an earlier one, as in the scan this replaces.
+        edges = {
+            u if v == node else v: (u, v, data)
+            for u, v, data in (*graph.in_edges(node, data=True), *graph.out_edges(node, data=True))
+            if _is_major(data)
+        }
+        index[node] = edges
+    return edges
+
+
 def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
     """Route positions where the route changes side across a major road.
 
@@ -199,6 +233,7 @@ def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
     once (dual-carriageway junctions).
     """
 
+    major_index = _major_edge_index(graph)
     crossings: list[int] = []
     travelled = 0.0
     joined_left: bool | None = None
@@ -208,14 +243,10 @@ def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
         incoming = graph.edges[previous, node]
         outgoing = graph.edges[node, following]
         travelled += float(incoming.get("length", 0))
-        incoming_major, outgoing_major = _is_major(incoming), _is_major(outgoing)
-        major_edges = {
-            u if v == node else v: (u, v, data)
-            for u, v, data in (*graph.in_edges(node, data=True), *graph.out_edges(node, data=True))
-            if _is_major(data)
-        }
+        major_edges = _major_edges_at(graph, major_index, node)
         if not major_edges:
             continue
+        incoming_major, outgoing_major = _is_major(incoming), _is_major(outgoing)
         back = _bearing_from(graph, previous, node, node)
         ahead = _bearing_from(graph, node, following, node)
         if not (incoming_major or outgoing_major):
@@ -475,16 +506,22 @@ class _CostMatrix:
         start, end = matrix.indptr[row], matrix.indptr[row + 1]
         return start + int((matrix.indices[start:end] == self.index[v]).nonzero()[0][0])
 
-    def tree(self, source: int, *, reverse: bool = False, matrix=None) -> "_PathTree":
-        from scipy.sparse.csgraph import dijkstra
+    def tree(
+        self, source: int, *, reverse: bool = False, matrix=None, limit: float | None = None
+    ) -> "_PathTree":
+        """Shortest paths from ``source``, searching no further than ``limit``.
+
+        A bounded search finalises nodes in the same order as a full one, so
+        every node it reaches gets the same path. A node beyond the bound is
+        not missing, just unsearched: the tree then reruns without the bound
+        on first need, so the result never depends on the limit chosen, only
+        the time does.
+        """
 
         if source not in self.index:
             raise nx.NodeNotFound(f"node {source} is not in the graph")
         graph = matrix if matrix is not None else (self.backward if reverse else self.forward)
-        _, predecessors = dijkstra(
-            graph, indices=self.index[source], return_predecessors=True
-        )
-        return _PathTree(self, self.index[source], predecessors)
+        return _PathTree(self, self.index[source], graph, limit)
 
     def penalized(self, edges: set[tuple[int, int]], factor: float):
         """A copy of the forward matrix with ``edges`` (either direction) scaled."""
@@ -500,15 +537,32 @@ class _CostMatrix:
 class _PathTree:
     """Shortest paths from one source, read out per target like a dict."""
 
-    def __init__(self, costs: _CostMatrix, source: int, predecessors) -> None:
+    def __init__(self, costs: _CostMatrix, source: int, matrix, limit: float | None) -> None:
         self._costs = costs
         self._source = source
-        self._predecessors = predecessors
+        self._matrix = matrix
+        self._limit = limit
+        self._predecessors = self._search(limit)
+
+    def _search(self, limit: float | None):
+        from scipy.sparse.csgraph import dijkstra
+
+        _, predecessors = dijkstra(
+            self._matrix,
+            indices=self._source,
+            return_predecessors=True,
+            limit=float("inf") if limit is None else limit,
+        )
+        return predecessors
 
     def __getitem__(self, target: int) -> list[int]:
         index = self._costs.index.get(target)
         if index is None:
             raise KeyError(target)
+        if index != self._source and self._predecessors[index] < 0 and self._limit is not None:
+            # Beyond the bound, or unreachable: only a full search can tell.
+            self._limit = None
+            self._predecessors = self._search(None)
         path = [index]
         while index != self._source:
             index = int(self._predecessors[index])
@@ -528,11 +582,11 @@ def _cost_matrix(graph: nx.DiGraph) -> _CostMatrix:
     return costs
 
 
-def _path(graph: nx.DiGraph, start: int, end: int) -> list[int]:
+def _path(graph: nx.DiGraph, start: int, end: int, limit: float | None = None) -> list[int]:
     # A* with a chord heuristic matched these costs but was slower overall:
     # 0.6x at the Rotunda for 3 miles, 1.1-2x at other origins and distances.
     try:
-        return _cost_matrix(graph).tree(start)[end]
+        return _cost_matrix(graph).tree(start, limit=limit)[end]
     except KeyError:
         raise nx.NetworkXNoPath(f"no path from {start} to {end}") from None
 
@@ -562,7 +616,7 @@ def _trim_spurs(node_ids: list[int]) -> list[int]:
 
 
 def _separated_return(
-    graph: nx.DiGraph, outbound: list[int], start: int, end: int
+    graph: nx.DiGraph, outbound: list[int], start: int, end: int, limit: float | None = None
 ) -> list[int]:
     """Shortest way home that avoids the streets the outbound legs used.
 
@@ -574,7 +628,7 @@ def _separated_return(
     costs = _cost_matrix(graph)
     used = set(zip(outbound, outbound[1:]))
     try:
-        return costs.tree(start, matrix=costs.penalized(used, 3))[end]
+        return costs.tree(start, matrix=costs.penalized(used, 3), limit=limit)[end]
     except KeyError:
         raise nx.NetworkXNoPath(f"no path from {start} to {end}") from None
 
@@ -633,7 +687,12 @@ def _routable_core(graph: nx.DiGraph) -> nx.DiGraph:
     trimmed = graph.subgraph(core).copy()
     trimmed.graph.pop(NODE_INDEX_KEY, None)
     trimmed.graph.pop(COST_MATRIX_KEY, None)
+    trimmed.graph.pop(MAJOR_EDGES_KEY, None)
     return trimmed
+
+
+# Search bound in cost units (metres plus penalties) per metre of target.
+SEARCH_LIMIT_FACTOR = 2.0
 
 
 def generate_loops(
@@ -657,9 +716,13 @@ def generate_loops(
         collapsed = _routable_core(collapse_graph(graph, preferences))
     origin_node = _nearest_node(collapsed, origin)
     costs = _cost_matrix(collapsed)
-    outbound_paths = costs.tree(origin_node)
-    inbound_reversed_paths = costs.tree(origin_node, reverse=True)
     target = preferences.target_distance_meters
+    # No leg of a loop the planner keeps can cost much more than the loop is
+    # long, so searches stop there instead of covering the whole graph. The
+    # bound only saves time: a leg past it is found by a full search.
+    search_limit = target * SEARCH_LIMIT_FACTOR
+    outbound_paths = costs.tree(origin_node, limit=search_limit)
+    inbound_reversed_paths = costs.tree(origin_node, reverse=True, limit=search_limit)
     target_miles = preferences.target_distance_miles
     candidates: list[RouteCandidate] = []
     candidate_legs: dict[str, tuple[list[int], list[int], list[int]]] = {}
@@ -677,7 +740,7 @@ def generate_loops(
         try:
             legs = (
                 outbound_paths[first_node],
-                _path(collapsed, first_node, second_node),
+                _path(collapsed, first_node, second_node, search_limit),
                 list(reversed(inbound_reversed_paths[second_node])),
             )
             nodes = _trim_spurs(_join_paths(list(legs)))
@@ -748,7 +811,7 @@ def generate_loops(
         first, middle, last = candidate_legs[candidate.route_id]
         try:
             alternate = _separated_return(
-                collapsed, _join_paths([first, middle]), last[0], origin_node
+                collapsed, _join_paths([first, middle]), last[0], origin_node, search_limit
             )
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             continue
@@ -816,6 +879,7 @@ def crop_to_radius(
     cropped = graph.subgraph(keep).copy()
     cropped.graph.pop(NODE_INDEX_KEY, None)
     cropped.graph.pop(COST_MATRIX_KEY, None)
+    cropped.graph.pop(MAJOR_EDGES_KEY, None)
     return cropped
 
 

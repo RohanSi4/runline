@@ -129,7 +129,9 @@ def _copernicus_tile(latitude: int, longitude: int, tile_directory: Path, sessio
         missing.touch()
         return None
     response.raise_for_status()
-    temporary = path.with_suffix(".tmp")
+    # Per-process name: array tasks sharing a DEM directory may fetch the same
+    # tile at once, and the last complete copy simply wins.
+    temporary = path.with_suffix(f".{os.getpid()}.tmp")
     temporary.write_bytes(response.content)
     os.replace(temporary, path)
     return path
