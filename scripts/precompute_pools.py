@@ -26,6 +26,7 @@ import hashlib
 import json
 import math
 import os
+import pickle
 import subprocess
 import sys
 import time
@@ -197,7 +198,6 @@ def run_shard(arguments) -> int:
 
     surfaces = [SurfacePreference(value) for value in arguments.surfaces]
     header = {
-        "header": True,
         "area": area.slug,
         "graph": graph_fingerprint(area),
         "grid_meters": arguments.grid_meters,
@@ -206,15 +206,26 @@ def run_shard(arguments) -> int:
         "shard": [arguments.shard_index, arguments.shard_count],
         **build_version(),
     }
+    write_pools(output, header, graph, shard_cells, surfaces, arguments.targets)
+    return 0
+
+
+def write_pools(output: Path, header: dict, graph, cells: list[str], surfaces, targets) -> int:
+    """Compute every cell's pools on ``graph`` and write them as one shard.
+
+    Written to a temporary name and renamed, so a shard that exists is whole
+    and a killed task leaves nothing to skip over.
+    """
+
     temporary = output.with_suffix(".tmp")
     started = time.time()
     written = 0
     with gzip.open(temporary, "wt", encoding="utf-8") as stream:
-        stream.write(json.dumps(header) + "\n")
+        stream.write(json.dumps({"header": True, **header}) + "\n")
         for surface in surfaces:
             core = prepare_area(graph, surface)
-            for position, cell in enumerate(shard_cells, 1):
-                pool = cell_pool(core, cell, arguments.targets, surface)
+            for position, cell in enumerate(cells, 1):
+                pool = cell_pool(core, cell, targets, surface)
                 if pool is not None:
                     record = {
                         "cell": cell,
@@ -226,31 +237,122 @@ def run_shard(arguments) -> int:
                     written += 1
                 if position % 10 == 0:
                     elapsed = time.time() - started
-                    print(f"  {surface.value}: {position}/{len(shard_cells)} cells, {elapsed:.0f}s", flush=True)
+                    print(f"  {surface.value}: {position}/{len(cells)} cells, {elapsed:.0f}s", flush=True)
     os.replace(temporary, output)
-    print(f"{output.name}: {written} pools from {len(shard_cells)} cells in {time.time() - started:.0f}s")
+    print(f"{output.name}: {written} pools from {len(cells)} cells in {time.time() - started:.0f}s")
+    return written
+
+
+def task_units(units: list[dict], task_index: int, task_count: int) -> list[dict]:
+    """A contiguous block of the plan's units, so one task mostly stays on one tile."""
+
+    start = len(units) * task_index // task_count
+    end = len(units) * (task_index + 1) // task_count
+    return units[start:end]
+
+
+def cells_with_nodes(graph, grid_meters: float) -> set[str]:
+    return {
+        cell_id(float(data["y"]), float(data["x"]), grid_meters) for _, data in graph.nodes(data=True)
+    }
+
+
+def run_plan(arguments) -> int:
+    """Pools for a block of the units in a plan from plan_tile_pools.py.
+
+    Each unit runs on its tile's own graph (built by build_tile_graphs.py), so
+    searches stay tile-sized however big the metro is. Cells without a
+    walkable node in the tile are skipped, as area runs skip them.
+    """
+
+    with gzip.open(arguments.plan, "rt", encoding="utf-8") as stream:
+        plan = json.load(stream)
+    units = task_units(plan["units"], arguments.shard_index, arguments.shard_count)
+    if arguments.list:
+        print(f"{len(plan['units'])} units; task {arguments.shard_index} of {arguments.shard_count} "
+              f"takes {len(units)}")
+        return 0
+    if max(arguments.targets) > plan["max_miles"]:
+        print(f"targets go to {max(arguments.targets)} mi but tiles are sized for {plan['max_miles']} mi")
+        return 1
+
+    arguments.output.mkdir(parents=True, exist_ok=True)
+    surfaces = [SurfacePreference(value) for value in arguments.surfaces]
+
+    def header(unit: dict, fingerprint: str | None) -> dict:
+        return {
+            "tile": unit["tile"],
+            "unit": unit["id"],
+            "graph": fingerprint,
+            "grid_meters": plan["grid_meters"],
+            "targets": list(arguments.targets),
+            "surfaces": [surface.value for surface in surfaces],
+            **build_version(),
+        }
+
+    loaded = None  # (tile, graph, fingerprint, cells with a node)
+    for unit in units:
+        output = arguments.output / f"{unit['id']}.jsonl.gz"
+        if output.exists():
+            print(f"{output.name} already written, skipping")
+            continue
+        if loaded is None or loaded[0] != unit["tile"]:
+            path = arguments.tile_graphs / f"{unit['tile']}.pkl.gz"
+            if not path.exists():
+                # build_tile_graphs writes no graph for an empty (all-water) tile.
+                if (arguments.tile_graphs / f"{unit['tile']}.json").exists():
+                    print(f"{unit['id']}: tile has no walkable ways")
+                    write_pools(output, header(unit, None), None, [], [], [])
+                    continue
+                print(f"{unit['id']}: no graph at {path}")
+                return 1
+            payload = path.read_bytes()
+            graph = pickle.loads(gzip.decompress(payload))
+            if not graph.graph.get("elevation_baked"):
+                print(f"warning: {unit['tile']} has no baked elevation")
+            loaded = (
+                unit["tile"],
+                graph,
+                hashlib.sha256(payload).hexdigest()[:16],
+                cells_with_nodes(graph, plan["grid_meters"]),
+            )
+        tile, graph, fingerprint, walkable = loaded
+        cells = [cell for cell in unit["cells"] if cell in walkable][: arguments.limit_cells]
+        write_pools(output, header(unit, fingerprint), graph, cells, surfaces, arguments.targets)
     return 0
 
 
-def main() -> int:
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="precompute_pools")
-    parser.add_argument("--area", required=True, help="area slug from graphs/manifest.json")
+    parser.add_argument("--area", help="area slug from graphs/manifest.json")
+    parser.add_argument("--plan", type=Path, help="plan.json.gz from plan_tile_pools.py (metro tiles)")
+    parser.add_argument("--tile-graphs", type=Path, help="tile graphs from build_tile_graphs.py, with --plan")
     parser.add_argument("--grid-meters", type=float, default=DEFAULT_GRID_METERS)
     parser.add_argument("--targets", type=float, nargs="+", default=DEFAULT_TARGETS)
     parser.add_argument(
         "--surfaces", nargs="+", default=[surface.value for surface in SurfacePreference],
         choices=[surface.value for surface in SurfacePreference],
     )
+    # Several arrays can split one plan: TASK_OFFSET shifts each array's ids
+    # (MaxArraySize is often 1001).
     parser.add_argument(
-        "--shard-index", type=int, default=int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
+        "--shard-index",
+        type=int,
+        default=int(os.environ.get("TASK_OFFSET", 0)) + int(os.environ.get("SLURM_ARRAY_TASK_ID", 0)),
     )
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--output", type=Path, default=ROOT / "pools")
     parser.add_argument("--limit-cells", type=int, help="only the first N cells of the shard (testing)")
     parser.add_argument("--list", action="store_true", help="print the cell count and exit")
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
     if not 0 <= arguments.shard_index < arguments.shard_count:
         parser.error("--shard-index must be in [0, --shard-count)")
+    if arguments.plan:
+        if not arguments.tile_graphs:
+            parser.error("--plan needs --tile-graphs")
+        return run_plan(arguments)
+    if not arguments.area:
+        parser.error("pass --area, or --plan with --tile-graphs")
     return run_shard(arguments)
 
 

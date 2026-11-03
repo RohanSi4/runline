@@ -368,3 +368,37 @@ def metro_slug(name: str) -> str:
     first_state = states.strip().split("--")[0]
     text = f"{first_place} {first_state}".lower()
     return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+
+
+def owned_cells(config: dict, boundaries: dict) -> dict[str, list[str]]:
+    """Cell ids each tile of a metros config owns, over all metros at once.
+
+    Adjacent metros' tiles overlap and some cells fall in two metros, so
+    cells are pooled and deduplicated first, then every cell goes to the
+    nearest tile that reaches it (``assign_cells``) among all tiles. Each cell
+    is computed by exactly one tile, so a merged run has no duplicates.
+    """
+
+    grid_meters = config["grid_meters"]
+    parts = [metro_cells(boundaries[metro["slug"]], grid_meters) for metro in config["metros"]]
+    rows = np.concatenate([part.rows for part in parts])
+    columns = np.concatenate([part.columns for part in parts])
+    keys, first = np.unique(np.column_stack((rows, columns)), axis=0, return_index=True)
+    latitudes = np.concatenate([part.latitudes for part in parts])[first]
+    longitudes = np.concatenate([part.longitudes for part in parts])[first]
+
+    tiles = [tile for metro in config["metros"] for tile in metro["tiles"]]
+    owner = assign_cells(
+        latitudes,
+        longitudes,
+        np.array([tile["latitude"] for tile in tiles]),
+        np.array([tile["longitude"] for tile in tiles]),
+        np.array([tile["reach_meters"] for tile in tiles]),
+    )
+    if (owner < 0).any():
+        raise ValueError(f"{int((owner < 0).sum())} cells are not reached by any tile; regenerate the config")
+    grid = int(grid_meters)
+    owned: dict[str, list[str]] = {tile["slug"]: [] for tile in tiles}
+    for (row, column), index in zip(keys.tolist(), owner.tolist()):
+        owned[tiles[index]["slug"]].append(f"{grid}:{row}:{column}")
+    return owned
