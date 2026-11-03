@@ -11,28 +11,7 @@ capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 
 ## How it fits together
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "DM Sans, -apple-system, Segoe UI, sans-serif", "primaryColor": "#fbfaf6", "primaryBorderColor": "#2f6348", "primaryTextColor": "#20221f", "lineColor": "#62655d", "clusterBkg": "#f1f6dc", "clusterBorder": "#2f6348", "titleColor": "#193c2c", "edgeLabelBackground": "#f4f1e9", "tertiaryColor": "#f4f1e9"}}}%%
-flowchart LR
-    subgraph Browser["Frontend · web/"]
-        UI["Leaflet map<br/>start, distance, surface, hills"]
-    end
-    subgraph Vercel["Backend · FastAPI on Vercel"]
-        API["/api/routes<br/>/api/places · /api/areas"]
-        Planner["Planner<br/>osm.py · scoring.py"]
-    end
-    subgraph Data["Shipped with the deploy"]
-        Graph[("Walk graph<br/>graphs/*.pkl.gz")]
-        Places[("Street + start list<br/>autocomplete")]
-    end
-    subgraph Cluster["UVA CS SLURM cluster"]
-        Pools[("Route pools<br/>pools.sqlite")]
-    end
-    UI -- "start, preferences" --> API --> Planner --> Graph
-    API --> Places
-    Planner -. "next: look up instead of generate" .-> Pools
-    API -- "3 loops + GPX" --> UI
-```
+<img src="docs/readme/architecture.svg" alt="The Leaflet frontend sends a start and preferences to the FastAPI backend on Vercel; the planner searches the shipped walk graph and returns 3 loops and a GPX; precomputed route pools on the UVA CS cluster are the next data source" width="100%">
 
 | Layer | What | Where |
 |---|---|---|
@@ -76,16 +55,7 @@ Live generation takes 0.7–2.4 s per request. Distance and hill preference only
 change the *ranking*, so every loop a start can have is computed ahead of time
 and a request becomes a lookup.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "DM Sans, -apple-system, Segoe UI, sans-serif", "primaryColor": "#fbfaf6", "primaryBorderColor": "#2f6348", "primaryTextColor": "#20221f", "lineColor": "#62655d", "clusterBkg": "#f1f6dc", "clusterBorder": "#2f6348", "titleColor": "#193c2c", "edgeLabelBackground": "#f4f1e9", "tertiaryColor": "#f4f1e9"}}}%%
-flowchart LR
-    P["US OSM extract<br/>(Geofabrik, 11 GB)"] --> X["Cut tiles<br/>osmium"]
-    M["Top 50 metros<br/>(Census urban areas)"] --> T["8,675 tiles of 13.8 km<br/>each owns its centre 3 km"]
-    T --> X
-    X --> G["Tile walk graphs<br/>+ elevation"]
-    G --> R["Every 200 m cell<br/>× 3 surfaces × 1-12 mi<br/>10 loops per target"]
-    R --> S[("pools.sqlite<br/>one packed row<br/>per cell + surface")]
-```
+<img src="docs/readme/precompute.svg" alt="The US OSM extract and the top 50 metros become 8,675 overlapping tiles, then tile walk graphs with elevation; every 200 m cell is pooled for 3 surfaces at 1 to 12 miles into pools.sqlite" width="100%">
 
 - **Grid:** the world is cut into fixed 200 m cells (`200:<row>:<col>`), so a
   request's pool is found from its start point alone.
