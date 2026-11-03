@@ -13,12 +13,14 @@ The work splits into shards so it can run as a SLURM array job:
 
 Each shard writes pools/<area>/shard-NNNNN.jsonl.gz and skips work it has
 already written, so a requeued or failed task picks up where it stopped.
+Each line holds one pool packed with runline.pools (format 2, base64).
 Merge shards with scripts/merge_pools.py.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import gzip
 import hashlib
 import json
@@ -40,21 +42,31 @@ from runline.geo import distance_meters
 from runline.grid import DEFAULT_GRID_METERS, cell_centre, cell_id
 from runline.models import Coordinate, RoutePreferences, SurfacePreference
 from runline.osm import (
+    MAX_SHARED_LENGTH_FRACTION,
     PREPARED_KEY,
+    _edge_lengths,
     _nearest_node,
     _routable_core,
     collapse_graph,
     generate_loops,
 )
+from runline.pools import FORMAT_VERSION, encode_pool
 
 # The planner homes in on its target, so a pool reliably holds loops near each
 # target and only some in between. Measured on three Charlottesville cells,
 # eight spread targets covered 2-13 of the 29 half-mile bands from 1 to 15
 # miles; whole miles covered 3-17 at twice the time. Requests that miss the
 # pool fall back to live generation.
-DEFAULT_TARGETS = tuple(range(1, 16))
-POOL_SIZE_PER_TARGET = 20
-POOL_FORMAT_VERSION = 1
+# Capped at 12 miles: metro tiles (runline.tiling) are sized for a 12 mile
+# loop, and longer requests are rare enough to generate live.
+DEFAULT_TARGETS = tuple(range(1, 13))
+# Ten per target keeps every distinct shape a request would plausibly see;
+# twenty doubled storage for loops that rarely ranked into a top five.
+POOL_SIZE_PER_TARGET = 10
+# Neighbouring targets find many of the same loops with a block or two
+# changed. Two loops this close in distance that share this much length are
+# one loop as far as a runner is concerned, so only the first is kept.
+DUPLICATE_DISTANCE_MILES = 0.25
 
 
 def area_cells(area, graph, grid_meters: float) -> list[str]:
@@ -96,7 +108,7 @@ def build_version() -> dict:
         )
     except (OSError, subprocess.CalledProcessError):
         commit, dirty = "unknown", True
-    return {"format": POOL_FORMAT_VERSION, "commit": commit, "dirty_src": dirty}
+    return {"format": FORMAT_VERSION, "commit": commit, "dirty_src": dirty}
 
 
 def graph_fingerprint(area) -> str:
@@ -104,22 +116,52 @@ def graph_fingerprint(area) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
+def drop_near_duplicates(core, candidates) -> list:
+    """Candidates in order, minus any that repeat an earlier one.
+
+    A repeat is within DUPLICATE_DISTANCE_MILES of a kept loop and shares at
+    least MAX_SHARED_LENGTH_FRACTION of their combined length, the same test
+    the planner uses within one target. The distance guard keeps loops that
+    overlap heavily but serve different distance bands.
+    """
+
+    kept: list = []
+    kept_edges: list[tuple[float, dict]] = []
+    for candidate in candidates:
+        distance = candidate.metrics.distance_miles
+        edges = _edge_lengths(core, candidate.node_ids)
+        total = sum(edges.values())
+        duplicate = False
+        for other_distance, other in kept_edges:
+            if abs(other_distance - distance) > DUPLICATE_DISTANCE_MILES:
+                continue
+            shared = sum(min(length, other.get(edge, 0)) for edge, length in edges.items())
+            union = total + sum(other.values()) - shared
+            if union and shared / union >= MAX_SHARED_LENGTH_FRACTION:
+                duplicate = True
+                break
+        if not duplicate:
+            kept.append(candidate)
+            kept_edges.append((distance, edges))
+    return kept
+
+
 def cell_pool(core, cell: str, targets, surface: SurfacePreference) -> dict | None:
     origin_node = _nearest_node(core, cell_centre(cell))
     data = core.nodes[origin_node]
     origin = Coordinate(float(data["y"]), float(data["x"]))
-    loops: dict[tuple[int, ...], dict] = {}
+    candidates = {}
     for target in targets:
         preferences = RoutePreferences(target, surface=surface)
         for candidate in generate_loops(core, origin, preferences, pool_size=POOL_SIZE_PER_TARGET):
-            if candidate.node_ids not in loops:
-                loops[candidate.node_ids] = {
-                    "nodes": list(candidate.node_ids),
-                    "metrics": asdict(candidate.metrics),
-                }
-    if not loops:
+            candidates.setdefault(candidate.node_ids, candidate)
+    if not candidates:
         return None
-    ordered = sorted(loops.values(), key=lambda loop: loop["metrics"]["distance_miles"])
+    loops = [
+        {"nodes": list(candidate.node_ids), "metrics": asdict(candidate.metrics)}
+        for candidate in drop_near_duplicates(core, list(candidates.values()))
+    ]
+    ordered = sorted(loops, key=lambda loop: loop["metrics"]["distance_miles"])
     return {
         "cell": cell,
         "surface": surface.value,
@@ -174,7 +216,13 @@ def run_shard(arguments) -> int:
             for position, cell in enumerate(shard_cells, 1):
                 pool = cell_pool(core, cell, arguments.targets, surface)
                 if pool is not None:
-                    stream.write(json.dumps(pool, separators=(",", ":")) + "\n")
+                    record = {
+                        "cell": cell,
+                        "surface": surface.value,
+                        "loops": len(pool["loops"]),
+                        "pool": base64.b64encode(encode_pool(pool)).decode("ascii"),
+                    }
+                    stream.write(json.dumps(record, separators=(",", ":")) + "\n")
                     written += 1
                 if position % 10 == 0:
                     elapsed = time.time() - started

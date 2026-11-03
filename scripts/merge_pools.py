@@ -3,14 +3,16 @@
     python scripts/merge_pools.py --area charlottesville-va
 
 Reads pools/<area>/shard-*.jsonl.gz and writes pools/<area>.sqlite with one
-row per (cell, surface). Each row holds the gzipped JSON pool, so the file can
-be served as-is or uploaded to an object store. Shards built from a different
+row per (cell, surface). Each row holds the pool packed by runline.pools
+(format 2; read it with runline.pools.decode_pool), so the file can be served
+as-is or uploaded to an object store. Shards built from a different
 graph or commit than the first one are refused rather than mixed.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import gzip
 import json
 import sqlite3
@@ -18,6 +20,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from runline.pools import FORMAT_VERSION
 
 
 def main() -> int:
@@ -57,7 +62,14 @@ def main() -> int:
     for shard in shards:
         with gzip.open(shard, "rt", encoding="utf-8") as stream:
             header = json.loads(stream.readline())
-            build = {key: header[key] for key in ("area", "graph", "commit", "grid_meters", "targets")}
+            build = {
+                key: header.get(key) for key in ("format", "area", "graph", "commit", "grid_meters", "targets")
+            }
+            if build["format"] != FORMAT_VERSION:
+                print(f"{shard.name} is pool format {build['format']}, expected {FORMAT_VERSION}; recompute it")
+                database.close()
+                temporary.unlink()
+                return 1
             if reference is None:
                 reference = build
             elif build != reference:
@@ -66,15 +78,10 @@ def main() -> int:
                 temporary.unlink()
                 return 1
             for line in stream:
-                pool = json.loads(line)
+                record = json.loads(line)
                 database.execute(
                     "INSERT OR REPLACE INTO pools VALUES (?, ?, ?, ?)",
-                    (
-                        pool["cell"],
-                        pool["surface"],
-                        len(pool["loops"]),
-                        gzip.compress(line.encode("utf-8"), 6),
-                    ),
+                    (record["cell"], record["surface"], record["loops"], base64.b64decode(record["pool"])),
                 )
                 rows += 1
     database.executemany(

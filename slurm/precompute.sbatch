@@ -7,8 +7,9 @@
 # reruns only failed or timed-out tasks. Watch with `squeue -u $USER` and the
 # logs in slurm/logs/. When every task is done, run slurm/merge.sbatch.
 #
-# Charlottesville is 4,364 cells at 200 m. At about 27s per cell for three
-# surfaces and 15 targets, a shard of 11 cells takes about 5 minutes.
+# Charlottesville is 4,364 cells at 200 m. On the cluster a cell took about
+# 80 s for three surfaces at 15 targets (format 1); 12 targets is about 25%
+# less, so a shard of 11 cells takes about 11 minutes.
 #SBATCH --job-name=runline-pools
 #SBATCH --partition=cpu
 #SBATCH --array=0-399%200
