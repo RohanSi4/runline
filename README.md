@@ -1,174 +1,139 @@
-# Runline
+# RunLine
 
-Deterministic running-loop generation over OpenStreetMap data. The prototype
-optimizes for target distance and low interruption count, then lets the runner
-choose road/trail mix and flat/balanced/hilly elevation. It exports GPX files for
-use in a watch-compatible route app.
+Pick a start and a distance; get running loops that come back to where you
+started, with few traffic lights, few major-road crossings and the surface and
+hills you asked for. Export to GPX for your watch.
 
-**Live app:** [runline-nine.vercel.app](https://runline-nine.vercel.app)
+**Live:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
+capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 
-## Current milestone
+## How it fits together
 
-- Generate multiple loop candidates from a start point.
-- Penalize mapped traffic signals, major-road crossings, repeated segments, and
-  distance error with visible score components.
-- Prefer road, mixed, or trail surfaces.
-- Prefer flat, balanced, or hilly candidates using cached Copernicus DEM
-  elevation from Open-Meteo.
-- Export GPX, GeoJSON, and a JSON score breakdown.
-- Benchmark 3, 5, 8, and 12 mile routes in Charlottesville.
-
-With `--drive-radius 1`, `3`, or `5`, the engine compares `start here` against
-nearby mapped trailheads, publicly accessible parking, and parks. It calculates
-driving distance over the OSM road network and includes the drive cost in the
-same transparent route score.
-
-## Privacy
-
-Committed benchmark metadata contains labels and regions only. Exact residential
-addresses live in `.private/benchmarks.local.json`, which is gitignored. Generated
-routes, coordinates, map caches, and output files are also ignored.
-
-## Setup and usage
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/runline generate \
-  --latitude 38.035556 --longitude -78.503333 \
-  --distance 5 \
-  --surface mixed \
-  --elevation balanced \
-  --output output/rotunda-5
+```mermaid
+flowchart LR
+    subgraph Browser["Frontend · web/"]
+        UI["Leaflet map<br/>start, distance, surface, hills"]
+    end
+    subgraph Vercel["Backend · FastAPI on Vercel"]
+        API["/api/routes<br/>/api/places · /api/areas"]
+        Planner["Planner<br/>osm.py · scoring.py"]
+    end
+    subgraph Data["Shipped with the deploy"]
+        Graph[("Walk graph<br/>graphs/*.pkl.gz")]
+        Places[("Street + start list<br/>autocomplete")]
+    end
+    subgraph Cluster["UVA CS SLURM cluster"]
+        Pools[("Route pools<br/>pools.sqlite")]
+    end
+    UI -- "start, preferences" --> API --> Planner --> Graph
+    API --> Places
+    Planner -. "next: look up instead of generate" .-> Pools
+    API -- "3 loops + GPX" --> UI
 ```
 
-That start is the Rotunda at UVA, which is also what the web app prefills.
-`--address` works too and is geocoded through Nominatim, but coordinates skip
-that call and avoid its rate limit. The start has to sit inside a shipped area.
+| Layer | What | Where |
+|---|---|---|
+| Frontend | Plain HTML/JS + Leaflet 1.9: map, form, route comparison, GPX download | `web/` |
+| API | FastAPI: generate routes, autocomplete places, list covered areas | `src/runline/api.py` |
+| Planner | Loop generation, scoring, ranking | `osm.py`, `scoring.py`, `planner.py` |
+| Map data | OpenStreetMap walk graph with elevation baked in, built ahead of time | `graphs/`, `scripts/build_graphs.py` |
+| Precompute | Every loop from every 200 m start cell, run on the cluster | `scripts/precompute_pools.py`, `slurm/` |
 
-The command writes `option-1.gpx`, `option-2.gpx`, `option-3.gpx`,
-`routes.geojson`, `routes.json`, and a self-contained `preview.html` route
-comparison (the street tiles require an internet connection).
+## How a loop is found
 
-## Map coverage and precomputed graphs
-
-Route generation needs an OpenStreetMap walk graph for the area around the
-start point. Downloading one from the Overpass API takes anywhere from ten
-seconds to several minutes depending on how hard Overpass is throttling, which
-is far longer than a serverless request may run. The deployed app therefore
-never calls Overpass: it ships prebuilt graphs and serves only the areas it has.
-
-Areas are declared in `config/areas.json` and built into `graphs/`:
-
-```bash
-.venv/bin/python scripts/build_graphs.py             # build anything missing
-.venv/bin/python scripts/build_graphs.py --force     # rebuild everything
-.venv/bin/python scripts/build_graphs.py --only charlottesville-va
+```mermaid
+flowchart TD
+    A["Start point + target distance"] --> B["Snap to nearest walkable node"]
+    B --> C["Pick 2 waypoints:<br/>12 headings × 2 widths × 4-5 sizes"]
+    C --> D["Shortest paths:<br/>start → A → B → start<br/>(scipy Dijkstra on runner costs)"]
+    D --> E["Trim out-and-back spurs"]
+    E --> F{"Within 55-150%<br/>of target?"}
+    F -- no --> C
+    F -- yes --> G["Measure: distance, signals, crossings,<br/>trail %, repeats, climb, roundness"]
+    G --> H["Re-route slivers home on<br/>different streets"]
+    H --> I["Score + rank, drop near-duplicates"]
+    I --> J["Top 3 loops"]
 ```
 
-The script writes one gzipped pickle per area plus `graphs/manifest.json`, all
-committed so a deploy needs no network access. Pickle rather than GraphML
-because a 40k-node graph loads in 0.9s against 6.3s, at a fifth of the peak
-memory. `requirements.txt` pins exact versions so the graphs load under the
-same library versions that built them.
+**Edges cost what they cost a runner**: metres, plus penalties for a traffic
+signal (+450 m), a major road (+1.8× its length), entering a node with major road on two
+sides (+300 m), and the wrong surface for the request. Shortest paths on
+those costs already avoid lights and busy roads.
 
-Coverage is currently Charlottesville only. Each added area costs build time,
-bundle size, and memory, so add one when you actually want to run there.
+**Scoring** adds weighted penalties; lowest wins:
 
-**Choosing a radius.** Cost scales with node count, not area radius, so dense
-cities need smaller radii. Measured on a full 5 mile request: 57k nodes peaks
-near 490MB RSS, while 118k nodes peaks near 1186MB and will exhaust a 1GB
-serverless function. The build script warns above 70k nodes; take the warning
-seriously and lower `radius_meters` for that area rather than raising the
-threshold. An area's radius also caps route length, since the whole route disc
-must fit inside it.
+| Distance off | Signals | Repeats | Shape | Crossings | Surface | Hills |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| 7.0 | 6.0 | 5.0 | 4.0 | 4.0 | 2.5 | 1.5 |
 
-**What ships per area.** The walk graph, the drive-radius start candidates
-(`<slug>-starts.json`), and the road graph used to measure drive distance
-(`<slug>-drive.pkl.gz`). `discover_public_starts` otherwise makes two Overpass
-calls per request, which is why picking a drive radius used to take minutes.
-The drive graph is reduced to its largest strongly connected component, since
-drive distance is a directed shortest path.
+*Shape* is roundness (4π·area / perimeter²): a circle is 1, the planner's
+triangles about 0.6, and a loop under 0.2 is an out-and-back in disguise, so
+it ranks after every round loop. Two options sharing over 70% of their length
+count as one.
 
-**Address autocomplete.** Areas ship `<slug>-places.json`: every named street
-in the walk graph plus the named public start points, about 2,700 entries and
-226KB for Charlottesville. `/api/places` serves it once and the browser filters
-locally, so suggestions are instant. Nominatim's usage policy forbids
-per-keystroke geocoding, and building the list from the shipped map has two
-further advantages: only places inside the covered area can be suggested, and
-a chosen suggestion carries its own coordinates, so the request skips
-geocoding entirely. Typing a free-form address still works and is geocoded
-server-side, and clicking the map still sets a start.
+## Precomputing routes
 
-**Production dependencies.** `requirements.txt` is deliberately smaller than
-`pyproject.toml`. Serving a precomputed area needs no osmnx, so none of
-geopandas, pandas, pyogrio, pyproj or shapely are installed on the serverless
-host, saving roughly 70MB of downloads on every cold start. Geocoding calls
-Nominatim directly. osmnx stays a development dependency because it builds the
-graphs. If you add a runtime code path that imports it, add it back.
+Live generation takes 0.7–2.4 s per request. Distance and hill preference only
+change the *ranking*, so every loop a start can have is computed ahead of time
+and a request becomes a lookup.
 
-**Caching.** One area graph is held in memory at a time, and the prepared graph
-(cropped, collapsed, reduced to its strongly connected core) is cached for the
-four most recent origin/surface combinations. Start points are rounded to about
-110m so two runs from the same block share an entry, with the crop widened to
-cover the rounding. Warm instances answer a repeat 3 mile request in roughly
-half the time of a first one.
-
-The build bakes elevation into the graph from the Copernicus GLO-90 DEM, read
-straight from the public AWS tiles (cached under `build-cache/dem/`, about 5MB
-per one-degree tile). Open-Meteo serves the same DEM but rate-limits bulk
-backfills, and its per-request cache lives in `/tmp`, which is wiped between
-serverless instances. All 40,209 Charlottesville nodes bake in about three
-seconds. To bake an already built graph without downloading it again:
-
-```bash
-.venv/bin/python scripts/build_graphs.py --bake-only
+```mermaid
+flowchart LR
+    P["US OSM extract<br/>(Geofabrik, 11 GB)"] --> X["Cut tiles<br/>osmium"]
+    M["Top 50 metros<br/>(Census urban areas)"] --> T["8,675 tiles of 13.8 km<br/>each owns its centre 3 km"]
+    T --> X
+    X --> G["Tile walk graphs<br/>+ elevation"]
+    G --> R["Every 200 m cell<br/>× 3 surfaces × 1-12 mi<br/>10 loops per target"]
+    R --> S[("pools.sqlite<br/>one packed row<br/>per cell + surface")]
 ```
 
-Locally, an address outside every shipped area still falls back to a live
-Overpass download and caches it under `cache/`. That fallback is disabled
-whenever `VERCEL` is set, and can be forced either way with
-`RUNLINE_ALLOW_OSM_DOWNLOAD=1` or `=0`. Uncovered requests return HTTP 422 with
-a message naming the supported areas.
+- **Grid:** the world is cut into fixed 200 m cells (`200:<row>:<col>`), so a
+  request's pool is found from its start point alone.
+- **Tiles:** a 12 mile loop needs a 10.6 km disc of map. Tiles are big enough
+  that every cell a tile owns has its whole disc inside it, and each cell is
+  owned by exactly one tile.
+- **Pools:** per cell and surface, every distinct loop at targets 1–12 miles,
+  stored as delta-encoded node ids + metrics, lzma-compressed (~12 KB a cell).
+- **Scale:** 3.35 M cells, 37,588 work units, up to 800 cores on the UVA CS
+  cluster (`cpu` + `gpu` partitions). `slurm/README.md` is the runbook.
 
-## Precomputed route pools
+| | Live | Precomputed |
+|---|---|---|
+| Request time | 0.7–2.4 s | ~0.1 s (lookup + rank) |
+| Coverage | Charlottesville | Top 50 US metros |
+| Where it runs | Vercel, per request | Cluster, once per OSM update |
 
-`scripts/precompute_pools.py` runs the planner from every 200 m start cell in
-an area, for each surface and for whole-mile targets from 1 to 15, and keeps
-every distinct loop it finds. Distance and elevation preference only affect
-ranking, so a request whose distance band a pool covers can be answered by
-filtering and ranking the pool. The work is split into shards for a SLURM
-array; `slurm/` has the setup, array and merge scripts for the UVA CS cluster,
-and `scripts/merge_pools.py` turns the shards into `pools/<area>.sqlite`.
+The app does not read pools yet; serving them is the next step.
+
+## How it was built
+
+| Stage | Change |
+|---|---|
+| 1 · Prototype | CLI loop generator on live Overpass downloads, scored and exported to GPX |
+| 2 · Ship it | Prebuilt Charlottesville graph, drive-radius starts and autocomplete so Vercel never waits on Overpass |
+| 3 · Better loops | Major-road crossings counted from road bearings; spurs trimmed; slivers re-routed and ranked last |
+| 4 · Faster | scipy Dijkstra (1.6–1.9×), memoized crossings, bounded searches: 8 mi generation 2.5 s → 0.7 s |
+| 5 · Scale out | Metro tiling, OSM-extract graph builder, packed pool format, SLURM precompute on the UVA CS cluster |
+
+Every routing change is checked against a 32-case benchmark
+(`scripts/bench.py`) and a shape audit (`scripts/shape_audit.py`).
+
+## Run it
 
 ```bash
-.venv/bin/python scripts/precompute_pools.py --area charlottesville-va --list --shard-count 400
-sbatch --export=AREA=charlottesville-va slurm/precompute.sbatch
+python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
+.venv/bin/runline-web          # http://127.0.0.1:8765
+.venv/bin/runline generate --address "Rotunda, Charlottesville" --distance 5 \
+    --surface mixed --elevation balanced --output output/rotunda-5
+.venv/bin/python -m pytest -q
 ```
 
-The app does not read pools yet.
+Coverage is Charlottesville (`config/areas.json`); a start outside it returns
+HTTP 422. Build or rebuild an area with `scripts/build_graphs.py`.
 
-## Frontend
+## Data and limits
 
-```bash
-.venv/bin/runline-web
-```
-
-Open `http://127.0.0.1:8765`. The map-first interface can geocode an address,
-accept a clicked or current location, generate routes with every engine
-preference, compare options, and download the selected route as GPX.
-
-## Known data limitations
-
-Traffic-signal and surface metrics are only as complete as OpenStreetMap tags.
-Unmapped stop signs and crossings cannot yet be counted. Open-Meteo elevation is
-based on the 90 m Copernicus DEM GLO-90 dataset, so it describes terrain rather
-than curb-level changes. Route output should be visually inspected before use
-because map data can contain pedestrian-access errors.
-
-Map data © OpenStreetMap contributors. Elevation data © Copernicus DEM 2021,
-provided by Open-Meteo.
-
-Elevation is fetched only for the strongest preliminary route candidates and is
-cached by roughly 100 m cells. If the elevation service is unavailable, route
-generation still succeeds and labels elevation as unavailable rather than zero.
+Map data © OpenStreetMap contributors (ODbL). Elevation © Copernicus DEM
+GLO-90. Signals and surfaces are only as complete as OSM tags, and 90 m
+elevation describes terrain, not curbs: check a route before you run it.
+Exact benchmark addresses stay in the gitignored `.private/`.
