@@ -277,5 +277,5 @@ def test_stored_boundary_contains_the_census_polygon() -> None:
 
 def test_committed_metros_cover_every_cell_at_the_12_mile_radius() -> None:
     if not build_metros.METROS_PATH.exists():
-        pytest.skip("config/metros.json not generated yet; see docs/us-precompute-handoff.md, Part A")
+        pytest.skip("config/metros.json not generated yet; see scripts/build_metros.py")
     assert build_metros.check(build_metros.METROS_PATH, build_metros.BOUNDARIES_PATH) == []

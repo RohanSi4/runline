@@ -1,13 +1,14 @@
 """Pick the largest US metros and cut each into graph tiles for precompute.
 
-Inputs are two public Census files (see docs/us-precompute-handoff.md, Part A):
+Inputs are two public Census files, both saved under build-cache/census/:
 
 - 2020 urban-area boundaries, the TIGER/Line shapefile ``tl_<year>_us_uac20.zip``
   (read as is, no need to unzip).
 - 2020 urban-area populations, in any of three forms:
-  the Census Data API response saved as .json, a .csv with a population
-  column and a GEOID or name column, or the Federal Register list of 2020
-  urban areas (2022-28286) saved as .txt.
+  the Census Data API response saved as .json
+  (api.census.gov/data/2020/dec/dhc?get=NAME,P1_001N&for=urban%20area:*),
+  a .csv with a population column and a GEOID or name column, or the
+  Federal Register list of 2020 urban areas (2022-28286) saved as .txt.
 
 Outputs, both committed:
 

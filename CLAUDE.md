@@ -4,13 +4,8 @@ Running-loop generator over OpenStreetMap (CS 4971 capstone: Adithya
 Balasubramaniam, Krish Patel, Rohan Singh). Python/FastAPI on Vercel; see
 README.md for setup and architecture.
 
-## Current effort: US route-pool precompute
-
-Read `docs/us-precompute-handoff.md` before working on pools, graph builds,
-the SLURM scripts, or routing performance. It has the status, measured
-baselines, cluster gotchas, and the remaining work split into tasks with
-acceptance criteria. When you finish a task or measure something, update its
-Status and Measured sections in the same PR.
+Route pools are precomputed on the UVA CS SLURM cluster; `slurm/README.md`
+is the runbook and lists the cluster's gotchas.
 
 ## Rules
 
