@@ -8,7 +8,9 @@
 # Charlottesville's 40k nodes peaked at 453 MB, and dense downtown tiles can
 # be several times that.
 #SBATCH --job-name=runline-tile-pools
-#SBATCH --partition=cpu
+# cpu and gpu each allow 400 cores per user, and nothing here needs a GPU, so
+# tasks start in whichever partition has a free core: up to 800 at once.
+#SBATCH --partition=cpu,gpu
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G
 #SBATCH --time=2-00:00:00

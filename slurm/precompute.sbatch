@@ -11,8 +11,10 @@
 # 80 s for three surfaces at 15 targets (format 1); 12 targets is about 25%
 # less, so a shard of 11 cells takes about 11 minutes.
 #SBATCH --job-name=runline-pools
-#SBATCH --partition=cpu
-#SBATCH --array=0-399%200
+# cpu and gpu each allow 400 cores per user, and nothing here needs a GPU, so
+# tasks start in whichever partition has a free core: up to 800 at once.
+#SBATCH --partition=cpu,gpu
+#SBATCH --array=0-399
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=3G
 #SBATCH --time=02:00:00

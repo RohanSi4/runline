@@ -7,19 +7,20 @@
 #       /bigtemp/$USER/tile-graphs /bigtemp/$USER/us-pools
 #
 # TASKS (default 4000) is how many tasks share the plan, ARRAY (default 1000)
-# the size of each array, CONCURRENT (default 400) how many run at once per
-# array. The cpu partition allows 400 cores per user in total, so the arrays
-# queue behind each other.
+# the size of each array, CONCURRENT (default 800) how many run at once per
+# array, PARTITION (default cpu,gpu) where they run. cpu and gpu each allow 400
+# cores per user, so up to 800 tasks run at once and the rest queue.
 set -euo pipefail
 PLAN=${1:?plan.json.gz} GRAPHS=${2:?tile graph directory} OUT=${3:?output directory}
-TASKS=${TASKS:-4000} ARRAY=${ARRAY:-1000} CONCURRENT=${CONCURRENT:-400}
+TASKS=${TASKS:-4000} ARRAY=${ARRAY:-1000} CONCURRENT=${CONCURRENT:-800}
+PARTITION=${PARTITION:-cpu,gpu}
 cd "$(dirname "$0")/.."
 mkdir -p slurm/logs "$OUT"
 
 jobs=()
 for ((offset = 0; offset < TASKS; offset += ARRAY)); do
     last=$((offset + ARRAY < TASKS ? ARRAY - 1 : TASKS - offset - 1))
-    jobs+=("$(sbatch --parsable --array="0-${last}%${CONCURRENT}" \
+    jobs+=("$(sbatch --parsable --partition="$PARTITION" --array="0-${last}%${CONCURRENT}" \
         --export="ALL,PLAN=$PLAN,GRAPHS=$GRAPHS,OUT=$OUT,TASKS=$TASKS,TASK_OFFSET=$offset" \
         slurm/precompute_tiles.sbatch)")
 done

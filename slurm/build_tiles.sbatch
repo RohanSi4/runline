@@ -4,6 +4,8 @@
 #   sbatch --export=EXTRACTS=/bigtemp/$USER/tiles,GRAPHS=/bigtemp/$USER/tile-graphs \
 #       slurm/build_tiles.sbatch
 #
+# The array must match SHARDS (800 by default).
+#
 # Needs BUILD=1 bash slurm/setup.sh (osmnx and pyosmium). Built tiles are
 # skipped, so resubmitting reruns only failed ones. When the array is done:
 #
@@ -13,8 +15,10 @@
 # for a dense downtown tile can be several GB. Raise --mem and resubmit if
 # tasks die with OUT_OF_MEMORY; the summary's largest tiles say how far.
 #SBATCH --job-name=runline-tiles
-#SBATCH --partition=cpu
-#SBATCH --array=0-399%200
+# cpu and gpu each allow 400 cores per user, and nothing here needs a GPU, so
+# tasks start in whichever partition has a free core: up to 800 at once.
+#SBATCH --partition=cpu,gpu
+#SBATCH --array=0-799
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G
 #SBATCH --time=04:00:00
@@ -22,7 +26,7 @@
 set -euo pipefail
 : "${EXTRACTS:?pass --export=EXTRACTS=<tile extracts>,GRAPHS=<output>}"
 : "${GRAPHS:?pass --export=EXTRACTS=<tile extracts>,GRAPHS=<output>}"
-SHARDS=${SHARDS:-400}
+SHARDS=${SHARDS:-800}
 
 cd "$SLURM_SUBMIT_DIR"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1

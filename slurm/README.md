@@ -65,6 +65,7 @@ for days.
   change; merge refuses to mix builds anyway.
 - Pickled graphs only load under the pinned versions in `requirements.txt`.
 - Per user: `cpu` 400 cores and 4 days, `gpu` 400 cores, `nolim` 80 cores and
-  20 days. Nothing here needs a GPU.
+  20 days. Nothing here needs a GPU, but the array jobs ask for `cpu,gpu`
+  so they can use both partitions' cores, up to 800 tasks at once.
 - Reservations come and go (`scontrol show reservation`); a job pinned to a
   reserved feature waits until the reservation ends.
