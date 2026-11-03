@@ -20,8 +20,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<9"]
-# Building metro tile graphs from a local OSM extract (scripts/build_tile_graphs.py).
-build = ["osmium>=4.0,<5"]
+# Building graphs: pyosmium reads local OSM extracts (scripts/build_tile_graphs.py),
+# rasterio reads the DEM tiles that bake elevation (runline.elevation).
+build = ["osmium>=4.0,<5", "rasterio>=1.4,<2"]
 
 [project.scripts]
 runline = "runline.cli:main"
