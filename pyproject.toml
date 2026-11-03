@@ -9,6 +9,8 @@ description = "Constraint-based running loop generation and scoring"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.116,<1",
+  # Read directly by scripts/build_metros.py; osmnx pulls it in too.
+  "geopandas>=1.0,<2",
   "networkx>=3.4,<4",
   "osmnx>=2.0,<3",
   "requests>=2.32,<3",
