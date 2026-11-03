@@ -3,6 +3,7 @@
 #
 #   ssh vaq5gp@portal.cs.virginia.edu
 #   cd ~/runline && bash slurm/setup.sh
+#   cd ~/runline && BUILD=1 bash slurm/setup.sh   # also tile graph builds
 #
 # The repo gets there from a laptop with:
 #
@@ -30,6 +31,11 @@ rm -rf .venv
 # osmnx is needed only to build new areas.
 "$UV" pip install --python .venv/bin/python -r requirements.txt
 "$UV" pip install --python .venv/bin/python -e . --no-deps
+# BUILD=1 adds osmnx and pyosmium for scripts/build_tile_graphs.py. The
+# requirements pins still apply, so graphs it pickles load in the runtime set.
+if [ "${BUILD:-0}" = 1 ]; then
+    "$UV" pip install --python .venv/bin/python -r requirements.txt -e '.[build]'
+fi
 
 for slug in $(.venv/bin/python -c "import json; print(' '.join(a['slug'] for a in json.load(open('graphs/manifest.json'))['areas']))"); do
     .venv/bin/python scripts/precompute_pools.py --area "$slug" --list --shard-count 400

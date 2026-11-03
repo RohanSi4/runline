@@ -20,6 +20,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<9"]
+# Building metro tile graphs from a local OSM extract (scripts/build_tile_graphs.py).
+build = ["osmium>=4.0,<5"]
 
 [project.scripts]
 runline = "runline.cli:main"
