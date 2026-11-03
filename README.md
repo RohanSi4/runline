@@ -33,10 +33,23 @@ capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
    distance, signals, crossings, trail share, repeats, climb and roundness;
    send sliver-shaped loops home on different streets; return the top 3.
 
+<img src="docs/readme/real-loops.svg" alt="The three loops RunLine returns for 5 miles from the Charlottesville map centre, 5.06, 4.98 and 5.12 miles, drawn on the shipped walk graph" width="100%">
+
+<sub>Real output: the three 5 mile loops (5.06, 4.98, 5.12 mi) from the
+Charlottesville map centre, on the shipped walk graph.</sub>
+
+**What it searches.** OpenStreetMap draws a street with every bend; the
+planner only needs the intersections. Shape points stay on the edge for
+drawing and length, so the search runs on far fewer nodes.
+
+<img src="docs/readme/graph.svg" alt="The same few blocks twice: left with every mapped shape point as white dots between dark intersections, right with intersections only" width="100%">
+
 **Edges cost what they cost a runner**: meters, plus penalties for a traffic
 signal (+450 m), a major road (+1.8× its length), entering a node with major
 road on two sides (+300 m), and the wrong surface for the request. Shortest
 paths on those costs already avoid lights and busy roads.
+
+<img src="docs/readme/costs.svg" alt="Every street near the map centre coloured by its cost to a runner: quiet streets green at their length, major roads and signal approaches red at two to three times or more" width="100%">
 
 **Scoring** adds weighted penalties; lowest wins:
 
@@ -56,6 +69,12 @@ change the *ranking*, so every loop a start can have is computed ahead of time
 and a request becomes a lookup.
 
 <img src="docs/readme/precompute.svg" alt="The US OSM extract and the top 50 metros become 8,675 overlapping tiles, then tile walk graphs with elevation; every 200 m cell is pooled for 3 surfaces at 1 to 12 miles into pools.sqlite" width="100%">
+
+<img src="docs/readme/pool.svg" alt="All 113 distinct loops in one start cell's precomputed pool, from 1 to 12 miles, coloured from lime for short to deep green for long" width="100%">
+
+<sub>One cell's pool, for real: all 113 distinct loops from the map centre
+cell (mixed surface, 1–12 mi). A request filters this to its distance and
+ranks what is left.</sub>
 
 - **Grid:** the world is cut into fixed 200 m cells (`200:<row>:<col>`), so a
   request's pool is found from its start point alone.
@@ -86,7 +105,8 @@ The app does not read pools yet; serving them is the next step.
 | 5 · Scale out | Metro tiling, OSM-extract graph builder, packed pool format, SLURM precompute on the UVA CS cluster |
 
 Every routing change is checked against a 32-case benchmark
-(`scripts/bench.py`) and a shape audit (`scripts/shape_audit.py`).
+(`scripts/bench.py`) and a shape audit (`scripts/shape_audit.py`). The map
+figures here are rendered from real output by `scripts/readme_figures.py`.
 
 ## Run it
 
