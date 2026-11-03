@@ -74,6 +74,12 @@ def _write_extract(path: Path) -> None:
             refs = [_node_id(row + 12, column + 12) for row in range(-12, 13)]
             writer.add_way(Way(id=way_id, nodes=refs, tags={"highway": "footway"}))
             way_id += 1
+        # Leaves the extract box to the west and comes back: a simple-strategy
+        # cut keeps both inside ends but not the nodes between them.
+        u_turn = [(2, column) for column in range(-9, -13, -1)] + [(4, column) for column in range(-12, -8)]
+        writer.add_way(
+            Way(id=15, nodes=[_node_id(row + 12, column + 12) for row, column in u_turn], tags={"highway": "path"})
+        )
         for offset, (way, tags) in enumerate(DROPPED.items()):
             row = -10 + 2 * offset
             refs = [_node_id(row + 12, column + 12) for column in range(2, 9)]
@@ -108,11 +114,11 @@ def test_walk_filter_keeps(tags) -> None:
 
 
 def test_elements_hold_only_walkable_ways_and_their_nodes(extract: Path) -> None:
-    elements = overpass_elements(extract)["elements"]
+    elements = overpass_elements(extract)[0]["elements"]
     ways = {element["id"] for element in elements if element["type"] == "way"}
     nodes = [element["id"] for element in elements if element["type"] == "node"]
 
-    assert ways == set(range(1, 15))
+    assert ways == set(range(1, 16))
     assert 99_999 not in nodes
     assert nodes == sorted(nodes)
     # Overpass order: every node before any way.
@@ -124,7 +130,7 @@ def test_graph_matches_osmnx_graph_from_point(extract: Path, monkeypatch) -> Non
     import osmnx as ox
     from osmnx import _overpass
 
-    response = overpass_elements(extract)
+    response, _ = overpass_elements(extract)
     monkeypatch.setattr(_overpass, "_download_overpass_network", lambda *args, **kwargs: iter([response]))
     expected = ox.graph.graph_from_point(
         (LATITUDE, LONGITUDE), dist=RADIUS, network_type="walk", simplify=True, retain_all=True
@@ -142,6 +148,39 @@ def test_graph_matches_osmnx_graph_from_point(extract: Path, monkeypatch) -> Non
     # The graph is cut to the requested bbox, not the whole extract.
     assert 0 < graph.number_of_nodes() < 25 * 25
     assert graph.nodes[_node_id(12, 12)]["highway"] == "traffic_signals"
+
+
+def _clip(extract: Path, path: Path) -> None:
+    """What osmium extract -s simple writes: nodes in the box, ways whole."""
+
+    west, south, east, north = extract_bounds(LATITUDE, LONGITUDE, RADIUS)
+    writer = osmium.SimpleWriter(str(path))
+    try:
+        for item in osmium.FileProcessor(str(extract)):
+            if item.is_node():
+                if not (west <= item.location.lon <= east and south <= item.location.lat <= north):
+                    continue
+                writer.add_node(item)
+            elif item.is_way():
+                writer.add_way(item)
+    finally:
+        writer.close()
+
+
+def test_clipped_extract_builds_the_same_graph(extract: Path, tmp_path: Path) -> None:
+    clipped = tmp_path / "clipped.osm.pbf"
+    _clip(extract, clipped)
+    full = walk_graph_from_pbf(extract, LATITUDE, LONGITUDE, RADIUS)
+
+    graph = walk_graph_from_pbf(clipped, LATITUDE, LONGITUDE, RADIUS)
+
+    elements, split_ids = overpass_elements(clipped)
+    assert list(split_ids.values()) == [15]  # the U-turn way came back as two runs
+    assert list(graph.nodes(data=True)) == list(full.nodes(data=True))
+    assert sorted(graph.edges(keys=True)) == sorted(full.edges(keys=True))
+    for u, v, key, data in full.edges(keys=True, data=True):
+        assert graph.edges[u, v, key]["osmid"] == data["osmid"]
+        assert graph.edges[u, v, key]["length"] == pytest.approx(data["length"])
 
 
 def test_empty_extract_gives_none(tmp_path: Path) -> None:

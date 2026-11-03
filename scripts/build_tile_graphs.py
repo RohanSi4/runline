@@ -54,10 +54,12 @@ sys.path.insert(0, str(ROOT / "src"))
 METROS_PATH = ROOT / "config" / "metros.json"
 AREAS_PATH = ROOT / "config" / "areas.json"
 DEFAULT_DEM_DIR = ROOT / "build-cache" / "dem"
-# osmium extract keeps a node id set per extract, sized by the highest node id
-# in the file rather than by the tile: about 1.8 GB each at 14.3 billion. Ten
-# extracts fit a 32 GB job; extract.sbatch runs the cuts as a parallel array.
-DEFAULT_BATCH_SIZE = 10
+# osmium extract keeps id sets per extract sized by the highest node id in the
+# file, not by the tile. Measured on the Washington pilot (max node id 14.3
+# billion): 3.4 GB per tile with complete_ways, 1.8 GB with simple, which
+# runline.pbf handles. Fourteen simple extracts fit a 32 GB job, and
+# extract.sbatch runs the cuts as a parallel array.
+DEFAULT_BATCH_SIZE = 14
 
 
 def metro_tiles(metros_path: Path, only: list[str] | None = None) -> list[dict]:
@@ -107,7 +109,7 @@ def write_configs(arguments) -> int:
         }
         path = extracts / f"extract-{batch:03d}.json"
         path.write_text(json.dumps(config, indent=1) + "\n", encoding="utf-8")
-        cuts.append(f"osmium extract --overwrite -s complete_ways -c {path} {highways}")
+        cuts.append(f"osmium extract --overwrite -s simple -c {path} {highways}")
     # filter.sh runs once; cuts.txt holds one cut per line for the array in
     # slurm/extract.sbatch; extract.sh does both in order, for a laptop.
     (extracts / "filter.sh").write_text(f"set -euo pipefail\n{prefilter}\n", encoding="utf-8")

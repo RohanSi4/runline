@@ -60,8 +60,18 @@ def is_walkable(tags: dict[str, str]) -> bool:
     return True
 
 
-def overpass_elements(pbf: Path) -> dict:
-    """Walkable ways and the nodes they use, as an Overpass JSON response."""
+def overpass_elements(pbf: Path) -> tuple[dict, dict[int, int]]:
+    """Walkable ways and the nodes they use, as an Overpass JSON response.
+
+    Tile extracts are cut with osmium's ``simple`` strategy, which keeps ways
+    whole but drops their nodes outside the box. A way is split into its runs
+    of present nodes, so a way that leaves the box and comes back never joins
+    its two ends with an edge that is not there. The extract box covers the
+    buffer the graph is truncated to, so every node that survives truncation
+    is present and the graph is the one complete ways would give. Second and
+    later runs need their own element id; the returned map takes those
+    (negative) ids back to the OSM way id.
+    """
 
     import osmium
 
@@ -85,7 +95,27 @@ def overpass_elements(pbf: Path) -> dict:
 
     nodes.sort(key=lambda element: element["id"])
     ways.sort(key=lambda element: element["id"])
-    return {"elements": nodes + ways}
+    present = {element["id"] for element in nodes}
+    pieces = []
+    split_ids: dict[int, int] = {}
+    for way in ways:
+        runs, run = [], []
+        for node in way["nodes"]:
+            if node in present:
+                run.append(node)
+            else:
+                if len(run) >= 2:
+                    runs.append(run)
+                run = []
+        if len(run) >= 2:
+            runs.append(run)
+        for index, run in enumerate(runs):
+            element_id = way["id"]
+            if index:
+                element_id = -(len(split_ids) + 1)
+                split_ids[element_id] = way["id"]
+            pieces.append({**way, "id": element_id, "nodes": run})
+    return {"elements": nodes + pieces}, split_ids
 
 
 def tile_polygons(latitude: float, longitude: float, radius_meters: float):
@@ -113,13 +143,16 @@ def walk_graph_from_pbf(pbf: Path, latitude: float, longitude: float, radius_met
     from osmnx import graph as osmnx_graph
     from osmnx import settings, simplification, stats, truncate
 
-    response = overpass_elements(pbf)
+    response, split_ids = overpass_elements(pbf)
     if not any(element["type"] == "way" for element in response["elements"]):
         return None
     polygon, buffered = tile_polygons(latitude, longitude, radius_meters)
 
     bidirectional = "walk" in settings.bidirectional_network_types
     buffered_graph = osmnx_graph._create_graph([response], bidirectional)
+    if split_ids:
+        for _, _, data in buffered_graph.edges(data=True):
+            data["osmid"] = split_ids.get(data["osmid"], data["osmid"])
     buffered_graph = truncate.truncate_graph_polygon(buffered_graph, buffered, truncate_by_edge=False)
     if buffered_graph.number_of_nodes() == 0:
         return None
