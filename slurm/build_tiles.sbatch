@@ -4,7 +4,8 @@
 #   sbatch --export=EXTRACTS=/bigtemp/$USER/tiles,GRAPHS=/bigtemp/$USER/tile-graphs \
 #       slurm/build_tiles.sbatch
 #
-# The array must match SHARDS (800 by default).
+# The array must match SHARDS (800 by default). METRO=<slug> builds one metro's
+# tiles only (a pilot); size the array to its tile count.
 #
 # Needs BUILD=1 bash slurm/setup.sh (osmnx and pyosmium). Built tiles are
 # skipped, so resubmitting reruns only failed ones. When the array is done:
@@ -33,4 +34,5 @@ export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 # DEM tiles are shared by every task; keep them next to the graphs.
 .venv/bin/python scripts/build_tile_graphs.py build \
     --extracts "$EXTRACTS" --output "$GRAPHS" --dem-dir "$GRAPHS/dem" \
-    --shard-index "$SLURM_ARRAY_TASK_ID" --shard-count "$SHARDS"
+    --shard-index "$SLURM_ARRAY_TASK_ID" --shard-count "$SHARDS" \
+    ${METRO:+--metro $METRO}
