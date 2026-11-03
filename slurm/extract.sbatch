@@ -16,7 +16,7 @@
 #
 # Two steps. Without an array it runs filter.sh, keeping only highway ways
 # (11 GB down to a few). As an array, task i runs line i+1 of cuts.txt: one
-# osmium extract of about ten tiles, each needing ~1.8 GB for its node id set.
+# osmium extract of about fourteen tiles, ~1.8 GB each for its node id set.
 # build_tile_graphs.py configs prints both sbatch lines.
 #SBATCH --job-name=runline-extract
 #SBATCH --partition=cpu,gpu
