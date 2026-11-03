@@ -294,3 +294,38 @@ def test_separated_return_stays_off_the_way_out() -> None:
     assert nx.shortest_path(graph, 3, 1, weight="_cost") == [3, 2, 1]
     assert _separated_return(graph, [1, 2, 3], 3, 1) == [3, 4, 1]
 
+
+
+def test_bounded_search_returns_the_same_paths_as_a_full_one() -> None:
+    from runline.osm import _cost_matrix
+
+    graph = nx.DiGraph()
+    for node in range(30):
+        for other, cost in (((node + 1) % 30, 10.0 + node % 7), ((node + 7) % 30, 55.0)):
+            graph.add_edge(node, other, _cost=cost)
+            graph.add_edge(other, node, _cost=cost * 1.3)
+    graph.add_node(99)  # unreachable from everything
+    costs = _cost_matrix(graph)
+    full = costs.tree(0)
+
+    for limit in (0.0, 15.0, 60.0, 1e9):
+        bounded = costs.tree(0, limit=limit)
+        for target in range(30):
+            assert bounded[target] == full[target]
+        with pytest.raises(KeyError):
+            costs.tree(0, limit=limit)[99]
+
+
+def test_major_edge_memo_is_rebuilt_when_the_graph_changes() -> None:
+    from runline.osm import _major_edge_index, _major_edges_at
+
+    graph = nx.DiGraph()
+    graph.add_edge(1, 2, highway="primary")
+    graph.add_edge(2, 3, highway="residential")
+    index = _major_edge_index(graph)
+    assert set(_major_edges_at(graph, index, 2)) == {1}
+    assert _major_edges_at(graph, index, 3) == {}
+    assert set(_major_edge_index(graph)) == {2, 3}
+
+    graph.add_edge(3, 4, highway="primary")
+    assert _major_edge_index(graph) == {}
