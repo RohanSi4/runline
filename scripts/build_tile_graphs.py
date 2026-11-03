@@ -54,9 +54,10 @@ sys.path.insert(0, str(ROOT / "src"))
 METROS_PATH = ROOT / "config" / "metros.json"
 AREAS_PATH = ROOT / "config" / "areas.json"
 DEFAULT_DEM_DIR = ROOT / "build-cache" / "dem"
-# osmium extract keeps one output buffer per extract while it reads the file;
-# its docs suggest staying in the low hundreds per run.
-DEFAULT_BATCH_SIZE = 300
+# osmium extract keeps a node id set per extract, sized by the highest node id
+# in the file rather than by the tile: about 1.8 GB each at 14.3 billion. Ten
+# extracts fit a 32 GB job; extract.sbatch runs the cuts as a parallel array.
+DEFAULT_BATCH_SIZE = 10
 
 
 def metro_tiles(metros_path: Path, only: list[str] | None = None) -> list[dict]:
@@ -89,10 +90,8 @@ def write_configs(arguments) -> int:
     extracts = arguments.extracts.resolve()
     extracts.mkdir(parents=True, exist_ok=True)
     highways = extracts / "highways.osm.pbf"
-    commands = [
-        "set -euo pipefail",
-        f"osmium tags-filter --overwrite -o {highways} {arguments.pbf} w/highway",
-    ]
+    prefilter = f"osmium tags-filter --overwrite -o {highways} {arguments.pbf} w/highway"
+    cuts = []
     batches = math.ceil(len(tiles) / arguments.batch_size)
     for batch in range(batches):
         chunk = tiles[batch * arguments.batch_size : (batch + 1) * arguments.batch_size]
@@ -108,10 +107,17 @@ def write_configs(arguments) -> int:
         }
         path = extracts / f"extract-{batch:03d}.json"
         path.write_text(json.dumps(config, indent=1) + "\n", encoding="utf-8")
-        commands.append(f"osmium extract --overwrite -s complete_ways -c {path} {highways}")
-    script = extracts / "extract.sh"
-    script.write_text("\n".join(commands) + "\n", encoding="utf-8")
-    print(f"{len(tiles)} tiles in {batches} extract configs; run: bash {script}")
+        cuts.append(f"osmium extract --overwrite -s complete_ways -c {path} {highways}")
+    # filter.sh runs once; cuts.txt holds one cut per line for the array in
+    # slurm/extract.sbatch; extract.sh does both in order, for a laptop.
+    (extracts / "filter.sh").write_text(f"set -euo pipefail\n{prefilter}\n", encoding="utf-8")
+    (extracts / "cuts.txt").write_text("\n".join(cuts) + "\n", encoding="utf-8")
+    (extracts / "extract.sh").write_text(
+        "\n".join(["set -euo pipefail", prefilter, *cuts]) + "\n", encoding="utf-8"
+    )
+    print(f"{len(tiles)} tiles in {batches} cuts. On the cluster:")
+    print(f"  f=$(sbatch --parsable --export=ALL,EXTRACTS={extracts} slurm/extract.sbatch)")
+    print(f"  sbatch --dependency=afterok:$f --array=0-{batches - 1} --export=ALL,EXTRACTS={extracts} slurm/extract.sbatch")
     return 0
 
 

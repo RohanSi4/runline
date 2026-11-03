@@ -204,3 +204,6 @@ def test_configs_write_one_extract_per_tile(tmp_path: Path) -> None:
     assert outputs == [f"test-{index:03d}.osm.pbf" for index in range(5)]
     script = (extracts / "extract.sh").read_text()
     assert script.count("osmium extract") == 3 and "tags-filter" in script
+    cuts = (extracts / "cuts.txt").read_text().splitlines()
+    assert len(cuts) == 3 and all(line.startswith("osmium extract") for line in cuts)
+    assert "tags-filter" in (extracts / "filter.sh").read_text()

@@ -33,8 +33,9 @@ Work under `/bigtemp/$USER` (home is 100 GB) and copy the finished
    ```bash
    .venv/bin/python scripts/build_tile_graphs.py configs \
        --pbf /bigtemp/$USER/us-latest.osm.pbf --extracts /bigtemp/$USER/tiles
-   sbatch --export=EXTRACTS=/bigtemp/$USER/tiles slurm/extract.sbatch
    ```
+   It prints two `sbatch` lines: one prefilter job, then an array of cuts of
+   about ten tiles each (osmium needs ~1.8 GB per tile it cuts at once).
 3. Build tile graphs, then check sizes before sizing step 5's memory:
    ```bash
    sbatch --export=EXTRACTS=/bigtemp/$USER/tiles,GRAPHS=/bigtemp/$USER/tile-graphs \
