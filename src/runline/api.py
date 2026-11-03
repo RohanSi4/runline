@@ -131,6 +131,7 @@ async def routes(request: RouteRequest) -> dict:
     return {
         "origin": {"latitude": origin.latitude, "longitude": origin.longitude},
         "discovered_starts": result.discovered_starts,
+        "source": result.source,
         "warnings": result.warnings,
         "routes": [
             {

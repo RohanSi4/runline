@@ -11,6 +11,7 @@ from .elevation import enrich_graph_open_meteo
 from .models import Coordinate, RouteCandidate, RoutePreferences, StartCandidate
 from .osm import generate_loops, graph_radius_meters, prepare_core
 from .scoring import rank_candidates
+from .serving import serve_from_pool
 from .starts import discover_public_starts
 
 
@@ -20,6 +21,8 @@ class PlanResult:
     discovered_starts: int
     fetched_elevation_cells: int
     warnings: tuple[str, ...]
+    # "pool" when answered from precomputed routes, "live" when searched now.
+    source: str = "live"
 
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
@@ -59,6 +62,10 @@ def plan_routes(
     elevation_source: str = "open-meteo",
     start_candidate_limit: int = 5,
 ) -> PlanResult:
+    pooled = serve_from_pool(origin, preferences)
+    if pooled:
+        return PlanResult(candidates=pooled, discovered_starts=0, fetched_elevation_cells=0, warnings=(), source="pool")
+
     fetched_cells = 0
     warnings: list[str] = []
 

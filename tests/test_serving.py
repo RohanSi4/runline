@@ -1,0 +1,210 @@
+"""Requests answered from a real pool, built here for one Charlottesville cell."""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from runline import serving
+from runline.coverage import areas, graphs_root, load_area_graph
+from runline.geo import destination, distance_meters
+from runline.grid import cell_id
+from runline.models import Coordinate, RoutePreferences, SurfacePreference
+from runline.osm import _nearest_node
+from runline.planner import plan_routes
+from runline.pools import FORMAT_VERSION, encode_pool
+from scripts.precompute_pools import cell_pool, prepare_area
+
+TARGETS = (4, 5, 6)
+MILES = 5
+
+
+def _write_pool(directory: Path, area, pool: dict, surface: str, cell: str, *, format_version=FORMAT_VERSION, graph=None) -> None:
+    fingerprint = graph or hashlib.sha256((graphs_root() / area.filename).read_bytes()).hexdigest()[:16]
+    database = sqlite3.connect(directory / f"{area.slug}.sqlite")
+    database.executescript(
+        """
+        CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE pools (cell TEXT, surface TEXT, loops INTEGER, pool BLOB, PRIMARY KEY (cell, surface));
+        """
+    )
+    meta = {"format": format_version, "graph": fingerprint, "grid_meters": 200.0}
+    database.executemany("INSERT INTO meta VALUES (?, ?)", [(k, json.dumps(v)) for k, v in meta.items()])
+    database.execute("INSERT INTO pools VALUES (?, ?, ?, ?)", (cell, surface, len(pool["loops"]), encode_pool(pool)))
+    database.commit()
+    database.close()
+
+
+@pytest.fixture(scope="module")
+def built():
+    area = next(item for item in areas() if item.slug == "charlottesville-va")
+    graph = load_area_graph(area)
+    cell = cell_id(area.center.latitude, area.center.longitude, 200.0)
+    core = prepare_area(graph, SurfacePreference.MIXED)
+    pool = cell_pool(core, cell, TARGETS, SurfacePreference.MIXED)
+    return area, graph, cell, pool
+
+
+@pytest.fixture
+def pools_dir(built, tmp_path: Path, monkeypatch) -> Path:
+    area, _, cell, pool = built
+    _write_pool(tmp_path, area, pool, "mixed", cell)
+    monkeypatch.setenv("RUNLINE_POOLS_DIR", str(tmp_path))
+    serving._checked_pool_file.cache_clear()
+    return tmp_path
+
+
+def _preferences(**changes) -> RoutePreferences:
+    return RoutePreferences(MILES, surface=SurfacePreference.MIXED, **changes)
+
+
+def _origin(built) -> Coordinate:
+    return Coordinate(*built[3]["origin"])
+
+
+def test_a_hit_returns_full_loops_in_the_distance_band(built, pools_dir) -> None:
+    routes = serving.serve_from_pool(_origin(built), _preferences())
+
+    assert routes is not None and len(routes) == 3
+    for route in routes:
+        assert abs(route.metrics.distance_miles - MILES) <= 0.25
+        assert route.node_ids[0] == route.node_ids[-1] == built[3]["origin_node"]
+        assert len(route.coordinates) > len(route.node_ids) / 2
+        assert route.start.kind == "origin"
+    assert [route.route_id for route in routes] == ["route-001", "route-002", "route-003"]
+    assert len({route.node_ids for route in routes}) == 3
+
+
+def test_ranking_matches_the_live_rules(built, pools_dir) -> None:
+    routes = serving.serve_from_pool(_origin(built), _preferences())
+
+    assert all(route.score_components for route in routes)
+    round_first = [route.metrics.compactness < 0.2 for route in routes]
+    assert round_first == sorted(round_first)
+
+
+def _cell_nodes_by_connector(built) -> tuple[list[int], list[int]]:
+    """Other walkable nodes in the cell: (connected to the pool origin, not connected)."""
+
+    _, graph, cell, pool = built
+    others = [
+        node for node, data in graph.nodes(data=True)
+        if cell_id(float(data["y"]), float(data["x"]), 200.0) == cell and node != pool["origin_node"]
+    ]
+    connected = [node for node in others if serving._connector(graph, node, pool["origin_node"])]
+    return connected, [node for node in others if node not in connected]
+
+
+def _at(graph, node) -> Coordinate:
+    return Coordinate(float(graph.nodes[node]["y"]), float(graph.nodes[node]["x"]))
+
+
+def test_a_start_elsewhere_in_the_cell_connects_out_and_back(built, pools_dir) -> None:
+    _, graph, _, pool = built
+    connected, _ = _cell_nodes_by_connector(built)
+    node = connected[0]
+    origin = _at(graph, node)
+    assert _nearest_node(graph, origin) == node
+
+    routes = serving.serve_from_pool(origin, _preferences(result_count=1))
+
+    assert routes
+    for route in routes:
+        assert route.node_ids[0] == route.node_ids[-1] == node
+        assert pool["origin_node"] in route.node_ids
+        assert distance_meters(route.coordinates[0], origin) < 1
+        assert distance_meters(route.coordinates[-1], origin) < 1
+
+
+def test_a_start_with_no_short_way_to_the_pool_falls_back(built, pools_dir) -> None:
+    _, graph, _, _ = built
+    _, unconnected = _cell_nodes_by_connector(built)
+    assert unconnected
+    assert serving.serve_from_pool(_at(graph, unconnected[0]), _preferences(result_count=1)) is None
+
+
+def test_connector_adds_its_length_twice_and_one_pass_as_repeated() -> None:
+    metrics = {
+        "distance_miles": 5.0,
+        "elevation_gain_feet": 100.0,
+        "traffic_signal_events": 0,
+        "major_crossing_events": 0,
+        "trail_fraction": 0.0,
+        "repeated_fraction": 0.1,
+        "drive_distance_miles": 0.0,
+        "elevation_coverage": 1.0,
+        "compactness": 0.5,
+    }
+
+    adjusted = serving._with_connector(metrics, 1609.344 / 10)
+
+    assert adjusted.distance_miles == pytest.approx(5.2)
+    assert adjusted.repeated_fraction == pytest.approx((0.5 + 0.1) / 5.2)
+    assert serving._with_connector(metrics, 0).distance_miles == 5.0
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [{"drive_radius_miles": 3}, {"result_count": 500}],
+)
+def test_requests_a_pool_cannot_answer_fall_back(built, pools_dir, changes) -> None:
+    assert serving.serve_from_pool(_origin(built), _preferences(**changes)) is None
+
+
+def test_distances_outside_the_pool_fall_back(built, pools_dir) -> None:
+    far = RoutePreferences(11, surface=SurfacePreference.MIXED)
+    assert serving.serve_from_pool(_origin(built), far) is None
+
+
+def test_a_cell_with_no_pool_falls_back(built, pools_dir) -> None:
+    area = built[0]
+    elsewhere = destination(area.center, 90, 1500)
+    assert cell_id(elsewhere.latitude, elsewhere.longitude, 200.0) != built[2]
+    assert serving.serve_from_pool(elsewhere, _preferences()) is None
+
+
+def test_another_surface_falls_back(built, pools_dir) -> None:
+    trail = RoutePreferences(MILES, surface=SurfacePreference.TRAIL)
+    assert serving.serve_from_pool(_origin(built), trail) is None
+
+
+@pytest.mark.parametrize("bad", [{"format_version": 1}, {"graph": "0" * 16}])
+def test_stale_pool_files_are_ignored(built, tmp_path: Path, monkeypatch, bad) -> None:
+    area, _, cell, pool = built
+    _write_pool(tmp_path, area, pool, "mixed", cell, **bad)
+    monkeypatch.setenv("RUNLINE_POOLS_DIR", str(tmp_path))
+    serving._checked_pool_file.cache_clear()
+    assert serving.serve_from_pool(_origin(built), _preferences()) is None
+
+
+def test_no_pool_directory_falls_back(built, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("RUNLINE_POOLS_DIR", str(tmp_path / "missing"))
+    assert serving.serve_from_pool(_origin(built), _preferences()) is None
+
+
+def test_the_planner_reports_where_routes_came_from(built, pools_dir, tmp_path: Path, monkeypatch) -> None:
+    origin = _origin(built)
+    assert plan_routes(origin, _preferences(), cache_directory=tmp_path).source == "pool"
+
+    monkeypatch.setenv("RUNLINE_POOLS_DIR", str(tmp_path / "missing"))
+    result = plan_routes(origin, _preferences(), cache_directory=tmp_path, elevation_source="none")
+    assert result.source == "live" and result.candidates
+
+
+def test_the_api_serves_a_pool_route_with_gpx(built, pools_dir) -> None:
+    from runline.api import RouteRequest, routes
+
+    origin = _origin(built)
+    payload = asyncio.run(
+        routes(RouteRequest(latitude=origin.latitude, longitude=origin.longitude, distance_miles=MILES, surface="mixed"))
+    )
+
+    assert payload["source"] == "pool"
+    assert len(payload["routes"]) == 3
+    assert "<gpx" in payload["routes"][0]["gpx"]
+    assert len(payload["routes"][0]["feature"]["geometry"]["coordinates"]) > 10
