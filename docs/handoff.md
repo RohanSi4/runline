@@ -32,6 +32,11 @@ pool is ignored and a warning is logged.
 
 ## Remaining work, in order
 
+These are all yours. Work through them in order and get as far as you can. There
+is no walkthrough planned, so this doc and `slurm/README.md` are the reference.
+Each task leaves the app working, so stopping between tasks is fine. Note how far
+you got here.
+
 ### 1. Host the pools
 
 Vercel's 250 MB limit rules it out, and serving needs the pool file and graph on
