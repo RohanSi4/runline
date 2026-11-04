@@ -37,6 +37,7 @@ pool is ignored and a warning is logged.
 Vercel's 250 MB limit rules it out, and serving needs the pool file and graph on
 local disk. Google Drive or a storage bucket works as a backup, not for serving.
 The suggested host is a DigitalOcean droplet from the GitHub Student Pack.
+You own the Vercel project, so moving the site or its domain is your call.
 
 - Run the whole app there, since FastAPI already serves `web/`. Otherwise the
   Vercel page has to call another origin and the API needs CORS.
@@ -78,16 +79,15 @@ and 85 GB: 3.4 days at 800 cores, or about 11 days at DC's average of 245.
 
 Before starting:
 
-- Choose a cluster and check access early, because everything here ran under
-  Krish's CS account. Either get your own CS account and confirm the 800-task
-  limit (400 on `cpu`, 400 on `gpu`), or use Rivanna (see below).
+- Choose a cluster, because everything here ran under Krish's CS account. You
+  have Rivanna access (see below). The CS cluster would need your own account,
+  and its limit of 800 tasks (400 on `cpu`, 400 on `gpu`) would need confirming.
 - Tell cshelpdesk before holding that many cores for days.
 - Download the 11 GB US extract, and plan where 85 GB will live. Home is 100 GB
   and `/bigtemp` is volatile.
 
-**Rivanna.** Krish believes you have access to UVA Research Computing's Rivanna,
-so confirm that first. It could replace the CS cluster, but nothing has been run
-or tested there:
+**Rivanna.** You have access to UVA Research Computing's Rivanna, so it could
+replace the CS cluster, but nothing has been run or tested there:
 
 - `slurm/` is written for the CS cluster, so partition names, `/bigtemp` paths
   and core limits all need changing. Rerun `setup.sh` and test it on a small area.
