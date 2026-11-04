@@ -6,8 +6,9 @@ trails and hills. It suggests up to three routes, favoring fewer traffic
 lights, major-road crossings and repeated sections. Download a route as a
 GPX file, the route format compatible watches and navigation apps import.
 
-**Current coverage:** Charlottesville, Virginia. Serving precomputed routes
-across the top 50 US metro areas is in development.
+**Current coverage:** Charlottesville, Virginia, planned live on the deployed
+app. The code can now serve saved routes, but they are not hosted yet; the top
+50 US metro areas are the goal.
 
 **Try it:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
 capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
@@ -139,7 +140,7 @@ sliver. Two options that share over 70% of their length count as one.
 
 ## Architecture
 
-<img src="docs/readme/architecture.svg" alt="Today: the browser sends a start and preferences to the route planner, which searches map data saved with the app and returns up to three routes and a GPX file. Planned: routes saved ahead of time on the cluster, looked up instead of searched" width="100%">
+<img src="docs/readme/architecture.svg" alt="Deployed today: the browser sends a start and preferences to the route planner, which searches map data saved with the app and returns up to three routes and a GPX file. Built, not hosted yet: routes saved ahead of time on the cluster, which the planner looks up first when their file is present" width="100%">
 
 | Part | What it does | Where |
 |---|---|---|
@@ -147,16 +148,17 @@ sliver. Two options that share over 70% of their length count as one.
 | Route planner | Finds, measures and ranks loops (Python, FastAPI on Vercel) | `src/runline/` |
 | Saved map data | Charlottesville walk graph with elevation, built ahead of time | `graphs/`, `scripts/build_graphs.py` |
 | Precompute | Generates saved routes on the UVA CS cluster | `scripts/precompute_pools.py`, `slurm/` |
+| Serving | Answers from saved routes, or hands back to the planner | `src/runline/serving.py` |
 
-## Future work: precomputed routes
+## Precomputed routes
 
-Planning a route live takes about 0.8–2.6 seconds. To cover more cities and
-answer faster, RunLine generates a collection of candidate loops ahead of
-time for each starting area and surface. The planned serving system will
-filter these saved routes by requested distance and rank them by the runner's
-preferences. The collection does not include every possible route.
+To cover more cities and answer faster, RunLine generates a collection of
+candidate loops ahead of time for each starting area and surface. A request
+filters these saved routes by distance and ranks them by the runner's
+preferences. The collection does not include every possible route, so when a
+start has no good answer saved, the planner searches live instead.
 
-<img src="docs/readme/precompute.svg" alt="Four steps: generate and save candidate loops ahead of time on the cluster, which is built; filter to the requested distance and rank by preferences when a request arrives, which is planned" width="100%">
+<img src="docs/readme/precompute.svg" alt="Four steps: generate and save candidate loops ahead of time on the cluster, then filter to the requested distance and rank by preferences when a request arrives" width="100%">
 
 - A **cell** is a 200 m square starting area. Every start in a cell shares
   its saved routes.
@@ -171,16 +173,30 @@ preferences. The collection does not include every possible route.
 <sub>One real route pool, from the Charlottesville map centre: all 113 saved
 loops, the 10 within ±0.25 mi of 5 miles, and the 3 that ranking picks.</sub>
 
-| | Today | Planned |
+| | Planned live | Saved route pools |
 |---|---|---|
-| Coverage | Charlottesville | Top 50 US metro areas |
-| Time per request | 0.8–2.6 s, measured | about 0.1 s, estimated |
-| Where routes come from | Planned live, per request | Looked up from saved route pools |
+| Time per request, warm | 0.6–2.4 s | 14–23 ms |
+| Requests it can answer | All covered starts | 71% in a 40-start Charlottesville test |
+| Traffic signals per mile | 0.044 | 0.042 |
+| Major crossings per mile | 0.270 | 0.284 |
 
-**Status:** the generator, the metro tiling and the map builder are done, and
-Charlottesville's route pools are computed. A Washington, DC pilot is
-running. Serving saved routes from the app is not built yet.
-`slurm/README.md` is the cluster runbook.
+<sub>Medians across 3–12 mile requests from the same starts, on the requests
+pools could answer, from `scripts/compare_pools.py`. Pool figures leave out
+signals and crossings on the short link from the runner to the saved loop.</sub>
+
+**To try it locally,** put a pool file at `pools/charlottesville-va.sqlite`.
+The API's `source` field then says `pool` or `live`.
+
+**Status:**
+
+- **Charlottesville:** route pools are computed and serving works locally. The
+  deployed app still plans live because the 110 MB pool file is not hosted.
+- **Washington, DC:** the pilot finished, with 72,237 cells and 2.3 GB of pools.
+  The app can't serve them yet because they span many map tiles.
+- **Top 50 metro areas:** not run yet.
+
+`docs/handoff.md` lists the remaining work, and `slurm/README.md` is the
+cluster runbook.
 
 ## How it was built
 
@@ -191,6 +207,7 @@ running. Serving saved routes from the app is not built yet.
 | 3 · Better loops | Major-road crossings counted from road directions; dead ends removed; narrow loops re-routed and ranked last |
 | 4 · Faster | Faster path search, cached crossing checks and bounded searches: an 8 mile route went from 2.5 s to 0.7 s |
 | 5 · Scale out | Metro tiling, a map builder for the US extract, a compact pool format and the cluster precompute |
+| 6 · Serve | Requests answered from saved route pools, falling back to live planning |
 
 Every routing change is checked against a 32-case benchmark
 (`scripts/bench.py`) and a shape audit (`scripts/shape_audit.py`). The maps in

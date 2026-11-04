@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 250" role="img" aria-labelledby="title">
-  <title id="title">Precomputing routes in four steps. Built: generate candidate loops for every starting area ahead of time on the cluster, then save them. Planned: when a request arrives, filter the saved loops to the requested distance and rank them by the runner's preferences</title>
+  <title id="title">Precomputing routes in four steps. Ahead of time on the cluster, generate candidate loops for every starting area and save them. When a request arrives, filter the saved loops to the requested distance and rank them by the runner's preferences</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#62655d"/>
@@ -14,14 +14,12 @@
   </defs>
   <rect width="1140" height="250" rx="22" fill="#f4f1e9"/>
 
-  <text class="tag" x="28" y="40">Built · ahead of time, on the cluster</text>
-  <text class="tag" x="604" y="40" style="fill:#62655d">Planned · when a request arrives</text>
+  <text class="tag" x="28" y="40">Ahead of time, on the cluster</text>
+  <text class="tag" x="604" y="40">When a request arrives</text>
 
   <g fill="#fbfaf6" stroke="#deddd6" stroke-width="1.5">
     <rect x="28" y="58" width="236" height="160" rx="14"/>
     <rect x="316" y="58" width="236" height="160" rx="14"/>
-  </g>
-  <g fill="none" stroke="#8a8d84" stroke-width="1.5" stroke-dasharray="6 5">
     <rect x="604" y="58" width="236" height="160" rx="14"/>
     <rect x="892" y="58" width="220" height="160" rx="14"/>
   </g>
