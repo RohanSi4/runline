@@ -15,7 +15,7 @@ from runline.coverage import areas, graphs_root, load_area_graph
 from runline.geo import destination, distance_meters
 from runline.grid import cell_id
 from runline.models import Coordinate, RoutePreferences, SurfacePreference
-from runline.osm import _nearest_node
+from runline.osm import _nearest_node, doubled_back_fraction
 from runline.planner import plan_routes
 from runline.pools import FORMAT_VERSION, encode_pool
 from scripts.precompute_pools import cell_pool, prepare_area
@@ -208,3 +208,15 @@ def test_the_api_serves_a_pool_route_with_gpx(built, pools_dir) -> None:
     assert len(payload["routes"]) == 3
     assert "<gpx" in payload["routes"][0]["gpx"]
     assert len(payload["routes"][0]["feature"]["geometry"]["coordinates"]) > 10
+
+
+def test_served_routes_count_doubling_back_as_repeated(built, pools_dir) -> None:
+    for route in serving.serve_from_pool(_origin(built), _preferences()):
+        doubled = doubled_back_fraction(route.coordinates)
+        assert doubled <= serving.MAX_DOUBLED_BACK
+        assert route.metrics.repeated_fraction >= doubled
+
+
+def test_a_pool_whose_loops_double_back_falls_back(built, pools_dir, monkeypatch) -> None:
+    monkeypatch.setattr(serving, "MAX_DOUBLED_BACK", -1.0)
+    assert serving.serve_from_pool(_origin(built), _preferences()) is None

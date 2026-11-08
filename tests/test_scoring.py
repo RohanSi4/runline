@@ -10,7 +10,7 @@ from runline.models import (
 from runline.scoring import rank_candidates
 
 
-def _candidate(route_id: str, *, signals: int = 0, crossings: int = 0, gain: float = 100, distance: float = 5, compactness: float = 1) -> RouteCandidate:
+def _candidate(route_id: str, *, signals: int = 0, crossings: int = 0, gain: float = 100, distance: float = 5, compactness: float = 1, repeated: float = 0) -> RouteCandidate:
     return RouteCandidate(
         route_id=route_id,
         node_ids=(1, 2, 1),
@@ -21,7 +21,7 @@ def _candidate(route_id: str, *, signals: int = 0, crossings: int = 0, gain: flo
             traffic_signal_events=signals,
             major_crossing_events=crossings,
             trail_fraction=0.5,
-            repeated_fraction=0,
+            repeated_fraction=repeated,
             compactness=compactness,
         ),
     )
@@ -106,3 +106,21 @@ def test_an_in_band_sliver_beats_a_round_loop_that_misses_the_distance() -> None
     ranked = rank_candidates([long_loop, sliver], RoutePreferences(target_distance_miles=5))
 
     assert [candidate.route_id for candidate in ranked] == ["sliver", "long"]
+
+
+def test_a_route_that_doubles_back_ranks_after_a_busier_clean_loop() -> None:
+    doubled = _candidate("doubled", repeated=0.2)
+    busy_loop = _candidate("loop", signals=3)
+
+    ranked = rank_candidates([doubled, busy_loop], RoutePreferences(target_distance_miles=5))
+
+    assert [candidate.route_id for candidate in ranked] == ["loop", "doubled"]
+
+
+def test_an_in_band_route_that_doubles_back_beats_one_that_misses_the_distance() -> None:
+    doubled = _candidate("doubled", repeated=0.2, distance=5.0)
+    long_loop = _candidate("long", distance=6.0)
+
+    ranked = rank_candidates([long_loop, doubled], RoutePreferences(target_distance_miles=5))
+
+    assert [candidate.route_id for candidate in ranked] == ["doubled", "long"]

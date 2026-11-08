@@ -23,6 +23,10 @@ ROUND_ENOUGH = 0.35
 # Below this a loop is a thin out-and-back. It ranks after every rounder route
 # that fits the distance, but still ahead of any route that misses it.
 MIN_COMPACTNESS = 0.2
+# Above this share run twice (see osm.doubled_back_fraction), a route reads as
+# doubling back. Like a sliver, it ranks after every cleaner route that fits
+# the distance. Live routes on 20 test starts had a median near 1%.
+MAX_REPEATED = 0.10
 
 
 def _normalized(value: float, minimum: float, maximum: float) -> float:
@@ -109,8 +113,11 @@ def rank_candidates(
     def ranking_key(candidate: RouteCandidate) -> tuple[float, ...]:
         error = abs(candidate.metrics.distance_miles - preferences.target_distance_miles)
         if error <= preferences.distance_tolerance_miles:
-            sliver = candidate.metrics.compactness < MIN_COMPACTNESS
-            return (0, sliver, candidate.score, error)
+            awkward = (
+                candidate.metrics.compactness < MIN_COMPACTNESS
+                or candidate.metrics.repeated_fraction > MAX_REPEATED
+            )
+            return (0, awkward, candidate.score, error)
         # If every option misses the target, the closest route is the honest fallback.
         return (1, error, candidate.score)
 

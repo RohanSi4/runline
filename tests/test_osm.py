@@ -7,6 +7,7 @@ import networkx as nx
 import pytest
 
 from runline.coverage import areas, load_area_graph
+from runline.geo import destination
 from runline.models import (
     Coordinate,
     ElevationPreference,
@@ -24,6 +25,7 @@ from runline.osm import (
     _separated_return,
     _trim_spurs,
     collapse_graph,
+    doubled_back_fraction,
     measure_route,
 )
 from runline.planner import plan_routes
@@ -329,3 +331,48 @@ def test_major_edge_memo_is_rebuilt_when_the_graph_changes() -> None:
 
     graph.add_edge(3, 4, highway="primary")
     assert _major_edge_index(graph) == {}
+
+
+def _walk(*legs: tuple[float, float]) -> list[Coordinate]:
+    """Coordinates from a start near Charlottesville, one point per (bearing, metres) leg."""
+
+    points = [Coordinate(38.03, -78.48)]
+    for bearing, meters in legs:
+        points.append(destination(points[-1], bearing, meters))
+    return points
+
+
+def test_out_on_a_street_and_back_on_its_sidewalk_counts_as_doubling_back() -> None:
+    out_and_back = _walk((90, 800), (0, 12), (270, 800))
+    assert doubled_back_fraction(out_and_back) == pytest.approx(0.5, abs=0.03)
+
+
+def test_a_round_loop_and_a_lap_do_not_count_as_doubling_back() -> None:
+    square = _walk((90, 500), (0, 500), (270, 500), (180, 500))
+    assert doubled_back_fraction(square) == 0
+    # Two laps of the same block run the same way.
+    assert doubled_back_fraction(square + square[1:]) == 0
+
+
+def test_a_spur_counts_only_its_own_length() -> None:
+    # A 2 km square with a 100 m out-and-back on its far side: the way back is
+    # 100 of 2,212 m.
+    loop = _walk((90, 500), (0, 250), (90, 100), (0, 12), (270, 100), (0, 238), (270, 500), (180, 500))
+    assert doubled_back_fraction(loop) == pytest.approx(100 / 2212, abs=0.01)
+
+
+def test_parallel_streets_further_apart_do_not_count() -> None:
+    assert doubled_back_fraction(_walk((90, 800), (0, 60), (270, 800))) == 0
+
+
+def test_measured_repeats_include_doubling_back_on_the_drawn_route(tmp_path, monkeypatch) -> None:
+    # measure_route works from cached per-edge lines; it must agree with the
+    # drawn coordinates the runner sees.
+    monkeypatch.setenv("RUNLINE_ALLOW_OSM_DOWNLOAD", "0")
+    result = plan_routes(
+        Coordinate(38.035556, -78.503333), RoutePreferences(5),
+        cache_directory=tmp_path, elevation_source="none",
+    )
+
+    for route in result.candidates:
+        assert route.metrics.repeated_fraction >= doubled_back_fraction(route.coordinates) - 0.005

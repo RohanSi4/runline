@@ -9,11 +9,13 @@ winners.
 Pools are an optimization, never a requirement. ``serve_from_pool`` returns
 None whenever it cannot give a full answer (no file, an old format, a pool
 built from a different graph, a cell with no pool, too few loops in the
-distance band, a drive-radius request) and the planner searches live.
+distance band that don't double back, a drive-radius request) and the planner
+searches live.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import functools
 import hashlib
 import json
@@ -33,9 +35,10 @@ from .osm import (
     _edge_preference_cost,
     _nearest_node,
     _route_coordinates,
+    doubled_back_fraction,
 )
 from .pools import FORMAT_VERSION, decode_pool
-from .scoring import rank_candidates
+from .scoring import MAX_REPEATED, rank_candidates
 
 LOGGER = logging.getLogger("runline.serving")
 
@@ -43,6 +46,12 @@ LOGGER = logging.getLogger("runline.serving")
 # runner's own nearest node is usually within a cell's half-diagonal of it.
 # Further than this along the streets, a connector would dominate a short loop.
 MAX_CONNECTOR_METERS = 300.0
+
+# A pool keeps ten loops per target, so a request's distance band can hold
+# few good ones and ranking would serve one that doubles back. Loops past the
+# ranking's limit are left out, and with too few left the planner searches
+# live, which has many more loops to choose from.
+MAX_DOUBLED_BACK = MAX_REPEATED
 
 
 def pools_root() -> Path:
@@ -191,13 +200,25 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
         # Checked by hash above, so this would be a corrupt pool, not a stale one.
         LOGGER.warning("pool %s %s names a missing edge: %s", cell, preferences.surface.value, error)
         return None
-    ranked = _distinct_by_length(small, rank_candidates(in_band, preferences), preferences.result_count)
+    # Pools were built counting only repeated edges; measure doubling back on
+    # the drawn route, connector included, as live planning now does.
+    kept: list[RouteCandidate] = []
+    for candidate in in_band:
+        candidate.coordinates = _route_coordinates(small, list(candidate.node_ids))
+        doubled = doubled_back_fraction(candidate.coordinates)
+        if doubled > MAX_DOUBLED_BACK:
+            continue
+        if doubled > candidate.metrics.repeated_fraction:
+            candidate.metrics = dataclasses.replace(candidate.metrics, repeated_fraction=doubled)
+        kept.append(candidate)
+    if len(kept) < preferences.result_count:
+        return None
+    ranked = _distinct_by_length(small, rank_candidates(kept, preferences), preferences.result_count)
     if len(ranked) < preferences.result_count:
         return None
 
     start = StartCandidate("Start here", "origin", origin, 0)
     for position, candidate in enumerate(ranked, start=1):
         candidate.route_id = f"route-{position:03d}"
-        candidate.coordinates = _route_coordinates(small, list(candidate.node_ids))
         candidate.start = start
     return ranked

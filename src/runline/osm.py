@@ -323,6 +323,99 @@ def _compactness(graph: nx.DiGraph, node_ids: list[int]) -> float:
     return min(1.0, 4 * math.pi * abs(area) / 2 / perimeter**2)
 
 
+# Out on a street and back on its sidewalk is two edges, so counting repeated
+# edges misses it. Within 20 m, heading the other way, it is the same street.
+# The gap keeps a sample from matching its own neighbours at a U-turn.
+DOUBLED_BACK_METERS = 20.0
+DOUBLED_BACK_GAP_METERS = 2 * DOUBLED_BACK_METERS
+DOUBLED_BACK_STEP_METERS = 10.0
+
+
+def doubled_back_fraction(coordinates: tuple[Coordinate, ...] | list[Coordinate]) -> float:
+    """Share of a route's length that runs back along an earlier part of it.
+
+    The route is sampled every 10 m; a sample counts when an earlier sample at
+    least 40 m back along the route lies within 20 m and heads the opposite
+    way. Only the later pass counts, as with repeated edges, so a pure out and
+    back is 0.5. A lap of a block heads the same way, so it does not count.
+    """
+
+    import numpy as np
+
+    if len(coordinates) < 2:
+        return 0.0
+    x_scale = 111_320.0 * math.cos(math.radians(coordinates[0].latitude))
+    return _doubled_back(np.array([(c.longitude * x_scale, c.latitude * 110_540.0) for c in coordinates]))
+
+
+EDGE_POINTS_KEY = "_runline_edge_points"
+
+
+def _route_points(graph: nx.DiGraph, node_ids: list[int]):
+    """The route's drawn line in local metres, from a per-edge memo on the graph.
+
+    Building ``_route_coordinates`` for every candidate cost more than the
+    rest of ``measure_route``; a request's candidates share most of their
+    edges, so each edge's line is projected once.
+    """
+
+    import numpy as np
+
+    cached = graph.graph.get(EDGE_POINTS_KEY)
+    if cached is None or cached[0] != graph.number_of_nodes():
+        x_scale = 111_320.0 * math.cos(math.radians(float(graph.nodes[node_ids[0]]["y"])))
+        cached = (graph.number_of_nodes(), x_scale, {})
+        graph.graph[EDGE_POINTS_KEY] = cached
+    _, x_scale, index = cached
+    parts = []
+    for u, v in zip(node_ids, node_ids[1:]):
+        points = index.get((u, v))
+        if points is None:
+            points = np.array(
+                [(c.longitude * x_scale, c.latitude * 110_540.0) for c in _edge_geometry_coordinates(graph, u, v)]
+            )
+            index[(u, v)] = points
+        parts.append(points)
+    return np.concatenate(parts)
+
+
+def _doubled_back(points) -> float:
+    """``doubled_back_fraction`` on a line already in local metres."""
+
+    import numpy as np
+    from scipy.spatial import cKDTree
+
+    segments = np.diff(points, axis=0)
+    lengths = np.hypot(segments[:, 0], segments[:, 1])
+    keep = lengths > 0
+    starts, segments, lengths = points[:-1][keep], segments[keep], lengths[keep]
+    total = float(lengths.sum())
+    if total <= 2 * DOUBLED_BACK_GAP_METERS:
+        return 0.0
+    counts = np.maximum(1, (lengths // DOUBLED_BACK_STEP_METERS).astype(int))
+    segment = np.repeat(np.arange(len(lengths)), counts)
+    offsets = np.arange(len(segment)) - np.repeat(np.cumsum(counts) - counts, counts)
+    share = offsets / counts[segment]
+    samples = starts[segment] + segments[segment] * share[:, None]
+    headings = segments[segment] / lengths[segment][:, None]
+    along = (np.cumsum(lengths) - lengths)[segment] + lengths[segment] * share
+
+    pairs = cKDTree(samples).query_pairs(DOUBLED_BACK_METERS, output_type="ndarray")
+    if not len(pairs):
+        return 0.0
+    first, second = pairs[:, 0], pairs[:, 1]
+    gap = np.abs(along[first] - along[second])
+    # A loop ends where it starts, so the two ends are close along the route.
+    gap = np.minimum(gap, total - gap)
+    opposite = np.einsum("ij,ij->i", headings[first], headings[second]) < -0.5
+    matched = (gap > DOUBLED_BACK_GAP_METERS) & opposite
+    later = np.where(along[first] > along[second], first, second)
+    doubled = np.zeros(len(samples), dtype=bool)
+    doubled[later[matched]] = True
+    weights = lengths[segment] / counts[segment]
+    return float(weights[doubled].sum() / total)
+
+
 def measure_route(
     graph: nx.DiGraph,
     node_ids: list[int],
@@ -354,13 +447,15 @@ def measure_route(
             gain_meters += max(0.0, float(end_elevation) - float(start_elevation))
 
     signal_events = sum(1 for node in node_ids[1:] if _is_signal(graph.nodes[node]))
+    edge_repeats = repeated_meters / total_meters if total_meters else 0
     return RouteMetrics(
         distance_miles=total_meters / METERS_PER_MILE,
         elevation_gain_feet=gain_meters * 3.28084,
         traffic_signal_events=signal_events,
         major_crossing_events=len(_major_crossings(graph, node_ids)),
         trail_fraction=trail_meters / total_meters if total_meters else 0,
-        repeated_fraction=repeated_meters / total_meters if total_meters else 0,
+        # Repeated edges catch a lap run twice; geometry catches parallel paths.
+        repeated_fraction=max(edge_repeats, _doubled_back(_route_points(graph, node_ids)) if len(node_ids) > 1 else 0),
         drive_distance_miles=drive_distance_miles,
         elevation_coverage=elevation_meters / total_meters if total_meters else 0,
         compactness=_compactness(graph, node_ids),
@@ -688,6 +783,7 @@ def _routable_core(graph: nx.DiGraph) -> nx.DiGraph:
     trimmed.graph.pop(NODE_INDEX_KEY, None)
     trimmed.graph.pop(COST_MATRIX_KEY, None)
     trimmed.graph.pop(MAJOR_EDGES_KEY, None)
+    trimmed.graph.pop(EDGE_POINTS_KEY, None)
     return trimmed
 
 
@@ -880,6 +976,7 @@ def crop_to_radius(
     cropped.graph.pop(NODE_INDEX_KEY, None)
     cropped.graph.pop(COST_MATRIX_KEY, None)
     cropped.graph.pop(MAJOR_EDGES_KEY, None)
+    cropped.graph.pop(EDGE_POINTS_KEY, None)
     return cropped
 
 
