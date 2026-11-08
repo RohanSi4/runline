@@ -22,10 +22,50 @@ jid=$(sbatch --parsable --export=AREA=charlottesville-va slurm/precompute.sbatch
 sbatch --dependency=afterok:$jid --export=AREA=charlottesville-va slurm/merge.sbatch
 ```
 
-## The top 50 metros
+## The top 50 metros, in batches
 
-Work under `/bigtemp/$USER` (home is 100 GB) and copy the finished
-`pools.sqlite` somewhere permanent; `/bigtemp` is volatile.
+`config/metro-batches.json` splits the 50 metros (minus DC, whose pilot ran)
+into a test batch of about 74,000 cells and eight batches of 360,000–420,000.
+At the pilot's 70 s per cell, each large batch is about 7,800 CPU-hours: about
+10 hours if all 800 cores stay busy, closer to 1.5 days at the pilot's
+average. Batches split the cells exactly as one run of all 50 would, so no
+cell is computed twice.
+
+Once per cluster, download `us-latest.osm.pbf` (about 11 GB,
+download.geofabrik.de) to `/bigtemp/$USER`, install osmium-tool (see
+`slurm/extract.sbatch`), and keep only the highway ways:
+
+```bash
+bash slurm/run_batch.sh --filter
+```
+
+Then, when that job succeeds, one command per batch submits all four steps,
+each waiting for the one before:
+
+```bash
+bash slurm/run_batch.sh test
+```
+
+Its pools land in `/bigtemp/$USER/batches/test/pools/pools.sqlite`. Before
+the next batch:
+
+- Copy the file somewhere permanent. `/bigtemp` is volatile.
+- Check `sacct` for OUT_OF_MEMORY. Tasks ask for 4G, against the pilot's
+  2.1 GB peak, and New York and Los Angeles (`b1`) may need more. Rerun with
+  `MEM=8G bash slurm/run_batch.sh <name>`: built tiles and finished units are
+  skipped.
+- If a tile build fails, the precompute stays pending forever
+  (`DependencyNeverSatisfied`). `scancel` it, fix the build, and rerun the
+  batch.
+
+To keep the cores busy, submit the next batch while the last one's slowest
+tasks are finishing.
+
+## The top 50 metros, step by step
+
+What `run_batch.sh` does, for a pilot or a rerun of one step. Work under
+`/bigtemp/$USER` (home is 100 GB) and copy the finished `pools.sqlite`
+somewhere permanent; `/bigtemp` is volatile.
 
 1. Download `us-latest.osm.pbf` (about 11 GB, download.geofabrik.de) to
    `/bigtemp/$USER`, and install osmium-tool (see `slurm/extract.sbatch`).

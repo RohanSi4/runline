@@ -5,14 +5,15 @@
 #
 # Finished units are skipped, so resubmitting reruns only what failed.
 # Memory follows the largest tile graph (see build_tile_graphs.py summary):
-# Charlottesville's 40k nodes peaked at 453 MB, and dense downtown tiles can
-# be several times that.
+# Charlottesville's 40k nodes peaked at 453 MB, and the DC pilot's largest
+# task at 2.1 GB. Asking for less lets more tasks fit on each node. If tasks
+# die with OUT_OF_MEMORY, resubmit with a larger --mem; finished units skip.
 #SBATCH --job-name=runline-tile-pools
 # cpu and gpu each allow 400 cores per user, and nothing here needs a GPU, so
 # tasks start in whichever partition has a free core: up to 800 at once.
 #SBATCH --partition=cpu,gpu
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=8G
+#SBATCH --mem=4G
 #SBATCH --time=2-00:00:00
 #SBATCH --output=slurm/logs/%x-%A_%a.out
 set -euo pipefail

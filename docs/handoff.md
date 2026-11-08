@@ -101,12 +101,12 @@ replace the CS cluster, but nothing has been run or tested there:
 - Rebuild pools on one cluster only unless you copy the graphs, since a pool only
   matches the exact graph it was built from.
 
-Apply what DC taught us. Neither change is in the code yet:
-
-- Lower `#SBATCH --mem` in `slurm/precompute_tiles.sbatch` from 8G to 4G. Peak
-  use was 2.1 GB, and asking for less gets more tasks scheduled.
-- Plan with `--cells-per-unit 50` rather than 100. The p95 task took 256 min and
-  the longest 358, so smaller units save more when a task fails.
+Run it in batches with `slurm/run_batch.sh` (see `slurm/README.md`): a test
+batch of three metros, then eight batches of 360,000–420,000 cells. Each
+finished batch can be copied off before the next starts. What DC taught us is
+already applied: tasks ask for 4G (the peak was 2.1 GB) and units are 50 cells
+(the p95 task took 256 min and the longest 358, so smaller units save more
+when a task fails).
 
 Consider whether task 2 changes the pool format before spending this compute.
 
