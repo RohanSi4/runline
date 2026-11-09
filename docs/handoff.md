@@ -41,8 +41,17 @@ you got here.
 
 Vercel's 250 MB limit rules it out, and serving needs the pool file and graph on
 local disk. Google Drive or a storage bucket works as a backup, not for serving.
-The suggested host is a DigitalOcean droplet from the GitHub Student Pack.
+The suggested host is an Azure Linux VM, paid for by Azure for Students ($100
+credit, no card, from the GitHub Student Pack; DigitalOcean is no longer in the
+pack). Its spending limit stops the VM rather than billing when the credit runs
+out, and the credit lasts 12 months.
 You own the Vercel project, so moving the site or its domain is your call.
+
+- Size: Azure's free B1s (1 GB RAM) is likely enough for Charlottesville alone.
+  Metro tile graphs need more: measure first (see task 2), then pick a B2s
+  (4 GB, roughly $30 a month) or larger.
+- Keep the pool files on the VM's disk; a 2 GB metro file is too big to fetch
+  per request. Azure Blob Storage on the same credit is fine for backups.
 
 - Run the whole app there, since FastAPI already serves `web/`. Otherwise the
   Vercel page has to call another origin and the API needs CORS.
