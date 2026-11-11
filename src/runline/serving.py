@@ -108,6 +108,13 @@ def load_pool(pool: PoolFile, cell: str, surface: str) -> dict | None:
     return decode_pool(row[0]) if row else None
 
 
+def _miss(reason: str, cell: str, surface: str) -> None:
+    """Log why a request found a pool but could not use it; returns None."""
+
+    LOGGER.debug("pool %s %s cannot answer: %s", cell, surface, reason, extra={"pool_miss": reason})
+    return None
+
+
 def _connector(graph: nx.MultiDiGraph, start_node: int, origin_node: int) -> tuple[list[int], list[int], float] | None:
     """Street paths from the runner's node to the pool's origin and back, and the length."""
 
@@ -181,7 +188,7 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
     start_node = _nearest_node(graph, origin)
     connector = _connector(graph, start_node, pool["origin_node"])
     if connector is None:
-        return None
+        return _miss("no connector", cell, preferences.surface.value)
     out, back, connector_meters = connector
 
     in_band: list[RouteCandidate] = []
@@ -192,7 +199,7 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
         nodes = (*out, *loop["nodes"][1:], *back[1:])
         in_band.append(RouteCandidate(f"pool-{index}", nodes, (), metrics))
     if len(in_band) < preferences.result_count:
-        return None
+        return _miss("few in band", cell, preferences.surface.value)
 
     try:
         small = _route_graph(graph, [candidate.node_ids for candidate in in_band], preferences)
@@ -212,10 +219,10 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
             candidate.metrics = dataclasses.replace(candidate.metrics, repeated_fraction=doubled)
         kept.append(candidate)
     if len(kept) < preferences.result_count:
-        return None
+        return _miss("few without doubling back", cell, preferences.surface.value)
     ranked = _distinct_by_length(small, rank_candidates(kept, preferences), preferences.result_count)
     if len(ranked) < preferences.result_count:
-        return None
+        return _miss("few distinct", cell, preferences.surface.value)
 
     start = StartCandidate("Start here", "origin", origin, 0)
     for position, candidate in enumerate(ranked, start=1):

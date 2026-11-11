@@ -172,6 +172,13 @@ def cell_pool(core, cell: str, targets, surface: SurfacePreference) -> dict | No
     }
 
 
+def _read_cells(path: Path) -> list[str]:
+    """Cell ids, one per line; blank lines and # comments are skipped."""
+
+    lines = (line.split("#", 1)[0].strip() for line in path.read_text().splitlines())
+    return [line for line in lines if line]
+
+
 def run_shard(arguments) -> int:
     area = next((item for item in areas() if item.slug == arguments.area), None)
     if area is None:
@@ -182,6 +189,12 @@ def run_shard(arguments) -> int:
         print("warning: graph has no baked elevation; run build_graphs.py --bake-only first")
 
     cells = area_cells(area, graph, arguments.grid_meters)
+    if arguments.cells:
+        wanted = set(_read_cells(arguments.cells))
+        cells = [cell for cell in cells if cell in wanted]
+        if len(cells) < len(wanted):
+            # As for the whole area, a cell with no walkable node gets no pool.
+            print(f"{len(wanted) - len(cells)} of {len(wanted)} listed cells have no walkable node in the area")
     if arguments.list:
         per_shard = math.ceil(len(cells) / arguments.shard_count)
         print(f"{area.slug}: {len(cells)} cells at {arguments.grid_meters:.0f}m, "
@@ -343,6 +356,9 @@ def main(argv=None) -> int:
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--output", type=Path, default=ROOT / "pools")
     parser.add_argument("--limit-cells", type=int, help="only the first N cells of the shard (testing)")
+    # A local sample (e.g. compare_pools.py's starts) without the whole area;
+    # shards then split just these cells.
+    parser.add_argument("--cells", type=Path, help="area runs: only the cell ids listed in this file, one per line")
     parser.add_argument("--list", action="store_true", help="print the cell count and exit")
     arguments = parser.parse_args(argv)
     if not 0 <= arguments.shard_index < arguments.shard_count:
