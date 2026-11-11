@@ -94,6 +94,11 @@ The fresh integrated run's eight misses comprised six unreachable-loop
 requests and two requests with too few loops in band. It still returns
 three routes on a hit; no result-count API change was made.
 
+On the complete rebuilt-graph pools, serving's two miss retries (a start
+moved onto the connected graph, then a 5x5 ring with a 500 m connector)
+raised the 600-request three-surface check from 548 to 582 hits (97.0%);
+see [pool-misses.md](pool-misses.md).
+
 Rivanna `b6` and CS two-tile smoke submission scripts also completed local
 `DRY_RUN=1` runs. The empty `done` list works; the Rivanna output includes
 Washington, uses the standard partition and allocation flag, and chains the

@@ -16,6 +16,14 @@ searches live.
 The default request asks for up to three routes. Two distinct, in-band
 routes are a usable answer; one triggers live planning for more choice.
 
+A request the usual read cannot answer gets two cheap retries before live
+planning (docs/pool-misses.md). A start whose nearest node is on a stranded
+fragment of the graph is moved to the nearest node of its largest strongly
+connected component, the node live planning would start from. Then the ring
+of cells is widened to 5x5 and the connector to FALLBACK_CONNECTOR_METERS.
+Distance, repetition and diversity checks are unchanged, and hits on the
+usual read never pay for either retry.
+
 A start inside a metro precomputed on tiles (runline.metros) resolves the
 same way: its cell names the owning tile, ``containing_area`` returns that
 tile as an Area, ``pool_file`` checks the metro's file and the tile's graph
@@ -30,6 +38,7 @@ import functools
 import hashlib
 import json
 import logging
+import math
 import os
 import sqlite3
 from dataclasses import dataclass
@@ -46,6 +55,7 @@ from .osm import (
     _edge_preference_cost,
     _is_major,
     _nearest_node,
+    _node_index,
     _route_coordinates,
     _trim_spurs,
     measure_route,
@@ -67,6 +77,14 @@ BAND_SLACK_MILES = 0.05
 # ranking's limit are left out, and with too few left the planner searches
 # live, which has many more loops to choose from.
 MAX_DOUBLED_BACK = MAX_REPEATED
+
+# The retry for a request the usual read cannot answer: cells this many rows
+# and columns out, joined by up to this far each way. Most misses on the
+# complete Charlottesville pools had in-band loops a few hundred meters past
+# MAX_CONNECTOR_METERS; a longer connector that doubles back is still caught
+# by MAX_DOUBLED_BACK, and the connector is measured as part of the route.
+FALLBACK_RING = 2
+FALLBACK_CONNECTOR_METERS = 500.0
 
 
 def pools_root() -> Path:
@@ -218,13 +236,12 @@ class _Reach:
     back_paths: dict[int, list[int]]
 
 
-def _reach(graph: nx.MultiDiGraph, start_node: int) -> _Reach:
-    out_meters, out_paths = nx.single_source_dijkstra(
-        graph, start_node, cutoff=MAX_CONNECTOR_METERS, weight="length"
-    )
+def _reach(graph: nx.MultiDiGraph, start_node: int, connector_meters: float | None = None) -> _Reach:
+    cutoff = MAX_CONNECTOR_METERS if connector_meters is None else connector_meters
+    out_meters, out_paths = nx.single_source_dijkstra(graph, start_node, cutoff=cutoff, weight="length")
     # Searched backwards, so each path runs from the start; reversed on use.
     back_meters, back_paths = nx.single_source_dijkstra(
-        graph.reverse(copy=False), start_node, cutoff=MAX_CONNECTOR_METERS, weight="length"
+        graph.reverse(copy=False), start_node, cutoff=cutoff, weight="length"
     )
     return _Reach(out_meters, out_paths, back_meters, back_paths)
 
@@ -235,7 +252,7 @@ def _anchored(loop: list[int], reach: _Reach) -> tuple[tuple[int, ...], float] |
     Every node of a loop is somewhere it could start, so the runner joins it
     at whichever node is the shortest round trip away instead of at the pool's
     origin. Returns the route's nodes and the connector's out-and-back length,
-    or None if the loop never comes within MAX_CONNECTOR_METERS each way.
+    or None if the loop never comes within the reach's cutoff each way.
     """
 
     best = None
@@ -299,7 +316,9 @@ def _route_graph(graph: nx.MultiDiGraph, routes: list[tuple[int, ...]], preferen
     return small
 
 
-def _candidates(pools: list[dict], reach: _Reach, preferences: RoutePreferences) -> list[RouteCandidate]:
+def _candidates(
+    pools: list[dict], reach: _Reach, preferences: RoutePreferences, connector_meters: float | None = None
+) -> list[RouteCandidate]:
     """Pool loops that, joined from the runner, could fit the distance band.
 
     Lengths here are the stored loop's plus the connector's; the exact length
@@ -308,7 +327,8 @@ def _candidates(pools: list[dict], reach: _Reach, preferences: RoutePreferences)
 
     target = preferences.target_distance_miles
     tolerance = preferences.distance_tolerance_miles + BAND_SLACK_MILES
-    longest_connector_miles = 2 * MAX_CONNECTOR_METERS / METERS_PER_MILE
+    connector = MAX_CONNECTOR_METERS if connector_meters is None else connector_meters
+    longest_connector_miles = 2 * connector / METERS_PER_MILE
     seen: set[tuple[int, ...]] = set()
     candidates: list[RouteCandidate] = []
     for pool in pools:
@@ -358,6 +378,56 @@ def _ranked(small: nx.DiGraph, measured: list[RouteCandidate], preferences: Rout
     return ranked, ""
 
 
+CORE_KEY = "_runline_core"
+
+
+def _core_node(graph: nx.MultiDiGraph, node: int, origin: Coordinate) -> int | None:
+    """The nearest node of the graph's largest strongly connected component
+    to the origin, or None if ``node`` is already on it.
+
+    Area graphs keep stranded fragments (a footway island, a car park
+    loop) that cannot reach any pooled loop. Live planning starts from this
+    component (osm._routable_core), so moving there matches what it would
+    do. The component is found once per loaded graph, about 70 ms on
+    Charlottesville, and only when a request misses.
+    """
+
+    import numpy as np
+
+    cached = graph.graph.get(CORE_KEY)
+    if cached is None or cached[0] != graph.number_of_nodes():
+        core = max(nx.strongly_connected_components(graph), key=len, default=set())
+        node_ids, _, _ = _node_index(graph)
+        mask = np.fromiter((int(n) in core for n in node_ids), dtype=bool, count=node_ids.size)
+        cached = graph.graph[CORE_KEY] = (graph.number_of_nodes(), core, mask)
+    _, core, mask = cached
+    if node in core or not mask.any():
+        return None
+    node_ids, latitudes, longitudes = _node_index(graph)
+    scale = math.cos(math.radians(origin.latitude))
+    squared = (latitudes - origin.latitude) ** 2 + ((longitudes - origin.longitude) * scale) ** 2
+    squared[~mask] = np.inf
+    return int(node_ids[int(np.argmin(squared))])
+
+
+def _answer(
+    graph: nx.MultiDiGraph,
+    pools: list[dict],
+    start_node: int,
+    preferences: RoutePreferences,
+    connector_meters: float | None = None,
+) -> tuple[list[RouteCandidate], str, nx.DiGraph | None]:
+    """Ranked routes from these pools joined at ``start_node``, or none and why."""
+
+    reach = _reach(graph, start_node, connector_meters)
+    candidates = _candidates(pools, reach, preferences, connector_meters)
+    if not candidates:
+        return [], "no loop within reach", None
+    small = _route_graph(graph, [candidate.node_ids for candidate in candidates], preferences)
+    ranked, reason = _ranked(small, _measured(small, candidates, preferences), preferences)
+    return ranked, reason, small
+
+
 def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[RouteCandidate] | None:
     """Ranked routes from the pools around the origin, or None if live planning should answer."""
 
@@ -374,24 +444,35 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
     # Loops from the cells around pass the runner too. Reading all nine found
     # ~45 candidates a request instead of ~10, and cut crossings per mile 30%
     # for ~50 ms (docs/routing-study.md, "Pool serving").
-    pools = load_pools(pool_source, neighbouring_cells(cell), surface)
-    if not pools:
-        return None
+    near = neighbouring_cells(cell)
+    pools = load_pools(pool_source, near, surface)
 
     graph = load_area_graph(area)
-    reach = _reach(graph, _nearest_node(graph, origin))
-    candidates = _candidates(pools, reach, preferences)
-    if not candidates:
-        return _miss("no loop within reach", cell, surface)
+    start_node = _nearest_node(graph, origin)
+    ranked, reason, small, retry = [], "no pool for the cell", None, ""
     try:
-        small = _route_graph(graph, [candidate.node_ids for candidate in candidates], preferences)
+        if pools:
+            ranked, reason, small = _answer(graph, pools, start_node, preferences)
+        if not ranked:
+            core_node = _core_node(graph, start_node, origin)
+            if core_node is not None:
+                start_node, retry = core_node, "connected start"
+                if pools:
+                    ranked, reason, small = _answer(graph, pools, start_node, preferences)
+        if not ranked:
+            wider = [extra for extra in neighbouring_cells(cell, FALLBACK_RING) if extra not in near]
+            pools = pools + load_pools(pool_source, wider, surface)
+            if pools:
+                retry = f"{retry} + wider" if retry else "wider"
+                ranked, reason, small = _answer(graph, pools, start_node, preferences, FALLBACK_CONNECTOR_METERS)
     except KeyError as error:
         # Checked by hash above, so this would be a corrupt pool, not a stale one.
         LOGGER.warning("pool near %s %s names a missing edge: %s", cell, surface, error)
         return None
-    ranked, reason = _ranked(small, _measured(small, candidates, preferences), preferences)
     if not ranked:
         return _miss(reason, cell, surface)
+    if retry:
+        LOGGER.debug("pool %s %s answered on retry: %s", cell, surface, retry, extra={"pool_retry": retry})
 
     start = StartCandidate("Start here", "origin", origin, 0)
     for position, candidate in enumerate(ranked, start=1):
