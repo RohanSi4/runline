@@ -59,16 +59,20 @@ def summary(routes: list) -> dict:
 
 
 class MissReasons(logging.Handler):
-    """Collects the reason serving logs when it finds a pool but cannot use it."""
+    """Collects why serving missed, or which retry answered, as it logs them."""
 
     def __init__(self) -> None:
         super().__init__(logging.DEBUG)
         self.reasons: list[str] = []
+        self.retries: list[str] = []
 
     def emit(self, record: logging.LogRecord) -> None:
         reason = getattr(record, "pool_miss", None)
         if reason:
             self.reasons.append(reason)
+        retry = getattr(record, "pool_retry", None)
+        if retry:
+            self.retries.append(retry)
 
 
 def plan_live(origin: Coordinate, preferences: RoutePreferences, cache: Path) -> tuple[list, float]:
@@ -106,6 +110,8 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--write-cells", type=Path, help="write the cells serving reads for these starts and exit")
     parser.add_argument("--no-live", action="store_true", help="skip live planning: hit rate and pool metrics only")
+    parser.add_argument("--live-on-retry", action="store_true",
+                        help="plan live only for misses and hits a serving retry answered")
     arguments = parser.parse_args()
 
     area = next(item for item in areas() if item.slug == arguments.area)
@@ -140,10 +146,11 @@ def main() -> int:
                 for start_index, origin in enumerate(starts):
                     preferences = RoutePreferences(miles, surface=SurfacePreference(surface))
                     misses.reasons.clear()
+                    misses.retries.clear()
                     began = time.perf_counter()
                     pooled = serving.serve_from_pool(origin, preferences)
                     pool_seconds = time.perf_counter() - began
-                    if arguments.no_live:
+                    if arguments.no_live or (arguments.live_on_retry and pooled and not misses.retries):
                         live, live_seconds = [], float("nan")
                     else:
                         live, live_seconds = plan_live(origin, preferences, cache)
@@ -151,6 +158,8 @@ def main() -> int:
                            "returned": len(pooled or []), "pool_seconds": pool_seconds, "live_seconds": live_seconds}
                     if not pooled:
                         row["miss"] = misses.reasons[-1] if misses.reasons else "no pool for the cell"
+                    elif misses.retries:
+                        row["retry"] = misses.retries[-1]
                     for name, routes in (("pool", pooled or []), ("live", live)):
                         for route in routes:
                             route._target = miles
@@ -173,6 +182,9 @@ def main() -> int:
     pool_ms = sorted(row["pool_seconds"] * 1000 for row in hits)
     if pool_ms:
         print(f"\npool ms on hits: p95 {pool_ms[int(0.95 * (len(pool_ms) - 1))]:.0f}, max {pool_ms[-1]:.0f}")
+    retried = collections.Counter(row["retry"] for row in hits if "retry" in row)
+    if retried:
+        print(f"{sum(retried.values())} hits answered on a retry: {dict(retried)}")
     short = [row for row in hits if row["returned"] < RoutePreferences(1).result_count]
     if short:
         print(f"{len(short)} hits returned fewer than the requested routes")

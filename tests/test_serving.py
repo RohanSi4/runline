@@ -9,6 +9,7 @@ import sqlite3
 from dataclasses import asdict
 from pathlib import Path
 
+import networkx as nx
 import pytest
 
 from runline import serving
@@ -192,7 +193,101 @@ def test_a_start_with_no_loop_within_reach_falls_back(built, pools_dir, monkeypa
     reached, _ = _cell_nodes_by_reach(built)
     off_the_loops = next(node for node in reached if node not in _loop_nodes(pool))
     monkeypatch.setattr(serving, "MAX_CONNECTOR_METERS", 0.0)
+    monkeypatch.setattr(serving, "FALLBACK_CONNECTOR_METERS", 0.0)
     assert serving.serve_from_pool(_at(graph, off_the_loops), _preferences(result_count=1)) is None
+
+
+def _retries(caplog) -> list[str]:
+    return [record.pool_retry for record in caplog.records if hasattr(record, "pool_retry")]
+
+
+def test_a_start_just_past_the_connector_is_answered_on_the_wider_retry(built, pools_dir, monkeypatch, caplog) -> None:
+    _, graph, _, pool = built
+    reached, _ = _cell_nodes_by_reach(built)
+    off_the_loops = next(node for node in reached if node not in _loop_nodes(pool))
+    origin = _at(graph, off_the_loops)
+    monkeypatch.setattr(serving, "MAX_CONNECTOR_METERS", 0.0)
+    caplog.set_level("DEBUG", logger="runline.serving")
+
+    routes = serving.serve_from_pool(origin, _preferences(result_count=1))
+
+    assert routes and _retries(caplog) == ["wider"]
+    for route in routes:
+        # The longer connector is part of the drawn, measured route and passes
+        # the same checks as any other.
+        assert route.node_ids[0] == route.node_ids[-1] == off_the_loops
+        assert abs(route.metrics.distance_miles - MILES) <= 0.25
+        assert route.metrics.repeated_fraction <= serving.MAX_DOUBLED_BACK
+        assert _is_rotation_of_a_loop(route.node_ids, pool)
+
+
+def test_a_hit_on_the_usual_read_never_runs_a_retry(built, pools_dir, monkeypatch, caplog) -> None:
+    def unexpected(*_):
+        raise AssertionError("retry ran on a hit")
+
+    monkeypatch.setattr(serving, "_core_node", unexpected)
+    caplog.set_level("DEBUG", logger="runline.serving")
+    assert len(serving.serve_from_pool(_origin(built), _preferences())) == 3
+    assert _retries(caplog) == []
+
+
+def test_a_start_two_cells_out_is_answered_from_the_wider_ring(built, pools_dir, monkeypatch) -> None:
+    _, graph, cell, pool = built
+    outer = set(neighbouring_cells(cell, serving.FALLBACK_RING)) - set(neighbouring_cells(cell))
+    loops = _loop_nodes(pool)
+    for node, data in graph.nodes(data=True):
+        if cell_id(float(data["y"]), float(data["x"]), 200.0) not in outer:
+            continue
+        reach = serving._reach(graph, node, serving.FALLBACK_CONNECTOR_METERS)
+        if not loops & reach.out_meters.keys() & reach.back_meters.keys():
+            continue
+        routes = serving.serve_from_pool(_at(graph, node), _preferences(result_count=1))
+        if not routes:
+            continue
+        assert routes[0].node_ids[0] == routes[0].node_ids[-1] == node
+        assert _is_rotation_of_a_loop(routes[0].node_ids, pool)
+        monkeypatch.setattr(serving, "FALLBACK_RING", 1)
+        assert serving.serve_from_pool(_at(graph, node), _preferences(result_count=1)) is None
+        return
+    pytest.fail("no start two cells out was answered from this cell's pool")
+
+
+def test_a_stranded_start_is_answered_from_the_connected_graph(built, pools_dir, monkeypatch, caplog) -> None:
+    """A start on a fragment the loops cannot reach joins from where live planning would start."""
+
+    area, graph, _, pool = built
+    core = max(nx.strongly_connected_components(graph), key=len)
+    loops = _loop_nodes(pool)
+    stranded = sorted(
+        (node for node in graph.nodes if node not in core),
+        key=lambda node: distance_meters(area.center, _at(graph, node)),
+    )
+    caplog.set_level("DEBUG", logger="runline.serving")
+    for node in stranded[:50]:
+        origin = _at(graph, node)
+        assert _nearest_node(graph, origin) == node
+        connected = serving._core_node(graph, node, origin)
+        assert connected in core
+        reach = serving._reach(graph, connected)
+        if not loops & reach.out_meters.keys() & reach.back_meters.keys():
+            continue
+        caplog.clear()
+        routes = serving.serve_from_pool(origin, _preferences(result_count=1))
+        if not routes:
+            continue
+        assert routes[0].node_ids[0] == routes[0].node_ids[-1] == connected
+        assert routes[0].start.coordinate == origin
+        assert _retries(caplog)[0].startswith("connected start")
+        monkeypatch.setattr(serving, "_core_node", lambda *_: None)
+        assert serving.serve_from_pool(origin, _preferences(result_count=1)) is None
+        return
+    pytest.fail("no stranded start near this cell joined its pool from the connected graph")
+
+
+def test_a_start_on_the_connected_graph_is_not_moved(built) -> None:
+    _, graph, _, pool = built
+    origin_node = pool["origin_node"]
+    assert serving._core_node(graph, origin_node, _at(graph, origin_node)) is None
 
 
 def test_anchoring_restarts_the_loop_at_its_nearest_node_and_adds_the_way_there() -> None:
@@ -267,6 +362,20 @@ def test_neighbouring_cells_are_the_eight_around_the_cell() -> None:
         for meters in (50, 100, 150):
             point = destination(centre, bearing, meters)
             assert cell_id(point.latitude, point.longitude, 200.0) in cells
+
+
+def test_a_wider_ring_holds_the_nine_and_the_sixteen_around_them() -> None:
+    cell = cell_id(38.03, -78.48, 200.0)
+    wider = neighbouring_cells(cell, 2)
+
+    assert wider[0] == cell and len(set(wider)) == len(wider) == 25
+    assert set(neighbouring_cells(cell)) < set(wider)
+    centre = cell_centre(cell)
+    assert all(distance_meters(centre, cell_centre(other)) < 640 for other in wider)
+    for bearing in range(0, 360, 15):
+        for meters in (250, 350):
+            point = destination(centre, bearing, meters)
+            assert cell_id(point.latitude, point.longitude, 200.0) in wider
 
 
 def test_pools_keep_no_loop_that_serving_would_drop(built) -> None:
