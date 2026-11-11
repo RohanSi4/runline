@@ -1,0 +1,24 @@
+# Rendered by deploy/provision.sh into /etc/caddy/Caddyfile, with
+# RUNLINE_SITES replaced by the --domain names. Caddy gets and renews the
+# HTTPS certificates itself once ports 80 and 443 reach it and each name's DNS
+# points at the VM.
+
+RUNLINE_SITES {
+	# Three routes with their GPX measured 195-280 KB of JSON for 8-12 miles,
+	# and compress about five to one: most of a response's time on a phone.
+	encode zstd gzip
+
+	# A route request is a few hundred bytes of JSON.
+	request_body {
+		max_size 64KB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:8000
+}
