@@ -1,9 +1,11 @@
 #!/bin/bash
-# One-screen progress of a metro run. Run on portal, refreshed by watch:
+# One-screen progress of a metro run. Run on a login node, once per check
+# (each `watch` refresh is cheap, but keep the SSH session itself to one):
 #
-#   watch -n 30 bash ~/runline/slurm/progress.sh /bigtemp/$USER/tiles \
-#       /bigtemp/$USER/tile-graphs /bigtemp/$USER/us-pools
+#   bash ~/runline/slurm/progress.sh $BASE/batches/<batch>/tiles \
+#       $BASE/tile-graphs $BASE/batches/<batch>/pools
 #
+# BASE is /bigtemp/$USER on the CS cluster and /scratch/$USER on Rivanna.
 # Arguments are the extracts, tile graph and pool directories; missing ones
 # are shown as not started.
 EXTRACTS=${1:?extracts directory} GRAPHS=${2:?tile graph directory} POOLS=${3:?pool directory}

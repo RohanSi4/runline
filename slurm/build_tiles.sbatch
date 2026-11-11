@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build metro tile walk graphs from the per-tile extracts, one shard per task.
 #
-#   sbatch --export=EXTRACTS=/bigtemp/$USER/tiles,GRAPHS=/bigtemp/$USER/tile-graphs \
+#   bash slurm/sbatch.sh --export=ALL,EXTRACTS=$BASE/tiles,GRAPHS=$BASE/tile-graphs \
 #       slurm/build_tiles.sbatch
 #
 # The array must match SHARDS (800 by default). METRO=<slug> builds one metro's
@@ -16,9 +16,8 @@
 # for a dense downtown tile can be several GB. Raise --mem and resubmit if
 # tasks die with OUT_OF_MEMORY; the summary's largest tiles say how far.
 #SBATCH --job-name=runline-tiles
-# cpu and gpu each allow 400 cores per user, and nothing here needs a GPU, so
-# tasks start in whichever partition has a free core: up to 800 at once.
-#SBATCH --partition=cpu,gpu
+# No partition or account here: submit through run_batch.sh, submit_tiles.sh
+# or sbatch.sh, which add them from slurm/clusters/<cluster>.env.
 #SBATCH --array=0-799
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G
@@ -30,7 +29,9 @@ set -euo pipefail
 SHARDS=${SHARDS:-800}
 
 cd "$SLURM_SUBMIT_DIR"
-export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+# shellcheck source=cluster.sh
+source slurm/cluster.sh
+job_prelude
 # DEM tiles are shared by every task; keep them next to the graphs.
 .venv/bin/python scripts/build_tile_graphs.py build \
     --extracts "$EXTRACTS" --output "$GRAPHS" --dem-dir "$GRAPHS/dem" \

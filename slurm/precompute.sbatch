@@ -1,7 +1,7 @@
 #!/bin/bash
 # Route-pool precompute as a SLURM array: one shard per task, one core each.
 #
-#   sbatch --export=AREA=charlottesville-va slurm/precompute.sbatch
+#   bash slurm/sbatch.sh --export=ALL,AREA=charlottesville-va slurm/precompute.sbatch
 #
 # Shards that already exist are skipped, so resubmitting the same command
 # reruns only failed or timed-out tasks. Watch with `squeue -u $USER` and the
@@ -11,9 +11,8 @@
 # 80 s for three surfaces at 15 targets (format 1); 12 targets is about 25%
 # less, so a shard of 11 cells takes about 11 minutes.
 #SBATCH --job-name=runline-pools
-# cpu and gpu each allow 400 cores per user, and nothing here needs a GPU, so
-# tasks start in whichever partition has a free core: up to 800 at once.
-#SBATCH --partition=cpu,gpu
+# No partition or account here: submit through run_batch.sh, submit_tiles.sh
+# or sbatch.sh, which add them from slurm/clusters/<cluster>.env.
 #SBATCH --array=0-399
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=3G
@@ -25,8 +24,10 @@ SHARDS=${SHARDS:-400}
 
 cd "$SLURM_SUBMIT_DIR"
 # .venv runs uv's standalone Python 3.12 (see setup.sh), so no modules.
-# One core per task: keep numpy/scipy from starting extra threads.
-export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+# job_prelude also keeps numpy/scipy to one thread, as each task has one core.
+# shellcheck source=cluster.sh
+source slurm/cluster.sh
+job_prelude
 
 .venv/bin/python scripts/precompute_pools.py \
     --area "$AREA" \
