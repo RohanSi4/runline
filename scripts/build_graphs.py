@@ -173,7 +173,7 @@ def build_start_candidates(ox, slug: str, latitude: float, longitude: float, rad
     from runline.osm import _routable_core
 
     drive = _routable_core(drive)
-    drive_payload = gzip.compress(pickle.dumps(drive, protocol=5), 6)
+    drive_payload = gzip.compress(pickle.dumps(drive, protocol=5), 6, mtime=0)
     (GRAPHS_DIR / f"{slug}-drive.pkl.gz").write_bytes(drive_payload)
     print(
         f"  {slug}: {len(entries)} start candidates, "
@@ -202,19 +202,24 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
             latitude, longitude = ox.geocoder.geocode(area["query"])
             latitude, longitude = float(latitude), float(longitude)
 
-        graph = ox.graph.graph_from_point(
-            (latitude, longitude),
-            dist=radius,
-            network_type="walk",
-            simplify=True,
-            retain_all=True,
+        # What ox.graph.graph_from_point(..., network_type="walk",
+        # simplify=True, retain_all=True) builds, plus the signal tags and
+        # nodes it would drop (runline.pbf.walk_graph_from_responses).
+        from osmnx import _overpass
+        from runline.pbf import tile_polygons, walk_graph_from_responses
+
+        polygon, buffered = tile_polygons(latitude, longitude, radius)
+        graph = walk_graph_from_responses(
+            _overpass._download_overpass_network(buffered, "walk", None), polygon, buffered
         )
         # Bake terrain elevation into the graph. The per-request Open-Meteo
         # cache lives in /tmp on a serverless host and is wiped between
         # instances, so an unbaked graph refetches on every request.
         bake_elevation(slug, graph)
 
-        payload = gzip.compress(pickle.dumps(graph, protocol=5), 6)
+        # mtime=0 leaves the build time out of the gzip header, so the same
+        # graph always hashes the same (pool files are keyed by that hash).
+        payload = gzip.compress(pickle.dumps(graph, protocol=5), 6, mtime=0)
         GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)
 
@@ -285,7 +290,7 @@ def main() -> int:
             with gzip.open(path, "rb") as handle:
                 graph = pickle.load(handle)
             bake_elevation(area["slug"], graph)
-            path.write_bytes(gzip.compress(pickle.dumps(graph, protocol=5), 6))
+            path.write_bytes(gzip.compress(pickle.dumps(graph, protocol=5), 6, mtime=0))
         entries = [existing[area["slug"]] for area in selected]
     elif arguments.starts_only:
         import osmnx as ox

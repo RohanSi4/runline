@@ -30,10 +30,10 @@ from runline.models import Coordinate, RouteCandidate, RouteMetrics, RoutePrefer
 from runline.osm import (  # noqa: E402
     _edge_geometry_coordinates,
     _is_major,
-    _is_signal,
     _nearest_node,
     collapse_graph,
     generate_loops,
+    signal_events,
 )
 from runline.scoring import rank_candidates  # noqa: E402
 from scripts.precompute_pools import cell_pool, prepare_area  # noqa: E402
@@ -309,7 +309,7 @@ def costs_figure(graph, start: Coordinate) -> tuple[str, dict]:
         x, y = frame.xy(*(float(graph.nodes[node][k]) for k in ("y", "x")))
         body.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="13" fill="{GREEN}"/>'
                     + text(x, y + 5, label, size=13, colour=PANEL, weight=700, anchor="middle", halo=False))
-    signals = sum(1 for n in short[1:] if _is_signal(graph.nodes[n]))
+    signals = signal_events(graph, short)
     facts = {
         "short_km": path_cost(graph, short, "length") / 1000,
         "short_cost": path_cost(graph, short, "_cost") / 1000,

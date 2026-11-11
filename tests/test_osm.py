@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import networkx as nx
@@ -26,9 +27,11 @@ from runline.osm import (
     _trim_spurs,
     collapse_graph,
     doubled_back_fraction,
+    is_signal,
     measure_route,
 )
 from runline.planner import plan_routes
+from runline.scoring import MIN_COMPACTNESS
 
 
 def _graph() -> nx.MultiDiGraph:
@@ -56,6 +59,65 @@ def test_measure_route_counts_signals_elevation_surface_and_repetition() -> None
     assert metrics.traffic_signal_events == 2
     assert metrics.trail_fraction == pytest.approx(0.5)
     assert metrics.repeated_fraction == pytest.approx(0.5)
+
+
+@pytest.mark.parametrize(
+    "tags",
+    [
+        {"highway": "traffic_signals"},
+        {"highway": "crossing", "crossing": "traffic_signals"},
+        {"highway": "crossing", "crossing": "traffic_signals;marked"},
+        {"highway": "crossing", "crossing": "pedestrian_signals"},
+        {"highway": "crossing", "crossing": "marked", "crossing:signals": "yes"},
+    ],
+)
+def test_signalled_crossings_are_signals(tags) -> None:
+    assert is_signal(tags)
+
+
+@pytest.mark.parametrize(
+    "tags",
+    [
+        {"highway": "crossing"},
+        {"highway": "crossing", "crossing": "uncontrolled"},
+        {"highway": "crossing", "crossing": "marked", "crossing:signals": "no"},
+        {"highway": "stop"},
+    ],
+)
+def test_other_crossings_are_not_signals(tags) -> None:
+    assert not is_signal(tags)
+
+
+def _signal_street(spacing: float) -> nx.MultiDiGraph:
+    """A street through 1-2-3-4-5: a crosswalk, a signal and a crosswalk in the middle."""
+
+    graph = nx.MultiDiGraph()
+    tags = {2: {"highway": "crossing", "crossing": "traffic_signals"}, 3: {"highway": "traffic_signals"},
+            4: {"highway": "crossing", "crossing:signals": "yes"}}
+    for node in range(1, 6):
+        graph.add_node(node, x=node * 0.001, y=0.0, **tags.get(node, {}))
+    lengths = {(1, 2): 200, (2, 3): spacing, (3, 4): spacing, (4, 5): 200}
+    for (u, v), length in lengths.items():
+        graph.add_edge(u, v, length=length, highway="residential")
+        graph.add_edge(v, u, length=length, highway="residential")
+    return graph
+
+
+def test_walking_through_a_signalled_junction_is_one_signal() -> None:
+    preferences = RoutePreferences(target_distance_miles=1)
+    graph = collapse_graph(_signal_street(15), preferences)
+
+    assert measure_route(graph, [1, 2, 3, 4, 5]).traffic_signal_events == 1
+    assert graph.edges[1, 2]["_cost"] == 200 + 450
+    assert graph.edges[2, 3]["_cost"] == graph.edges[3, 4]["_cost"] == 15
+
+
+def test_signals_a_block_apart_each_count() -> None:
+    preferences = RoutePreferences(target_distance_miles=1)
+    graph = collapse_graph(_signal_street(120), preferences)
+
+    assert measure_route(graph, [1, 2, 3, 4, 5]).traffic_signal_events == 3
+    assert graph.edges[2, 3]["_cost"] == 120 + 450
 
 
 def test_trail_preference_changes_edge_cost() -> None:
@@ -285,6 +347,62 @@ def test_compactness_tells_a_square_from_a_sliver() -> None:
 
     assert 0.7 < square < 0.85
     assert sliver < 0.2
+
+
+def _compactness_graph(points: dict[int, tuple[float, float]]) -> nx.DiGraph:
+    graph = nx.DiGraph()
+    for node, (x, y) in points.items():
+        graph.add_node(node, x=x * 0.01, y=y * 0.01)
+    return graph
+
+
+def _shoelace_compactness(graph: nx.DiGraph, node_ids: list[int]) -> float:
+    """The signed-area formula, which is right for a loop that never crosses itself."""
+
+    points = [(graph.nodes[n]["x"] * 111_320.0, graph.nodes[n]["y"] * 110_540.0) for n in node_ids]
+    pairs = list(zip(points, points[1:] + points[:1]))
+    area = sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in pairs)
+    perimeter = sum(((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5 for (x1, y1), (x2, y2) in pairs)
+    return min(1.0, 4 * math.pi * abs(area) / 2 / perimeter**2)
+
+
+def test_compactness_of_a_simple_loop_is_unchanged() -> None:
+    graph = _compactness_graph({1: (0, 0), 2: (3, 0), 3: (4, 2), 4: (1, 3), 5: (-1, 1)})
+    route = [1, 2, 3, 4, 5, 1]
+
+    assert _compactness(graph, route) == pytest.approx(_shoelace_compactness(graph, route), rel=1e-12)
+
+
+def test_figure_eight_lobes_do_not_cancel() -> None:
+    # Two diamonds meeting at node 1, run in opposite directions, as a runner
+    # would draw an 8: the signed areas of the lobes cancel to zero.
+    graph = _compactness_graph(
+        {1: (0, 0), 2: (1, 1), 3: (2, 0), 4: (1, -1), 5: (-1, 1), 6: (-2, 0), 7: (-1, -1)}
+    )
+    eight = [1, 2, 3, 4, 1, 5, 6, 7, 1]
+    lobe = [1, 2, 3, 4, 1]
+
+    assert _shoelace_compactness(graph, eight) == pytest.approx(0, abs=1e-9)
+    # Twice the area and twice the perimeter: half one lobe's ratio.
+    assert _compactness(graph, eight) == pytest.approx(_compactness(graph, lobe) / 2)
+    assert _compactness(graph, eight) > MIN_COMPACTNESS
+
+
+def test_bowtie_crossing_between_nodes_counts_both_lobes() -> None:
+    graph = _compactness_graph({1: (0, 0), 2: (2, 2), 3: (2, 0), 4: (0, 2)})
+    bowtie = [1, 2, 3, 4, 1]
+    triangle = _compactness_graph({1: (0, 0), 2: (1, 1), 3: (0, 2), 4: (0, 1)})
+
+    assert _shoelace_compactness(graph, bowtie) == pytest.approx(0, abs=1e-9)
+    # Two triangles of half the bowtie's perimeter each.
+    assert _compactness(graph, bowtie) == pytest.approx(_compactness(triangle, [1, 2, 3, 4, 1]) / 2, rel=1e-3)
+
+
+def test_a_spur_off_a_loop_adds_no_area() -> None:
+    graph = _compactness_graph({1: (0, 0), 2: (2, 0), 3: (2, 2), 4: (0, 2), 5: (3, 3)})
+    with_spur = [1, 2, 3, 5, 3, 4, 1]
+
+    assert _compactness(graph, with_spur) == pytest.approx(_shoelace_compactness(graph, with_spur))
 
 
 def test_separated_return_stays_off_the_way_out() -> None:
