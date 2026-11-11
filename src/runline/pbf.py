@@ -16,11 +16,17 @@ the same disc:
 
 Only the walk graph is built. Pools are keyed by cell, so a tile needs no
 drive graph, start list or place index.
+
+The steps after the download live in ``walk_graph_from_responses``, which
+scripts/build_graphs.py and live downloads (runline.osm.load_graph) also use,
+so every walk graph keeps the signal tags osmnx's defaults would drop.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
@@ -139,24 +145,85 @@ def extract_bounds(latitude: float, longitude: float, radius_meters: float) -> t
 def walk_graph_from_pbf(pbf: Path, latitude: float, longitude: float, radius_meters: float):
     """The walk graph for a disc, or None when the extract has no walkable way."""
 
-    import networkx as nx
-    from osmnx import graph as osmnx_graph
-    from osmnx import settings, simplification, stats, truncate
-
     response, split_ids = overpass_elements(pbf)
     if not any(element["type"] == "way" for element in response["elements"]):
         return None
     polygon, buffered = tile_polygons(latitude, longitude, radius_meters)
+    return walk_graph_from_responses([response], polygon, buffered, split_ids)
+
+
+@contextmanager
+def _signal_node_tags():
+    """Keep the node tags runline.osm.is_signal reads while osmnx builds a graph."""
+
+    from osmnx import settings
+
+    from .osm import SIGNAL_NODE_TAGS
+
+    saved = settings.useful_tags_node
+    settings.useful_tags_node = list(dict.fromkeys([*saved, *SIGNAL_NODE_TAGS]))
+    try:
+        yield
+    finally:
+        settings.useful_tags_node = saved
+
+
+# Marks signal nodes for one simplify_graph call; removed before returning.
+_KEEP_NODE = "_runline_keep"
+
+
+def _simplify_keeping_signals(graph):
+    """osmnx's simplify_graph, except that a signal stays a node.
+
+    simplify_graph folds a node joining exactly two edges into one edge and
+    drops its tags. A signalled crosswalk on a footway whose road is left out
+    of the walk graph (sidewalk=separate) is such a node, as is a signal where
+    the cross street is not walkable. On the Charlottesville download osmnx
+    dropped 76 of 301 signalled crosswalks and 137 of 268 traffic signals.
+    """
+
+    from osmnx import simplification
+
+    from .osm import is_signal
+
+    for _, data in graph.nodes(data=True):
+        if is_signal(data):
+            data[_KEEP_NODE] = True
+    simplified = simplification.simplify_graph(graph, node_attrs_include=[_KEEP_NODE])
+    for target in (graph, simplified):
+        for _, data in target.nodes(data=True):
+            data.pop(_KEEP_NODE, None)
+    return simplified
+
+
+def walk_graph_from_responses(
+    responses: Iterable[dict],
+    polygon,
+    buffered,
+    split_ids: dict[int, int] | None = None,
+):
+    """The walk graph from Overpass-shaped responses for ``buffered``, cut to ``polygon``.
+
+    Follows ``osmnx.graph.graph_from_polygon`` (simplify=True, retain_all=True)
+    step by step, but nodes keep the crossing tags and signals survive
+    simplification (``_simplify_keeping_signals``). Returns None when the
+    buffered polygon holds no node.
+    """
+
+    import networkx as nx
+    from osmnx import graph as osmnx_graph
+    from osmnx import settings, stats, truncate
 
     bidirectional = "walk" in settings.bidirectional_network_types
-    buffered_graph = osmnx_graph._create_graph([response], bidirectional)
+    with _signal_node_tags():
+        buffered_graph = osmnx_graph._create_graph(responses, bidirectional)
     if split_ids:
         for _, _, data in buffered_graph.edges(data=True):
             data["osmid"] = split_ids.get(data["osmid"], data["osmid"])
     buffered_graph = truncate.truncate_graph_polygon(buffered_graph, buffered, truncate_by_edge=False)
     if buffered_graph.number_of_nodes() == 0:
         return None
-    buffered_graph = simplification.simplify_graph(buffered_graph)
+    buffered_graph = _simplify_keeping_signals(buffered_graph)
     graph = truncate.truncate_graph_polygon(buffered_graph, polygon, truncate_by_edge=False)
     street_counts = stats.count_streets_per_node(buffered_graph, nodes=graph.nodes)
     nx.set_node_attributes(graph, values=street_counts, name="street_count")

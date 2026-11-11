@@ -46,7 +46,6 @@ from runline.osm import (
     MAX_SHARED_LENGTH_FRACTION,
     PREPARED_KEY,
     _edge_lengths,
-    _nearest_node,
     _routable_core,
     collapse_graph,
     generate_loops,
@@ -147,8 +146,40 @@ def drop_near_duplicates(core, candidates) -> list:
     return kept
 
 
+CELL_NODES_KEY = "_runline_cell_nodes"
+
+
+def cell_origin(core, cell: str) -> int | None:
+    """The routable node in the cell nearest its centre, or None if it has none.
+
+    Cells are listed from every mapped node, but loops start on the routable
+    core. Taking the core node nearest the centre wherever it lies gave 377 of
+    Charlottesville's 4,364 cells an origin outside the cell; 342 of those have
+    no core node at all, and mostly got a copy of a neighbour's pool. Serving
+    reads the neighbours' pools itself, so those cells now get none.
+    """
+
+    grid_meters = float(cell.split(":", 1)[0])
+    cached = core.graph.get(CELL_NODES_KEY)
+    if cached is None or cached[0] != grid_meters:
+        by_cell: dict[str, list[int]] = {}
+        for node, data in core.nodes(data=True):
+            by_cell.setdefault(cell_id(float(data["y"]), float(data["x"]), grid_meters), []).append(node)
+        cached = core.graph[CELL_NODES_KEY] = (grid_meters, by_cell)
+    nodes = cached[1].get(cell)
+    if not nodes:
+        return None
+    centre = cell_centre(cell)
+    return min(
+        nodes,
+        key=lambda node: distance_meters(centre, Coordinate(float(core.nodes[node]["y"]), float(core.nodes[node]["x"]))),
+    )
+
+
 def cell_pool(core, cell: str, targets, surface: SurfacePreference) -> dict | None:
-    origin_node = _nearest_node(core, cell_centre(cell))
+    origin_node = cell_origin(core, cell)
+    if origin_node is None:
+        return None
     data = core.nodes[origin_node]
     origin = Coordinate(float(data["y"]), float(data["x"]))
     candidates = {}
@@ -172,6 +203,13 @@ def cell_pool(core, cell: str, targets, surface: SurfacePreference) -> dict | No
     }
 
 
+def _read_cells(path: Path) -> list[str]:
+    """Cell ids, one per line; blank lines and # comments are skipped."""
+
+    lines = (line.split("#", 1)[0].strip() for line in path.read_text().splitlines())
+    return [line for line in lines if line]
+
+
 def run_shard(arguments) -> int:
     area = next((item for item in areas() if item.slug == arguments.area), None)
     if area is None:
@@ -182,6 +220,12 @@ def run_shard(arguments) -> int:
         print("warning: graph has no baked elevation; run build_graphs.py --bake-only first")
 
     cells = area_cells(area, graph, arguments.grid_meters)
+    if arguments.cells:
+        wanted = set(_read_cells(arguments.cells))
+        cells = [cell for cell in cells if cell in wanted]
+        if len(cells) < len(wanted):
+            # As for the whole area, a cell with no walkable node gets no pool.
+            print(f"{len(wanted) - len(cells)} of {len(wanted)} listed cells have no walkable node in the area")
     if arguments.list:
         per_shard = math.ceil(len(cells) / arguments.shard_count)
         print(f"{area.slug}: {len(cells)} cells at {arguments.grid_meters:.0f}m, "
@@ -343,6 +387,9 @@ def main(argv=None) -> int:
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--output", type=Path, default=ROOT / "pools")
     parser.add_argument("--limit-cells", type=int, help="only the first N cells of the shard (testing)")
+    # A local sample (e.g. compare_pools.py's starts) without the whole area;
+    # shards then split just these cells.
+    parser.add_argument("--cells", type=Path, help="area runs: only the cell ids listed in this file, one per line")
     parser.add_argument("--list", action="store_true", help="print the cell count and exit")
     arguments = parser.parse_args(argv)
     if not 0 <= arguments.shard_index < arguments.shard_count:

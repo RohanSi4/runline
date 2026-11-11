@@ -1,0 +1,58 @@
+# RunLine on a single Linux VM: uvicorn behind Caddy. Installed by
+# deploy/provision.sh to /etc/systemd/system/runline.service; edit this copy in
+# the repo and rerun provision.sh rather than editing the installed one.
+#
+# Worker count and the memory limits live in files provision.sh writes from
+# the VM's RAM (/etc/runline/runline.env and runline.service.d/memory.conf),
+# because each uvicorn worker is a separate process holding its own copy of
+# the walk graph: about 250 MB once loaded, 600 MB once live requests fill the
+# prepared-graph cache, and up to 775 MB after drive-radius requests
+# (deploy/README.md has the measurements).
+
+[Unit]
+Description=RunLine route planner (uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=runline
+Group=runline
+WorkingDirectory=/opt/runline/app
+# Imports the checkout's src/ directly, so updating is a git checkout and a
+# restart, with no package install that could point somewhere else.
+Environment=PYTHONPATH=/opt/runline/app/src
+Environment=PYTHONUNBUFFERED=1
+# Off Vercel, downloads_allowed() would otherwise be true, and a start outside
+# the shipped map would try a live Overpass download inside the request.
+Environment=RUNLINE_ALLOW_OSM_DOWNLOAD=0
+Environment=RUNLINE_POOLS_DIR=/srv/runline/pools
+Environment=RUNLINE_METROS_DIR=/srv/runline/metros
+# The service user cannot write the checkout; systemd creates this for it.
+Environment=RUNLINE_CACHE_DIR=/var/cache/runline
+Environment=RUNLINE_WORKERS=1
+# Read after the lines above, so its values win.
+EnvironmentFile=-/etc/runline/runline.env
+ExecStart=/opt/runline/venv/bin/uvicorn runline.api:app \
+    --host 127.0.0.1 --port 8000 \
+    --workers ${RUNLINE_WORKERS} \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1 \
+    --no-server-header
+Restart=always
+RestartSec=2
+TimeoutStopSec=30
+
+CacheDirectory=runline
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -143,7 +143,11 @@ def build_one(tile: dict, pbf: Path, output: Path, dem_dir: Path) -> dict | None
         stats.update(nodes=0, edges=0, empty=True)
     else:
         coverage = bake(graph, dem_dir)
-        payload = gzip.compress(pickle.dumps(graph, protocol=5), 6)
+        # Pools are tied to the sha256 of this file. gzip would otherwise
+        # stamp the build time in its header, so even an identical rebuild
+        # would orphan every pool built on the tile. Files built before
+        # this keep their hashes; serving only compares bytes.
+        payload = gzip.compress(pickle.dumps(graph, protocol=5), 6, mtime=0)
         temporary = output / f"{tile['slug']}.pkl.gz.tmp"
         temporary.write_bytes(payload)
         os.replace(temporary, output / f"{tile['slug']}.pkl.gz")

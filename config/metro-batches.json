@@ -1,5 +1,6 @@
 {
- "note": "Run in order with slurm/run_batch.sh <name>. Washington, DC is left out: its pilot already ran. Cells are each batch's share of a plan of all 50 metros (scripts/plan_tile_pools.py --batch).",
+ "note": "Run in order with slurm/run_batch.sh <name>. Rebuild every tile graph with preserved signal nodes before precomputing pools. The old Washington, DC pilot is archived, not reusable with the rebuilt graphs; Washington is included with Baltimore in b6. Cells are each batch's share of a plan of all 50 metros.",
+ "done": [],
  "batches": [
   {"name": "test", "cells": 73952, "metros": ["salt-lake-city-ut", "las-vegas-nv", "new-orleans-la"]},
   {"name": "b1", "cells": 372064, "metros": ["new-york-ny", "los-angeles-ca"]},
@@ -7,7 +8,7 @@
   {"name": "b3", "cells": 361621, "metros": ["dallas-tx", "philadelphia-pa", "louisville-jefferson-county-ky", "buffalo-ny", "bridgeport-ct"]},
   {"name": "b4", "cells": 397203, "metros": ["atlanta-ga", "boston-ma", "phoenix-az"]},
   {"name": "b5", "cells": 417003, "metros": ["detroit-mi", "seattle-wa", "san-francisco-ca", "san-diego-ca", "minneapolis-mn", "tampa-fl"]},
-  {"name": "b6", "cells": 400909, "metros": ["denver-co", "riverside-ca", "baltimore-md", "st-louis-mo", "portland-or", "san-antonio-tx", "sacramento-ca", "orlando-fl", "san-jose-ca"]},
+  {"name": "b6", "cells": 493968, "metros": ["denver-co", "riverside-ca", "baltimore-md", "st-louis-mo", "portland-or", "san-antonio-tx", "sacramento-ca", "orlando-fl", "san-jose-ca", "washington-dc"]},
   {"name": "b7", "cells": 420791, "metros": ["austin-tx", "pittsburgh-pa", "cleveland-oh", "indianapolis-in", "cincinnati-oh", "kansas-city-mo", "columbus-oh", "virginia-beach-va"]},
   {"name": "b8", "cells": 413939, "metros": ["charlotte-nc", "milwaukee-wi", "providence-ri", "jacksonville-fl", "nashville-davidson-tn", "raleigh-nc", "richmond-va", "memphis-tn", "oklahoma-city-ok", "hartford-ct"]}
  ]

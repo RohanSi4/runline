@@ -204,3 +204,29 @@ mkdir -p /tmp/runline-baseline && git archive c9a25de | tar -x -C /tmp/runline-b
 .venv/bin/python scripts/sweep.py --origin ring_180 --distances 3 5 8
 .venv/bin/python -m pytest -q
 ```
+
+
+## Pool serving: November 10 recovery
+
+The integrated serving path joins saved loops at their nearest reachable
+node, reads the start cell and eight neighbors, and measures the complete
+drawn route. For metro pools, only neighbors built on the loaded tile graph
+are read. Pool generation rejects loops above the repetition limit before
+filling slots and chooses a routable origin inside each cell. The wire
+format remains version 2; numpy decoding reduces repeated Python work.
+
+On the matched 40-start, five-distance sample, old serving on old sample
+pools answered 113/200 requests (56.5%); integrated serving on regenerated
+sample pools answered 192/200 (96%). Pool answers took 76 ms median against
+1,409 ms live. On hits, median absolute distance error was 0.083 versus
+0.104 miles and median major-road crossings per mile were 0.208 versus
+0.274. Connectors are included. These are local sample results, not a new
+production measurement or evidence from rebuilt signal-preserving graphs.
+
+The fresh live benchmark retained 91/96 in-band routes, with warm median
+latency 374 to 393 ms. Shape-audit routes over 10% repetition rose from 11
+to 13 while slivers below 0.20 stayed at nine. The new compactness measure
+correctly counts the enclosed faces of self-crossing loops, and nearby
+signal nodes are grouped into events. Those corrections re-rank routes;
+they do not improve every aggregate. Full before/after numbers, dependency
+versions and reproduction are in [validation.md](validation.md).

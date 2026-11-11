@@ -12,14 +12,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 from shapely import affinity
-from shapely.geometry import Point
+from shapely.geometry import Point, mapping
 
 from runline.coverage import areas, load_area_graph
 from runline.geo import distance_meters
 from runline.grid import cell_centre
 from runline.models import Coordinate
 from runline.pools import decode_pool
-from runline.tiling import metro_cells, owned_cells, plan_tiles
+from runline.tiling import metro_cells, owned_cells, owned_cells_after, plan_tiles
 from scripts import merge_pools, plan_tile_pools, precompute_pools
 
 
@@ -65,6 +65,56 @@ def test_overlapping_metros_share_no_cell() -> None:
             assert distance_meters(centre, cell_centre(cell)) <= tile["reach_meters"] + 1e-6
 
 
+def _pilot_and_neighbour() -> tuple[dict, dict]:
+    # A pilot metro and a neighbour whose boundaries overlap, as DC and Baltimore do.
+    shapes = {"pilot": _ellipse(10.0, 20.0, 40, 12), "east": _ellipse(10.0, 20.23, 40, 12)}
+    return _config(shapes), shapes
+
+
+def test_batches_after_a_pilot_cover_every_cell_once() -> None:
+    config, shapes = _pilot_and_neighbour()
+    alone = owned_cells({**config, "metros": [config["metros"][0]]}, shapes)
+    pilot = {cell for cells in alone.values() for cell in cells}
+    tiles = {tile["slug"]: tile for metro in config["metros"] for tile in metro["tiles"]}
+    full = owned_cells(config, shapes)
+    # Without the correction, a batch of "east" would repeat pilot cells and
+    # miss east cells that only the pilot's tiles were given.
+    naive = {cell for tile, cells in full.items() if tiles[tile]["metro"] == "east" for cell in cells}
+    assert naive & pilot
+    assert set(metro_cells(shapes["east"]).ids()) - naive - pilot
+
+    after = owned_cells_after(config, shapes, ["pilot"])
+
+    assert {tiles[tile]["metro"] for tile in after} == {"east"}
+    batch = [cell for cells in after.values() for cell in cells]
+    assert len(batch) == len(set(batch))
+    assert not set(batch) & pilot
+    assert set(batch) | pilot == set(metro_cells(shapes["pilot"]).ids()) | set(metro_cells(shapes["east"]).ids())
+    for slug, cells in after.items():
+        centre = Coordinate(tiles[slug]["latitude"], tiles[slug]["longitude"])
+        for cell in cells:
+            assert distance_meters(centre, cell_centre(cell)) <= tiles[slug]["reach_meters"] + 1e-6
+
+
+def test_plan_batch_leaves_out_done_metros(tmp_path: Path) -> None:
+    config, shapes = _pilot_and_neighbour()
+    metros, boundaries = tmp_path / "metros.json", tmp_path / "boundaries.geojson"
+    metros.write_text(json.dumps(config))
+    boundaries.write_text(json.dumps({"type": "FeatureCollection", "features": [
+        {"type": "Feature", "properties": {"slug": slug}, "geometry": mapping(shape)} for slug, shape in shapes.items()
+    ]}))
+    common = ["--metros", str(metros), "--boundaries", str(boundaries), "--cells-per-unit", "10000"]
+
+    assert plan_tile_pools.main([*common, "--batch", "east", "--done", "pilot", "--output", str(tmp_path / "b")]) == 0
+    assert plan_tile_pools.main([*common, "--batch", "pilot", "--done", "pilot", "--output", str(tmp_path / "x")]) == 1
+
+    with gzip.open(tmp_path / "b" / "plan.json.gz", "rt") as stream:
+        plan = json.load(stream)
+    assert plan["done"] == ["pilot"]
+    cells = {cell for unit in plan["units"] for cell in unit["cells"]}
+    assert cells == {cell for tile_cells in owned_cells_after(config, shapes, ["pilot"]).values() for cell in tile_cells}
+
+
 def test_units_split_tiles_and_tasks_cover_every_unit_once() -> None:
     owned = {"b-001": [f"200:1:{index}" for index in range(250)], "a-000": ["200:0:0"], "c-002": []}
 
@@ -75,6 +125,10 @@ def test_units_split_tiles_and_tasks_cover_every_unit_once() -> None:
     for count in (1, 3, 4, 7):
         blocks = [precompute_pools.task_units(units, index, count) for index in range(count)]
         assert [unit for block in blocks for unit in block] == units
+
+
+def _disc(centre: Coordinate, radius_meters: float) -> dict:
+    return {"latitude": centre.latitude, "longitude": centre.longitude, "radius_meters": radius_meters}
 
 
 @pytest.fixture(scope="module")
@@ -100,6 +154,11 @@ def tile_run(tmp_path_factory) -> dict:
             {"id": "cville-000-p00", "tile": "cville-000", "cells": [*cells, "200:0:0"]},
             {"id": "sea-000-p00", "tile": "sea-000", "cells": ["200:0:1"]},
         ],
+        "tiles": {
+            "cville-000": {"metro": "test", **_disc(area.center, area.radius_meters)},
+            "sea-000": {"metro": "test", **_disc(Coordinate(0.001, 0.003), 1000.0)},
+        },
+        "labels": {"test": "Test, VA"},
     }
     plan_path = root / "plan.json.gz"
     with gzip.open(plan_path, "wt", encoding="utf-8") as stream:

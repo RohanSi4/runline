@@ -34,3 +34,10 @@ def test_vercel_cache_uses_writable_tmp(monkeypatch) -> None:
     monkeypatch.setenv("VERCEL", "1")
 
     assert cache_root().parent == Path(tempfile.gettempdir())
+
+
+def test_cache_dir_override_wins_over_vercel(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setenv("RUNLINE_CACHE_DIR", str(tmp_path / "cache"))
+
+    assert cache_root() == tmp_path / "cache"

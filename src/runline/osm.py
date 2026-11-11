@@ -27,7 +27,7 @@ from .models import (
     RoutePreferences,
     SurfacePreference,
 )
-from .scoring import MIN_COMPACTNESS, ROUND_ENOUGH, rank_candidates
+from .scoring import MAX_REPEATED, MIN_COMPACTNESS, ROUND_ENOUGH, rank_candidates
 
 
 TRAIL_HIGHWAYS = {"bridleway", "footway", "path", "track"}
@@ -66,21 +66,53 @@ def _is_major(data: dict[str, Any]) -> bool:
     return bool(_values(data.get("highway")) & MAJOR_HIGHWAYS)
 
 
-def _is_signal(node_data: dict[str, Any]) -> bool:
-    return "traffic_signals" in _values(node_data.get("highway")) or (
-        "traffic_signals" in _values(node_data.get("crossing"))
-    ) or "yes" in _values(node_data.get("crossing:signals"))
+# A signalled crosswalk mapped on its own node carries these tags, not
+# highway=traffic_signals. osmnx keeps only highway, junction, railway and ref
+# on nodes, so the graph builders ask for these too (runline.pbf).
+SIGNAL_NODE_TAGS = ("crossing", "crossing:signals")
+# crossing=traffic_signals is the approved value; pedestrian_signals and
+# signals are older spellings of it. crossing:signals=yes is the newer flag.
+SIGNAL_CROSSINGS = {"traffic_signals", "pedestrian_signals", "signals"}
+# A signalled junction is often a highway=traffic_signals node with a mapped
+# crosswalk node on each side of it. Walking along the road through all three
+# is one wait, so a signal reached from another signal this close is free.
+SIGNAL_CLUSTER_METERS = 40.0
+
+
+def is_signal(node_data: dict[str, Any]) -> bool:
+    crossing = {part.strip() for value in _values(node_data.get("crossing")) for part in value.split(";")}
+    return (
+        "traffic_signals" in _values(node_data.get("highway"))
+        or bool(crossing & SIGNAL_CROSSINGS)
+        or "yes" in _values(node_data.get("crossing:signals"))
+    )
+
+
+def _new_signal(source_node: dict[str, Any] | None, destination_node: dict[str, Any], length: float) -> bool:
+    """True when arriving at ``destination_node`` means waiting at a signal."""
+
+    if not is_signal(destination_node):
+        return False
+    return source_node is None or length > SIGNAL_CLUSTER_METERS or not is_signal(source_node)
+
+
+def signal_events(graph: nx.DiGraph, node_ids: list[int]) -> int:
+    return sum(
+        _new_signal(graph.nodes[u], graph.nodes[v], float(graph.edges[u, v].get("length", 0.0)))
+        for u, v in zip(node_ids, node_ids[1:])
+    )
 
 
 def _edge_preference_cost(
     data: dict[str, Any],
     destination_node: dict[str, Any],
     preferences: RoutePreferences,
+    source_node: dict[str, Any] | None = None,
 ) -> float:
     length = float(data.get("length", 1.0))
     cost = length
 
-    if _is_signal(destination_node):
+    if _new_signal(source_node, destination_node, length):
         cost += 450.0
     if _is_major(data):
         cost += max(120.0, length * 1.8)
@@ -118,7 +150,7 @@ def collapse_graph(graph: nx.Graph, preferences: RoutePreferences) -> nx.DiGraph
     }
     for u, v, _, raw_data in _iter_edges(graph):
         data = dict(raw_data)
-        data["_cost"] = _edge_preference_cost(data, graph.nodes[v], preferences)
+        data["_cost"] = _edge_preference_cost(data, graph.nodes[v], preferences, graph.nodes[u])
         # Entering a node with major road on two sides usually means crossing
         # it. An edge cost cannot see the turn, so same-side turns pay too; it
         # still cut geometric crossings 38% with no loss of in-band routes.
@@ -303,7 +335,16 @@ def _major_crossings(graph: nx.DiGraph, node_ids: list[int]) -> list[int]:
 
 
 def _compactness(graph: nx.DiGraph, node_ids: list[int]) -> float:
-    """Isoperimetric ratio of the route's outline, in local metres."""
+    """Isoperimetric ratio of the route's outline, in local metres.
+
+    The signed shoelace area is right for a loop that never crosses itself.
+    The two lobes of a figure eight run opposite ways and cancel in it, so an
+    outline that crosses or touches itself is noded into faces instead, and
+    every enclosed face counts once.
+    """
+
+    import shapely
+    from shapely.geometry import LineString
 
     if len(node_ids) < 4:
         return 0.0
@@ -320,6 +361,9 @@ def _compactness(graph: nx.DiGraph, node_ids: list[int]) -> float:
         perimeter += math.hypot(x2 - x1, y2 - y1)
     if perimeter == 0:
         return 0.0
+    outline = LineString(points + points[:1])
+    if not outline.is_simple:
+        area = 2 * shapely.polygonize(shapely.get_parts(shapely.node(outline))).area
     return min(1.0, 4 * math.pi * abs(area) / 2 / perimeter**2)
 
 
@@ -446,12 +490,11 @@ def measure_route(
             elevation_meters += float(graph.edges[u, v].get("length", 0.0))
             gain_meters += max(0.0, float(end_elevation) - float(start_elevation))
 
-    signal_events = sum(1 for node in node_ids[1:] if _is_signal(graph.nodes[node]))
     edge_repeats = repeated_meters / total_meters if total_meters else 0
     return RouteMetrics(
         distance_miles=total_meters / METERS_PER_MILE,
         elevation_gain_feet=gain_meters * 3.28084,
-        traffic_signal_events=signal_events,
+        traffic_signal_events=signal_events(graph, node_ids),
         major_crossing_events=len(_major_crossings(graph, node_ids)),
         trail_fraction=trail_meters / total_meters if total_meters else 0,
         # Repeated edges catch a lap run twice; geometry catches parallel paths.
@@ -920,6 +963,11 @@ def generate_loops(
         if 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
             candidates.append(RouteCandidate(f"route-{len(candidates) + 1:03d}", tuple(nodes), (), metrics))
 
+    if pool_size is not None:
+        # Serving never answers with a loop that doubles back (see
+        # serving.MAX_DOUBLED_BACK), so such loops would only take the slots
+        # of ones it can serve. Live ranking keeps them as a last resort.
+        candidates = [candidate for candidate in candidates if candidate.metrics.repeated_fraction <= MAX_REPEATED]
     pool = _distinct_by_length(
         collapsed,
         rank_candidates(candidates, preferences),
@@ -1009,17 +1057,21 @@ def load_graph(origin: Coordinate, radius_meters: float, cache_directory: Path) 
     digest = hashlib.sha256(
         f"{origin.latitude:.6f},{origin.longitude:.6f},{round(radius_meters)}".encode()
     ).hexdigest()[:16]
-    graph_path = cache_directory / f"walk-{digest}.graphml"
+    # Graphs cached before signal tags were kept are named walk-<digest>.
+    graph_path = cache_directory / f"walk-signals-{digest}.graphml"
     if graph_path.exists():
         return ox.load_graphml(graph_path)
 
-    graph = ox.graph.graph_from_point(
-        (origin.latitude, origin.longitude),
-        dist=radius_meters,
-        network_type="walk",
-        simplify=True,
-        retain_all=True,
+    from osmnx import _overpass
+
+    from .pbf import tile_polygons, walk_graph_from_responses
+
+    polygon, buffered = tile_polygons(origin.latitude, origin.longitude, radius_meters)
+    graph = walk_graph_from_responses(
+        _overpass._download_overpass_network(buffered, "walk", None), polygon, buffered
     )
+    if graph is None:
+        raise CoverageError("OpenStreetMap has no walkable streets near this start.")
     ox.save_graphml(graph, graph_path)
     return graph
 

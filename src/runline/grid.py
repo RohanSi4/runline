@@ -62,3 +62,23 @@ def cell_half_diagonal_meters(grid_meters: float) -> float:
     """
 
     return grid_meters * math.sqrt(2) / 2 * 1.005
+
+
+def neighbouring_cells(cell: str) -> list[str]:
+    """The cell and the eight around it, the cell itself first.
+
+    Rows differ slightly in column width, so the rows above and below are
+    found by point rather than by adding one to the column.
+    """
+
+    grid, row, _ = (int(part) for part in cell.split(":"))
+    centre = cell_centre(cell)
+    width = column_width_degrees(row, grid)
+    cells = [cell]
+    for row_step in (0, -1, 1):
+        latitude = row_centre_latitude(row + row_step, grid)
+        for column_step in (0, -1, 1):
+            neighbour = cell_id(latitude, centre.longitude + column_step * width, grid)
+            if neighbour not in cells:
+                cells.append(neighbour)
+    return cells

@@ -287,6 +287,18 @@ function renderRoutes(payload) {
   selectRoute(0, false);
 }
 
+// FastAPI sends a string for errors the API raises, but a list of
+// {loc, msg, type} objects when the request fails validation.
+function errorMessage(detail) {
+  if (Array.isArray(detail)) {
+    const messages = detail.map((item) => (item && item.msg) || String(item)).filter(Boolean);
+    if (messages.length) return messages.join(" ");
+  } else if (typeof detail === "string" && detail) {
+    return detail;
+  }
+  return "Could not generate routes.";
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   generateButton.disabled = true;
@@ -317,7 +329,7 @@ form.addEventListener("submit", async (event) => {
     const payload = await response.json().catch(() => ({
       detail: `Server error (${response.status}). Try again shortly.`,
     }));
-    if (!response.ok) throw new Error(payload.detail || "Could not generate routes.");
+    if (!response.ok) throw new Error(errorMessage(payload.detail));
     renderRoutes(payload);
     showStatus((payload.warnings || []).join(" "));
   } catch (error) {

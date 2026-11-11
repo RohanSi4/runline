@@ -11,4 +11,5 @@ cache/
 /build-cache/dem/
 /build-cache/census/
 /pools/
+/metros/
 /slurm/logs/
