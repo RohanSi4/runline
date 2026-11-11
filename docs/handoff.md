@@ -61,6 +61,10 @@ recipe uses `/srv/runline/pools`, `/srv/runline/metros`, and `/var/cache/runline
 the existing Oracle service paths are recorded in task 4.
 Measure the actual metro graphs before sizing a VM; Charlottesville memory
 measurements do not establish DC's memory needs.
+[hosting-at-scale.md](hosting-at-scale.md) projects disk and RAM for the
+batches and all 50 metros from the DC pilot (`scripts/project_hosting.py`)
+and compares block volume, object storage, a compact tile format and
+per-region VMs.
 
 ## Remaining work, in order
 
