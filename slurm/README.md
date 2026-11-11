@@ -65,20 +65,19 @@ bash slurm/sbatch.sh --dependency=afterok:$jid --export=ALL,AREA=charlottesville
 
 ## The top 50 metros, in batches
 
-`config/metro-batches.json` splits the 50 metros (minus DC, whose pilot ran)
-into a test batch of about 74,000 cells and eight batches of 360,000–420,000.
+`config/metro-batches.json` splits all 50 metros into a test batch of about
+74,000 cells and eight larger batches. Washington, DC is included in `b6`
+with Baltimore because the signal-preserving graph rebuild invalidates the
+old pilot's pools. Batch cell counts are recorded in the config.
 At the pilot's 70 s per cell, each large batch is about 7,800 CPU-hours: about
 10 hours if 800 cores stay busy, closer to 1.5 days at the pilot's average.
 
 Batches split the cells exactly as one run of all 50 would, so no cell is
-computed twice, with one correction for the DC pilot. DC ran on its own, so
-it covered every cell of its own boundary, which is not the share a plan of
-all 50 gives it: Baltimore's tiles would own 604 DC cells (computed twice)
-and DC's tiles would own 480 Baltimore cells (computed by nobody, since DC is
-in no batch). `metro-batches.json` lists DC under `done`, and
-`plan_tile_pools.py --done` moves those 604 cells out of `b6` and the 480
-into it, on Baltimore's tiles. If DC is ever rerun (see the checklist), take
-it out of `done` and put it in a batch.
+computed twice. `done` is empty for this rebuild. For future partial reruns,
+`plan_tile_pools.py --done` also supports retaining a compatible standalone
+pilot: it reserves that pilot's own boundary cells and reassigns neighboring
+cells to the batches that will actually run. Never list the old DC pilot as
+done when building the new graphs.
 
 Once per cluster, download `us-latest.osm.pbf` (about 11 GB,
 download.geofabrik.de) to `$BASE`, install osmium-tool (see
@@ -367,10 +366,9 @@ rsynced to the cluster (then rerun `setup.sh`):
   fill pool slots, and picks cells from the routable core, so it changes
   every pool.
 - The signal-tag fix: it changes tile graphs, so every tile graph must be
-  rebuilt. That also makes the DC pilot's pools stale (they match the old
-  DC tile graphs): take `washington-dc` out of `done` in
-  `config/metro-batches.json` and add it to a batch (with Baltimore in `b6`
-  is natural; about 93,000 cells, roughly 1,800 more core-hours).
+  rebuilt. The old DC pilot is incompatible with rebuilt graphs; the config
+  already schedules Washington with Baltimore in `b6` and leaves `done`
+  empty. Preserve the old graph/pool pair only as an archive.
 
 Pools from code before these land are thrown away, so only the smoke tests
 (runbook steps 2 and 3) are worth running before then. If old shards or

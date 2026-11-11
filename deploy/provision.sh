@@ -99,7 +99,7 @@ step "users and directories"
 id runline >/dev/null 2>&1 || useradd --system --home-dir /opt/runline --shell /usr/sbin/nologin runline
 install -d -m 755 /opt/runline /srv/runline /etc/runline
 # The uploader writes pool files without sudo; the service only reads them.
-install -d -m 755 -o "$UPLOADER" -g "$UPLOADER" "$POOLS" "$POOLS/.incoming"
+install -d -m 755 -o "$UPLOADER" -g "$UPLOADER" "$POOLS" "$POOLS/.incoming" /srv/runline/metros
 
 step "code at $REF"
 if [[ ! -d "$APP/.git" ]]; then

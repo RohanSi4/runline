@@ -23,6 +23,22 @@ Nothing here has been run against Azure yet. `provision.sh` has run end to
 end in a local Ubuntu 24.04 container under systemd (see the end of this
 file).
 
+## Metro runs
+
+The service reads metro runs from `/srv/runline/metros`, outside the code
+checkout. After measuring the actual DC tile graphs with
+`scripts/measure_tile_graphs.py`, copy each complete run into its own
+directory there, containing `pools.sqlite` and `tile-graphs/<tile>.pkl.gz`.
+For an old merged file, add its cell/tile index using the matching plan and
+`scripts/merge_pools.py --add-index` before uploading. Publish the completed
+directory with a rename on the same filesystem so requests never see a
+partial upload. The `runline` service user needs read access to all files.
+
+`upload_pools.sh` handles manifest areas such as Charlottesville; metro runs
+need their tile graphs as well as the SQLite file. The B1s measurements below
+cover Charlottesville only. Measure DC before selecting its VM size or graph
+cache size; no actual DC tile graphs were available during local integration.
+
 ## Sizing: one worker on a B1s
 
 Measured on the dev laptop (macOS, Python 3.13, other jobs running) with a

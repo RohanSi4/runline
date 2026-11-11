@@ -247,6 +247,8 @@ def test_a_pool_built_on_another_tile_is_not_served(served, tmp_path, monkeypatc
     directory = _copy_run(served, tmp_path, monkeypatch)
     cell, origin, miles = _best_request(served)
     database = sqlite3.connect(directory / "pools.sqlite")
+    # Isolate this pool: valid neighboring cells can now answer the request.
+    database.execute("DELETE FROM pools WHERE cell != ?", (cell,))
     database.execute("UPDATE pools SET tile = 'elsewhere' WHERE cell = ?", (cell,))
     database.commit()
     database.close()

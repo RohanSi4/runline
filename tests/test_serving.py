@@ -63,6 +63,26 @@ def _preferences(**changes) -> RoutePreferences:
     return RoutePreferences(MILES, surface=SurfacePreference.MIXED, **changes)
 
 
+def test_neighbour_pools_stay_on_the_loaded_tile_graph(tmp_path: Path) -> None:
+    pool = {"origin_node": 1, "origin": [0.0, 0.0], "loops": []}
+    path = tmp_path / "metro.sqlite"
+    with sqlite3.connect(path) as database:
+        database.execute("CREATE TABLE pools (cell TEXT, surface TEXT, tile TEXT, pool BLOB)")
+        database.executemany(
+            "INSERT INTO pools VALUES (?, ?, ?, ?)",
+            [
+                ("own", "mixed", "tile-a", encode_pool(pool)),
+                # This row must never be decoded on tile-a, even if the
+                # caller includes this neighbour in its lookup.
+                ("neighbour", "mixed", "tile-b", b"not this graph's pool"),
+            ],
+        )
+    source = serving.PoolFile(path, 200.0, tile="tile-a")
+
+    assert serving.load_pools(source, ["neighbour", "own"], "mixed") == [pool]
+    assert serving.load_pool(source, "neighbour", "mixed") is None
+
+
 def _origin(built) -> Coordinate:
     return Coordinate(*built[3]["origin"])
 

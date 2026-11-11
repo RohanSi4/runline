@@ -1,179 +1,123 @@
-# Handoff: where RunLine stands
+# RunLine handoff
 
-Written for Rohan when Krish handed off the remaining work, as of `24402ba`.
+## Recovery status
 
-## State
+Claude's November 10 work is integrated on `codex/resume-runline` in the
+`runline-recovery` checkout. The original five branches and their worktrees
+are preserved. `main` has not been merged or deployed from this checkout.
 
-| Piece | State |
+| Work | Current state |
 |---|---|
-| Pool serving (`src/runline/serving.py`) | Merged. Works locally. The API's `source` field says `pool` or `live` |
-| Deployed app | Runs that code, but always `live`: no pool file is hosted |
-| Charlottesville pools | Built: 13,092 pools, 110 MB. Not hosted |
-| DC pilot | Finished: 72,237 cells with pools, 20.25M loops, 2.3 GB. Serving can read it once indexed and given its tile graphs (task 2) |
-| Top 50 metros | Not run |
+| VM hosting | Provisioning, systemd, Caddy, area-pool upload, backup and smoke scripts integrated. Azure deployment remains to be done. |
+| Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Tested with cropped Charlottesville tile graphs; actual DC artifacts are unavailable locally. |
+| Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
+| Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
+| Rivanna | Cluster configuration, dry-run and smoke support integrated. No jobs submitted. |
+| Graphs and pools | Shipped Charlottesville graph is unchanged. The signal-preserving builders have not rebuilt production graphs or pools. |
 
-Pool files are gitignored. Krish shares them in a Drive folder, sent separately.
-The originals are in Krish's `/bigtemp` on the cluster, which is volatile, so
-treat the Drive copy as the one to keep.
+See [validation.md](validation.md) for the before/after routing checks and
+pool comparison. Local sample pools are benchmark fixtures, not a complete
+Charlottesville or DC deployment.
 
-## Check it works
+## How the app fits together
 
-Put the Charlottesville file at `pools/charlottesville-va.sqlite`, then:
+FastAPI serves `web/` and the route API. `planner.plan_routes` tries pool
+serving first and falls back to live planning. Manifest areas have priority
+over metro runs. Production installs use `requirements.txt`; its exact pins
+must match the graph build environment.
 
-```bash
-.venv/bin/python -m pytest -q
-.venv/bin/python scripts/compare_pools.py --area charlottesville-va --starts 40
-```
+An area pool lives at `RUNLINE_POOLS_DIR/<area>.sqlite` (default `pools/`).
+A metro run lives at `RUNLINE_METROS_DIR/<run>/`, containing `pools.sqlite`
+and `tile-graphs/<tile>.pkl.gz`. The merged SQLite file's `cells` table maps
+each start cell to its owning tile. Pool rows from neighboring cells are
+usable only if they belong to that same tile graph. Missing or corrupt pools
+fall back to live routing; missing tile graphs produce a coverage error.
 
-Last result, across 200 requests: 71% answered from pools, 14–23 ms against
-0.6–2.4 s live, with similar route quality (the README has the table). Without
-the file, requests plan live with no error. If you rebuild the graph, the old
-pool is ignored and a warning is logged.
+`RUNLINE_TILE_GRAPHS_CACHE` defaults to two graphs per worker. The VM service
+uses `/srv/runline/pools`, `/srv/runline/metros`, and `/var/cache/runline`.
+Measure the actual metro graphs before sizing a VM; Charlottesville memory
+measurements do not establish DC's memory needs.
 
 ## Remaining work, in order
 
-These are all yours. Work through them in order and get as far as you can. There
-is no walkthrough planned, so this doc and `slurm/README.md` are the reference.
-Each task leaves the app working, so stopping between tasks is fine. Note how far
-you got here.
+### 1. Review and merge the integrated code
 
-### 1. Host the pools
+The recovery branch brings together `host-pools-vm`, `serve-metro-tiles`,
+`pool-hit-rate`, `signal-tags-and-metrics`, and the already combined
+`rivanna-slurm-on-metro`. Validation results belong with its PR. Do not push
+to `main` directly.
 
-Vercel's 250 MB limit rules it out, and serving needs the pool file and graph on
-local disk. Google Drive or a storage bucket works as a backup, not for serving.
-The suggested host is an Azure Linux VM, paid for by Azure for Students ($100
-credit, no card, from the GitHub Student Pack; DigitalOcean is no longer in the
-pack). Its spending limit stops the VM rather than billing when the credit runs
-out, and the credit lasts 12 months.
-You own the Vercel project, so moving the site or its domain is your call.
+### 2. Recover and archive the existing artifacts
 
-- Size: Azure's free B1s (1 GB RAM) is likely enough for Charlottesville alone.
-  Metro tile graphs need more: measure first (see task 2), then pick a B2s
-  (4 GB, roughly $30 a month) or larger.
-- Keep the pool files on the VM's disk; a 2 GB metro file is too big to fetch
-  per request. Azure Blob Storage on the same credit is fine for backups.
+Krish's Charlottesville file has 13,092 pools, about 110 MB. The DC pilot
+has 72,237 cells with pools, about 20.25 million loops, and a 2.3 GB SQLite
+file. Those are historical build figures, not locally verified artifacts.
+Krish shared a Drive folder separately; the complete files are not in this
+checkout. Keep the exact matching graphs and `plan.json.gz` with each pool.
+The originals on the CS cluster's `/bigtemp` are volatile.
 
-- Run the whole app there, since FastAPI already serves `web/`. Otherwise the
-  Vercel page has to call another origin and the API needs CORS.
-- Set `RUNLINE_POOLS_DIR` if the files live outside the repo's `pools/`.
-- Done when a deployed request returns `source: pool`.
+The old DC merge needs its index added using its exact plan:
 
-**Progress (branch `host-pools-vm`).** Everything short of creating the VM is
-done: `deploy/README.md` is the runbook (exact `az` commands, provisioning,
-pool upload, Blob backups, and the Vercel decision), with measured memory per
-worker behind its choice of one worker on a B1s. `scripts/pool_smoke.py`
-checks a pool file against the graph and then that a server answers
-`source: pool`. Not yet run on Azure.
+```bash
+.venv/bin/python scripts/merge_pools.py --plan plan.json.gz --add-index pools.sqlite
+```
 
-### 2. Serve DC
+Leave at least another pool file's worth of disk for the rewrite. Old
+artifacts can be served with their original graphs or retained as an archive;
+they do not contain the newly preserved signal nodes. Do not mix them with
+rebuilt graphs: graph hash validation rejects that combination.
 
-Copying the file is not enough. Serving assumes one area, one graph and one
-pool file. A metro run differs:
+### 3. Rebuild graphs and matching pools
 
-- `merge_pools.py` writes each tile's graph hash to a `tiles` table and no
-  `graph` entry to `meta`, so `_checked_pool_file` rejects the file.
-- A pool's node ids belong to its tile's graph, so serving must find the cell's
-  owning tile (`runline.tiling.owned_cells`, or the run's `plan.json.gz`) and
-  load that graph.
-- `containing_area` and `/api/areas` only know areas in the graph manifest.
+The signal fix changes graph topology and hashes. Build graphs with the
+build dependencies (`osmnx`, `osmium` for PBF inputs, and `rasterio` for
+Copernicus elevation). Confirm the elevation bake is complete before
+publishing. Recompute pools on those exact graphs using the pool-generation
+fixes in this branch, which exclude unusable loops and choose origins inside
+routable cells. Production rebuilds have not run during this recovery.
 
-This needs DC's tile graphs and plan as well as the pools. Size the server by
-measuring tile graph load time and memory first. They have not been measured
-for serving, and the top 50 metros have 8,675 tiles.
+### 4. Host and verify
 
-**Done in code** (branch `serve-metro-tiles`): `runline.metros` serves metro
-runs from `metros/<run>/pools.sqlite` plus `metros/<run>/tile-graphs/`. A
-start's cell names its owning tile in the file's `cells` table; serving checks
-that tile's graph hash against `tiles`, loads the graph lazily (at most
-`RUNLINE_TILE_GRAPHS_CACHE`, default 2, in memory), and on a pool miss plans
-live on the same tile. The pool format is unchanged, so task 4 needs no
-recompute for this; only the plan and merge steps changed, and both are cheap
-to rerun. What is left for DC:
+Follow [deploy/README.md](../deploy/README.md). The last recorded Vercel
+deployment serves Charlottesville live; this recovery did not redeploy it.
+The runbook covers provisioning, upload, backups and rollback. Hosting is
+done only when a deployed request returns `source: pool`.
 
-1. Copy DC's tile graphs (`/bigtemp/$USER/tile-graphs/washington-dc-*.pkl.gz`)
-   and `plan.json.gz` off the cluster before `/bigtemp` is purged. The pools
-   only work on those exact graph files: a rebuild hashes differently.
-2. Index the Drive copy of the pool file from its plan (it was merged before
-   the index existed). This rewrites every row, so leave 2.3 GB free:
-   ```bash
-   .venv/bin/python scripts/merge_pools.py --plan plan.json.gz --add-index pools.sqlite
-   ```
-3. Lay it out as `metros/washington-dc/pools.sqlite` and
-   `metros/washington-dc/tile-graphs/`, then measure:
-   ```bash
-   .venv/bin/python scripts/measure_tile_graphs.py metros/washington-dc/tile-graphs --together 2
-   ```
-   On the Charlottesville graph (40k nodes) one graph took 157 MB and 0.3 s
-   to load, about 3.9 MB per 1,000 nodes, and two held together took twice
-   that. `build_tile_graphs.py summary` gives DC's node counts. Size the VM for
-   the process baseline plus the cache size times the largest tile, plus a
-   live request's working set.
+Before serving DC, measure its actual tile graphs:
 
-Keep `plan.json.gz` with each batch's pools in task 4 too: it is how a merged
-file gets its index back.
+```bash
+.venv/bin/python scripts/measure_tile_graphs.py metros/washington-dc/tile-graphs --together 2
+```
 
-### 3. Raise the hit rate
+Keep the complete app on one origin, or explicitly implement CORS if the
+frontend and API are hosted separately. The hosting runbook's cloud pricing
+and eligibility notes must be checked against the selected subscription
+before provisioning.
 
-Of the 58 misses in 200 requests, 40 had no connector within 300 m
-(`MAX_CONNECTOR_METERS`), from 8 of the 40 starts, and 18 had fewer than 3 loops
-in the distance band.
+### 5. Run the metros on Rivanna
 
-- Start the loop at its nearest point to the runner, rather than adding a
-  connector out and back.
-- Count signals and crossings on connectors. They are currently left out, so
-  pool quality figures read slightly better than they should.
-- Consider returning 2 routes when only 2 are in band.
+Follow [slurm/README.md](../slurm/README.md), starting with local dry runs,
+then a small cluster smoke run. Confirm a faculty PI's allocation and its
+available SUs, task limits, scratch purge policy and durable archive storage
+before submitting the full run. No cluster login or allocation was checked
+in this recovery.
 
-**Status (branch `pool-hit-rate`, stopped early at the usage limit):**
-- Done: loops are restarted where they pass closest to the runner, read from the runner's cell and its 8 neighbours, and the whole drawn route (connector included) is measured with `measure_route`. Pool mode drops loops over `MAX_REPEATED`, and a cell's origin must lie inside the cell. Both precompute changes must land before task 4.
-- Measured (compare_pools, 40 starts x 5 distances, mixed, local pools for 278 cells): main today is 56%, not 71%, because fc527ee's doubling-back filter came after that figure (24402ba's serving gives exactly 71% on the same pools). The precompute fix alone gives 61%, nearest-point anchoring 77%, and all nine cells 96% (8 misses, 2 starts; start 25 is a 2-node fragment) at 71 ms median, with crossings/mi .208 against .299 when neighbours are only a fallback.
-- Two routes when only 2 are in band would rescue 3 of the 10 remaining misses (27 of 87 before), so it is not worth an API change.
-- Left: bench/shape_audit before and after for the osm.py change (pool mode only; expected identical, but unverified, though commit 549657c says identical), the live-vs-pool quality table from `compare_pools.py` with live planning, and README/routing-study numbers. `load_pool` is now unused (`load_pools` replaced it), so put the serve-metro-tiles corrupt-pool handling there when merging.
+The batch config now includes Washington with Baltimore in `b6` and has an
+empty `done` list: the old pilot must be recomputed for signal-preserving
+graphs. Do not reuse old tile graphs or shards in a new run directory:
+existing outputs are skipped rather than rebuilt. Archive each completed
+batch, its plan, shards and exact tile graphs before proceeding.
 
-### 4. Run the top 50 metros
+## Repo rules and operational traps
 
-Follow `slurm/README.md`. The estimate, scaled from DC, is about 65,000 CPU-hours
-and 85 GB: 3.4 days at 800 cores, or about 11 days at DC's average of 245.
-
-Before starting:
-
-- Choose a cluster, because everything here ran under Krish's CS account. You
-  have Rivanna access (see below). The CS cluster would need your own account,
-  and its limit of 800 tasks (400 on `cpu`, 400 on `gpu`) would need confirming.
-- Tell cshelpdesk before holding that many cores for days.
-- Download the 11 GB US extract, and plan where 85 GB will live. Home is 100 GB
-  and `/bigtemp` is volatile.
-
-**Rivanna.** You have access to UVA Research Computing's Rivanna, so it could
-replace the CS cluster, but nothing has been run or tested there:
-
-- `slurm/` is written for the CS cluster, so partition names, `/bigtemp` paths
-  and core limits all need changing. Rerun `setup.sh` and test it on a small area.
-- Check that your allocation covers about 65,000 core-hours, how many jobs can run
-  at once, and the scratch space's size and purge rules.
-- Rebuild pools on one cluster only unless you copy the graphs, since a pool only
-  matches the exact graph it was built from.
-- `slurm/clusters/rivanna.env` now holds Rivanna's settings, and
-  `slurm/README.md` has a Rivanna runbook (smoke tests first) and a pre-flight
-  checklist: allocation SUs, where the 260–540 GB archive goes, whom to tell,
-  and the branches the run must wait for. Still untested on the cluster.
-
-Run it in batches with `slurm/run_batch.sh` (see `slurm/README.md`): a test
-batch of three metros, then eight batches of 360,000–420,000 cells. Each
-finished batch can be copied off before the next starts. What DC taught us is
-already applied: tasks ask for 4G (the peak was 2.1 GB) and units are 50 cells
-(the p95 task took 256 min and the longest 358, so smaller units save more
-when a task fails).
-
-Consider whether task 2 changes the pool format before spending this compute.
-
-## Traps
-
-- **SSH bans.** Repeated connections or failed logins get you automatically
-  blocked from the portal. Reuse one connection (`ControlMaster`) and check
-  progress rarely. The `portal` alias also rotates nodes, and direct `portalNN`
-  addresses aren't reachable.
-- **Tile extracts.** Keep osmium's `simple` strategy and 14 tiles per job, as
-  `build_tile_graphs.py` does. Other settings ran out of memory at up to 64 GB.
-- **Repo rules.** `CLAUDE.md` asks for a branch and PR per task, with benchmark
-  numbers for changes to routing code, and no real coordinates in tracked files.
+- One branch and PR per task; never push directly to `main`.
+- Changes touching `osm.py`, `scoring.py` or `models.py` require tests,
+  `scripts/bench.py`, `scripts/shape_audit.py`, and before/after PR numbers.
+- Keep personal starts and addresses in `.private/`, never in tracked output.
+- Keep `requirements.txt` pins exact; rebuild graphs after networkx or
+  shapely version changes.
+- Do not use the CS cluster's Python module; follow `slurm/setup.sh`.
+- Reuse one SSH connection to avoid portal bans. Do not repeatedly retry
+  logins; direct `portalNN` addresses are not reachable.
+- Keep osmium's `simple` strategy and 14 tile extracts per job; other settings
+  previously ran out of memory.

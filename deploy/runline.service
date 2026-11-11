@@ -27,6 +27,7 @@ Environment=PYTHONUNBUFFERED=1
 # the shipped map would try a live Overpass download inside the request.
 Environment=RUNLINE_ALLOW_OSM_DOWNLOAD=0
 Environment=RUNLINE_POOLS_DIR=/srv/runline/pools
+Environment=RUNLINE_METROS_DIR=/srv/runline/metros
 # The service user cannot write the checkout; systemd creates this for it.
 Environment=RUNLINE_CACHE_DIR=/var/cache/runline
 Environment=RUNLINE_WORKERS=1
