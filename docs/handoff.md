@@ -9,7 +9,7 @@ Written for Rohan when Krish handed off the remaining work, as of `24402ba`.
 | Pool serving (`src/runline/serving.py`) | Merged. Works locally. The API's `source` field says `pool` or `live` |
 | Deployed app | Runs that code, but always `live`: no pool file is hosted |
 | Charlottesville pools | Built: 13,092 pools, 110 MB. Not hosted |
-| DC pilot | Finished: 72,237 cells with pools, 20.25M loops, 2.3 GB. Serving can't read this file yet (task 2) |
+| DC pilot | Finished: 72,237 cells with pools, 20.25M loops, 2.3 GB. Serving can read it once indexed and given its tile graphs (task 2) |
 | Top 50 metros | Not run |
 
 Pool files are gitignored. Krish shares them in a Drive folder, sent separately.
@@ -73,6 +73,37 @@ pool file. A metro run differs:
 This needs DC's tile graphs and plan as well as the pools. Size the server by
 measuring tile graph load time and memory first. They have not been measured
 for serving, and the top 50 metros have 8,675 tiles.
+
+**Done in code** (branch `serve-metro-tiles`): `runline.metros` serves metro
+runs from `metros/<run>/pools.sqlite` plus `metros/<run>/tile-graphs/`. A
+start's cell names its owning tile in the file's `cells` table; serving checks
+that tile's graph hash against `tiles`, loads the graph lazily (at most
+`RUNLINE_TILE_GRAPHS_CACHE`, default 2, in memory), and on a pool miss plans
+live on the same tile. The pool format is unchanged, so task 4 needs no
+recompute for this; only the plan and merge steps changed, and both are cheap
+to rerun. What is left for DC:
+
+1. Copy DC's tile graphs (`/bigtemp/$USER/tile-graphs/washington-dc-*.pkl.gz`)
+   and `plan.json.gz` off the cluster before `/bigtemp` is purged. The pools
+   only work on those exact graph files: a rebuild hashes differently.
+2. Index the Drive copy of the pool file from its plan (it was merged before
+   the index existed). This rewrites every row, so leave 2.3 GB free:
+   ```bash
+   .venv/bin/python scripts/merge_pools.py --plan plan.json.gz --add-index pools.sqlite
+   ```
+3. Lay it out as `metros/washington-dc/pools.sqlite` and
+   `metros/washington-dc/tile-graphs/`, then measure:
+   ```bash
+   .venv/bin/python scripts/measure_tile_graphs.py metros/washington-dc/tile-graphs --together 2
+   ```
+   On the Charlottesville graph (40k nodes) one graph took 157 MB and 0.3 s
+   to load, about 3.9 MB per 1,000 nodes, and two held together took twice
+   that. `build_tile_graphs.py summary` gives DC's node counts. Size the VM for
+   the process baseline plus the cache size times the largest tile, plus a
+   live request's working set.
+
+Keep `plan.json.gz` with each batch's pools in task 4 too: it is how a merged
+file gets its index back.
 
 ### 3. Raise the hit rate
 

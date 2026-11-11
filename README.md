@@ -187,12 +187,21 @@ signals and crossings on the short link from the runner to the saved loop.</sub>
 **To try it locally,** put a pool file at `pools/charlottesville-va.sqlite`.
 The API's `source` field then says `pool` or `live`.
 
+**Metros** are served from their tiles. Each metro run is a directory under
+`metros/` (or `RUNLINE_METROS_DIR`) holding the merged `pools.sqlite` and a
+`tile-graphs/` directory of that run's tile graphs. A start finds its tile
+from its cell, loads that tile's graph on first use, and keeps at most
+`RUNLINE_TILE_GRAPHS_CACHE` (default 2) graphs in memory. A start with no
+usable pool plans live on the same tile graph. `/api/areas` lists the served
+metros after the shipped areas.
+
 **Status:**
 
 - **Charlottesville:** route pools are computed and serving works locally. The
   deployed app still plans live because the 110 MB pool file is not hosted.
 - **Washington, DC:** the pilot finished, with 72,237 cells and 2.3 GB of pools.
-  The app can't serve them yet because they span many map tiles.
+  Serving metro tiles works in tests; serving DC needs its tile graphs and
+  plan copied from the cluster (see `docs/handoff.md`, task 2).
 - **Top 50 metro areas:** not run yet.
 
 `docs/handoff.md` lists the remaining work, and `slurm/README.md` is the
