@@ -1,5 +1,17 @@
 # RunLine handoff
 
+## Presentation preparation
+
+Integration PR #5 is merged. Active presentation work is on
+`codex/presentation-ready` in the `runline-presentation` checkout, tracked by
+PR #6. See [presentation.md](presentation.md) for the demo sequence and
+[presentation-release.md](presentation-release.md) for its measured results.
+A rebuilt graph and a complete 315-pool demo sample are validated locally;
+the complete area's 96-shard build is running separately from fixed sources.
+A separate public presentation deployment is available at
+https://runline-capstone.vercel.app, with a hosted recorded fallback. The original Oracle
+backend has not been updated in this session because SSH access is missing.
+
 ## Recovery status
 
 Claude's November 10 work is integrated on `codex/resume-runline` in the
@@ -42,9 +54,9 @@ measurements do not establish DC's memory needs.
 
 ## Remaining work, in order
 
-### 1. Review and merge the integrated code
+### 1. Integration merged; finish the presentation release
 
-The recovery branch brings together `host-pools-vm`, `serve-metro-tiles`,
+PR #5 is merged. The recovery branch brought together `host-pools-vm`, `serve-metro-tiles`,
 `pool-hit-rate`, `signal-tags-and-metrics`, and the already combined
 `rivanna-slurm-on-metro`. Validation results belong with its PR. Do not push
 to `main` directly.

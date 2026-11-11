@@ -5,6 +5,11 @@ artifacts, release verification, an offline saved example, locally served
 Leaflet, and support for returning two qualifying pool routes on the default
 up-to-three request. Other result counts retain their existing behavior.
 
+The full suite passes **186 tests** on the rebuilt graph with its matching
+crossing fixture. The new two-route cases confirm that one qualifying loop
+still falls back to live planning, and two qualifying loops return a clear
+notice without relaxing distance, repetition or diversity checks.
+
 ## Replacement graph
 
 | Measure | Shipped graph | Rebuilt graph |
@@ -81,3 +86,36 @@ checked. Browser interaction/visual QA was unavailable in this session.
 
 Raw reports and captures are in gitignored `output/presentation/`. Generated
 coordinates, graph files and pool files are not committed with the tooling.
+
+
+## Public deployment verification
+
+The public URL **https://runline-capstone.vercel.app** passed the complete
+rehearsal on source commit `77f6c3e14fb1816338dd71477fc8069ffa14b6d2`.
+All 30 returned routes closed and fell within their requested distance band;
+all GPX points matched the displayed routes. Seven of ten scenarios used the
+sample pools; road/trail and nearby-start scenarios used live planning.
+The health, backend revision, coverage, autocomplete, local frontend assets,
+unsupported-start and invalid-distance checks passed. The standalone saved
+example is available at `/assets/saved-demo.html` without API requests.
+
+This is a separate Vercel project. The original `runline-nine` site and its
+Oracle proxy were preserved. The signed-in-only preview on the original
+project is not the presentation URL.
+
+## Portable artifacts
+
+`package_presentation.py` checks SQLite integrity, the exact graph hash,
+every pool row, every loop's closure, every referenced graph edge and the
+repetition limit before writing an archive. Complete-area packages also
+require all build shards and surfaces. The sample package was extracted and
+ran its own API, serving three closed pool routes with GPX; private/auth
+files were absent. It contains a `start.sh`, pinned requirements, matching
+graph/pools, attribution, source metadata and the recorded fallback.
+
+`finalize_pool_build.py` watches the ongoing build, keeps the Mac awake
+while waiting, retries a finished failed build once at lower concurrency,
+and audits/packages the complete artifact before invoking an optional
+upload callback. Its progress is recorded in
+`output/presentation/completion-status.json`. No generated data is committed
+to the repository.

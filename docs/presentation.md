@@ -1,5 +1,17 @@
 # Capstone presentation — November 11, 1 pm Eastern
 
+## Links
+
+- Public presentation build: https://runline-capstone.vercel.app
+- Recorded fallback: https://runline-capstone.vercel.app/assets/saved-demo.html
+- Existing Oracle-backed app: https://runline-nine.vercel.app
+- Presentation source: https://github.com/RohanSi4/runline/pull/6
+
+The presentation deployment is pinned to application commit
+`77f6c3e14fb1816338dd71477fc8069ffa14b6d2`, graph hash prefix
+`66b524897627167e`, and the 315-pool sample. Its public alias is independent
+of the original app's Oracle proxy.
+
 ## Demo order
 
 1. Open the pinned presentation URL recorded in the release report. Keep
