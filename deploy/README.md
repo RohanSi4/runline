@@ -149,7 +149,7 @@ Run these from the repo root on your laptop. Nothing below has been run yet.
   .venv/bin/python scripts/pool_smoke.py --pool pools/charlottesville-va.sqlite
   ```
 
-- This branch on GitHub. The VM clones the repo, so push `host-pools-vm` (or
+- This branch on GitHub. The VM clones the repo, so push `codex/resume-runline` (or
   merge it) before step 2.
 
 ### 1. Create the VM
@@ -222,7 +222,7 @@ portal after the first day, and set a budget alert there (say $5 a month).
 
 ```bash
 scp deploy/provision.sh runline:
-ssh runline sudo bash provision.sh --domain <fqdn> --ref host-pools-vm
+ssh runline sudo bash provision.sh --domain <fqdn> --ref codex/resume-runline
 ```
 
 Drop `--ref` once this branch is merged (it defaults to `main`). It ends by

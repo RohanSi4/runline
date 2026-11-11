@@ -2,7 +2,7 @@
 # Set up, or update, RunLine on an Ubuntu 24.04 LTS VM. Run it as root:
 #
 #   sudo bash provision.sh --domain runline-xyz.eastus.cloudapp.azure.com
-#   sudo bash provision.sh --domain a.example.com,b.example.com --ref host-pools-vm
+#   sudo bash provision.sh --domain a.example.com,b.example.com --ref codex/resume-runline
 #
 # Safe to rerun: each step checks before it changes anything, and a rerun is
 # how the app is updated (it checks out --ref, reinstalls requirements.txt and

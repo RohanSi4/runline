@@ -140,12 +140,12 @@ sliver. Two options that share over 70% of their length count as one.
 
 ## Architecture
 
-<img src="docs/readme/architecture.svg" alt="Deployed today: the browser sends a start and preferences to the route planner, which searches map data saved with the app and returns up to three routes and a GPX file. Built, not hosted yet: routes saved ahead of time on the cluster, which the planner looks up first when their file is present" width="100%">
+<img src="docs/readme/architecture.svg" alt="The Vercel page proxies API requests to FastAPI on Oracle, which ranks saved loops first and plans live when no pool fits. Pools and their exact graph files live on the VM." width="100%">
 
 | Part | What it does | Where |
 |---|---|---|
 | Browser | Map, form, route comparison, GPX download (HTML/JS + Leaflet) | `web/` |
-| Route planner | Finds, measures and ranks loops (Python, FastAPI on Vercel) | `src/runline/` |
+| Route planner | Finds, measures and ranks loops (Python, FastAPI on Oracle) | `src/runline/` |
 | Saved map data | Charlottesville walk graph with elevation, built ahead of time | `graphs/`, `scripts/build_graphs.py` |
 | Precompute | Generates saved routes on the UVA CS cluster | `scripts/precompute_pools.py`, `slurm/` |
 | Serving | Answers from saved routes, or hands back to the planner | `src/runline/serving.py` |
@@ -175,14 +175,18 @@ loops, the 10 within ±0.25 mi of 5 miles, and the 3 that ranking picks.</sub>
 
 | | Planned live | Saved route pools |
 |---|---|---|
-| Time per request, warm | 0.6–2.4 s | 14–23 ms |
-| Requests it can answer | All covered starts | 71% in a 40-start Charlottesville test |
-| Traffic signals per mile | 0.044 | 0.042 |
-| Major crossings per mile | 0.270 | 0.284 |
+| Median request time | 1.41 s | 76 ms |
+| Requests answered in the sample | 200 / 200 | 192 / 200 (96%) |
+| Median absolute distance error | 0.104 mi | 0.083 mi |
+| Median major crossings per mile | 0.274 | 0.208 |
+| Median repeated fraction | 2.4% | 2.3% |
 
-<sub>Medians across 3–12 mile requests from the same starts, on the requests
-pools could answer, from `scripts/compare_pools.py`. Pool figures leave out
-signals and crossings on the short link from the runner to the saved loop.</sub>
+<sub>Local integration measurements: 40 seeded Charlottesville starts × five
+3–12 mile distances, mixed surface, using pools for 278 sampled cells.
+Quality is compared on the 192 pool hits, including connectors; latency is
+measured over each source's answers. The deployed backend has not yet been
+updated with these changes. See [validation](docs/validation.md) for the
+before/after checks, scope and reproduction.</sub>
 
 **To try it locally,** put a pool file at `pools/charlottesville-va.sqlite`.
 The API's `source` field then says `pool` or `live`.
