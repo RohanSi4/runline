@@ -22,6 +22,7 @@ crossing is marked, signalled, or busy.
 from __future__ import annotations
 
 import json
+import argparse
 import math
 import os
 import sys
@@ -218,7 +219,10 @@ def windows(graph, node_ids, labels):
             for lo, hi in _spans(graph, node_ids)]
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=ROOT / "tests/fixtures/crossing_audit.json")
+    args = parser.parse_args(argv)
     os.environ["RUNLINE_ALLOW_OSM_DOWNLOAD"] = "0"
     from runline.geo import destination
     from runline.models import Coordinate, RoutePreferences
@@ -244,7 +248,8 @@ def main():
     print(f"routes, event level: tp={tp} fp={fp} fn={fn} "
           f"precision={tp / (tp + fp):.3f} recall={tp / (tp + fn):.3f}")
     unique = list({tuple(item["nodes"]): item for item in slices}.values())
-    (ROOT / "tests/fixtures/crossing_audit.json").write_text(json.dumps(unique) + "\n")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(unique) + "\n")
     print(f"fixture: {len(unique)} route slices, "
           f"{sum(len(item['events']) for item in unique)} geometric crossings")
 

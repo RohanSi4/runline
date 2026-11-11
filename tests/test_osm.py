@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import math
 from pathlib import Path
 
@@ -185,7 +186,9 @@ def test_divided_major_road_counts_as_one_crossing() -> None:
 def test_crossing_count_against_geometry_labels() -> None:
     # Route slices around every major-road node on generated routes, labelled
     # by scripts/audit_crossings.py from corridor geometry, not by this rule.
-    fixture = Path(__file__).parent / "fixtures/crossing_audit.json"
+    fixture = Path(os.environ.get(
+        "RUNLINE_CROSSING_FIXTURE", Path(__file__).parent / "fixtures/crossing_audit.json"
+    ))
     slices = json.loads(fixture.read_text())
     graph = collapse_graph(load_area_graph(areas()[0]), RoutePreferences(3))
     # Match positions, not just counts: an extra crossing cannot cancel a miss.
