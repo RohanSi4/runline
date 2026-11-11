@@ -15,6 +15,10 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "https://129-153-47-234.sslip.io/api/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "app.py"
     }
