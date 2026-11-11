@@ -28,11 +28,15 @@ class DefaultStart(HTMLParser):
     def __init__(self):
         super().__init__()
         self.values = {}
+        self.assets = []
 
     def handle_starttag(self, tag, attrs):
         data = dict(attrs)
         if tag == "input" and data.get("id") in ("latitude", "longitude"):
             self.values[data["id"]] = float(data["value"])
+        asset = data.get("src") if tag == "script" else data.get("href") if tag == "link" else None
+        if asset and asset.startswith("/assets/"):
+            self.assets.append(asset)
 
 
 def check_routes(payload: dict, target: float) -> dict:
@@ -115,6 +119,11 @@ def main(argv=None) -> int:
         if set(default.values) != {"latitude", "longitude"}:
             raise ValueError("frontend has no valid default start")
         report["checks"].append("frontend")
+        for asset in default.assets:
+            if not get(asset).content:
+                raise ValueError(f"empty frontend asset: {asset}")
+        report["asset_count"] = len(default.assets)
+        report["checks"].append("frontend-assets")
         manifest = json.loads((ROOT / "graphs/manifest.json").read_text())
         area = next(a for a in manifest["areas"] if a["slug"] == "charlottesville-va")
         center = {key: area[key] for key in ("latitude", "longitude")}
