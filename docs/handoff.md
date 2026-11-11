@@ -7,8 +7,8 @@ Written for Rohan when Krish handed off the remaining work, as of `24402ba`.
 | Piece | State |
 |---|---|
 | Pool serving (`src/runline/serving.py`) | Merged. Works locally. The API's `source` field says `pool` or `live` |
-| Deployed app | Runs that code, but always `live`: no pool file is hosted |
-| Charlottesville pools | Built: 13,092 pools, 110 MB. Not hosted |
+| Deployed app | Vercel serves the page; `/api` goes to an Oracle VM that has the Charlottesville pool (task 1) |
+| Charlottesville pools | Built: 13,092 pools, 110 MB. Hosted on the Oracle VM |
 | DC pilot | Finished: 72,237 cells with pools, 20.25M loops, 2.3 GB. Serving can't read this file yet (task 2) |
 | Top 50 metros | Not run |
 
@@ -37,26 +37,36 @@ is no walkthrough planned, so this doc and `slurm/README.md` are the reference.
 Each task leaves the app working, so stopping between tasks is fine. Note how far
 you got here.
 
-### 1. Host the pools
+### 1. Host the pools (done)
 
 Vercel's 250 MB limit rules it out, and serving needs the pool file and graph on
-local disk. Google Drive or a storage bucket works as a backup, not for serving.
-The suggested host is an Azure Linux VM, paid for by Azure for Students ($100
-credit, no card, from the GitHub Student Pack; DigitalOcean is no longer in the
-pack). Its spending limit stops the VM rather than billing when the credit runs
-out, and the credit lasts 12 months.
-You own the Vercel project, so moving the site or its domain is your call.
+local disk, so the API runs on an Oracle Cloud Always Free VM instead:
 
-- Size: Azure's free B1s (1 GB RAM) is likely enough for Charlottesville alone.
-  Metro tile graphs need more: measure first (see task 2), then pick a B2s
-  (4 GB, roughly $30 a month) or larger.
-- Keep the pool files on the VM's disk; a 2 GB metro file is too big to fetch
-  per request. Azure Blob Storage on the same credit is fine for backups.
+- `VM.Standard.A1.Flex` (ARM), 4 OCPUs, 24 GB RAM, 190 GB disk, Ubuntu 24.04,
+  in Krish's Oracle account. All of it is inside the Always Free limits (4 OCPUs,
+  24 GB and 200 GB of block storage per account); anything beyond them is billed.
+  A $1 monthly budget emails Krish on any spend.
+- The app runs at the commit it was deployed from, under a systemd service
+  (`runline.service`, uvicorn on 127.0.0.1:8765 with
+  `RUNLINE_ALLOW_OSM_DOWNLOAD=0`), behind Caddy for HTTPS at
+  `https://129-153-47-234.sslip.io`. sslip.io turns the IP into a hostname, so
+  no domain is needed.
+- `vercel.json` sends `/api/*` to that server, so the Vercel page stays where it
+  is and the browser sees one origin (no CORS).
+- Only `pools/charlottesville-va.sqlite` is on it. Checked: 4, 5, 6 and 8 mile
+  requests from a downtown start came from the pool in 0.10–0.16 s; 2 and 3 miles
+  planned live (task 3's misses). The process used about 330 MB.
 
-- Run the whole app there, since FastAPI already serves `web/`. Otherwise the
-  Vercel page has to call another origin and the API needs CORS.
-- Set `RUNLINE_POOLS_DIR` if the files live outside the repo's `pools/`.
-- Done when a deployed request returns `source: pool`.
+To update the server after a merge: SSH in, `git pull` in `~/runline`, then
+`sudo systemctl restart runline`. Rebuilding graphs means copying the new pool
+too, or the old one is ignored.
+
+Traps: the public IP is ephemeral, so recreating the VM changes the hostname in
+`vercel.json` (reserve the IP if that becomes a problem). Oracle's Ubuntu image
+has an iptables `REJECT` rule; port rules must go above it, then
+`sudo netfilter-persistent save`. Free A1 capacity in Ashburn was unavailable
+for hours; the account was upgraded to Pay As You Go to get it, which keeps
+Always Free resources free.
 
 ### 2. Serve DC
 
