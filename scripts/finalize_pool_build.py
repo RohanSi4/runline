@@ -72,10 +72,9 @@ def main(argv=None):
                     record(completed=count, total=progress["shards"], failed=progress["failed"])
                     last_completed = count
                 workers = active_workers()
-                finished_failed = count + len(progress["failed"]) == progress["shards"] and progress["failed"]
-                if not workers and (finished_failed or count < progress["shards"]):
+                if not workers and not pool.exists():
                     if state["retries"]:
-                        raise RuntimeError("shards still failed after the resumable retry")
+                        raise RuntimeError("build did not produce a complete pool file after the resumable retry")
                     record(state="retrying", retries=1)
                     command = [
                         sys.executable, str(ROOT / "scripts/build_local_pools.py"),
