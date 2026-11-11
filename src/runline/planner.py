@@ -73,7 +73,10 @@ def plan_routes(
         LOGGER.exception("serving from pools failed; planning live")
         pooled = None
     if pooled:
-        return PlanResult(candidates=pooled, discovered_starts=0, fetched_elevation_cells=0, warnings=(), source="pool")
+        notices = () if len(pooled) == preferences.result_count else (
+            f"Found {len(pooled)} distinct routes within your distance range.",
+        )
+        return PlanResult(candidates=pooled, discovered_starts=0, fetched_elevation_cells=0, warnings=notices, source="pool")
 
     fetched_cells = 0
     warnings: list[str] = []

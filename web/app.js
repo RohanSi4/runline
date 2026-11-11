@@ -245,6 +245,9 @@ function selectRoute(index, fit = true) {
 
 function renderRoutes(payload) {
   clearRoutes();
+  if (payload.origin) {
+    setStart(payload.origin.latitude, payload.origin.longitude, address.value || "Start here");
+  }
   state.routes = payload.routes;
   const routeList = document.getElementById("route-list");
   routeList.replaceChildren();
@@ -305,6 +308,7 @@ form.addEventListener("submit", async (event) => {
   generateButton.setAttribute("aria-busy", "true");
   generateButton.querySelector("span").textContent = "Exploring loops…";
   showStatus("Reading streets, trails, crossings, and elevation…");
+  const submittedStart = [address.value, latitude.value, longitude.value];
   const body = {
     distance_miles: Number(distanceInput.value),
     drive_radius_miles: state.drive,
@@ -330,6 +334,11 @@ form.addEventListener("submit", async (event) => {
       detail: `Server error (${response.status}). Try again shortly.`,
     }));
     if (!response.ok) throw new Error(errorMessage(payload.detail));
+    const currentStart = [address.value, latitude.value, longitude.value];
+    if (submittedStart.some((value, index) => value !== currentStart[index])) {
+      showStatus("Start changed. Generate routes for the new location.");
+      return;
+    }
     renderRoutes(payload);
     showStatus((payload.warnings || []).join(" "));
   } catch (error) {

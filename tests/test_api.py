@@ -18,6 +18,14 @@ def test_health_and_frontend_are_served() -> None:
     assert "Your distance. Fewer interruptions." in frontend
 
 
+def test_backend_release_can_be_verified_independently_of_frontend(monkeypatch) -> None:
+    monkeypatch.setenv("RUNLINE_BUILD_SHA", "a" * 40)
+    monkeypatch.setenv("VERCEL_GIT_COMMIT_SHA", "b" * 40)
+    result = asyncio.run(api.version())
+    assert result == {"version": api.app.version, "commit": "a" * 40}
+    assert asyncio.run(health()) == {"status": "ok"}
+
+
 def test_unknown_address_returns_422(monkeypatch) -> None:
     def fail(*_args, **_kwargs):
         raise ValueError("could not find a location for 'nowhere'")

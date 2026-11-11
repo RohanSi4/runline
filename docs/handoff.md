@@ -1,5 +1,18 @@
 # RunLine handoff
 
+## Presentation preparation
+
+Integration PR #5 is merged. Presentation work is on
+`codex/presentation-ready` in the `runline-presentation` checkout, tracked by
+PR #6. See [presentation.md](presentation.md) for the demo sequence and
+[presentation-release.md](presentation-release.md) for its measured results.
+The rebuilt graph and complete 11,417-pool, 605,206-loop dataset are audited
+and deployed to the capstone URL. All 96 shards finished without failures;
+the complete package and audit are attached to the capstone draft release.
+A separate public presentation deployment is available at
+https://runline-capstone.vercel.app, with a hosted recorded fallback. The Oracle service was not modified in this session. The team subsequently
+recorded its migration to main and the indexed DC layout below.
+
 ## Recovery status
 
 Claude's November 10 work is integrated on `codex/resume-runline` in the
@@ -9,13 +22,13 @@ on Oracle. This recovery has not changed the deployed backend.
 
 | Work | Current state |
 |---|---|
-| Current hosting | Charlottesville and the DC pilot are served from Krish's Oracle VM, running `main`; Vercel proxies `/api` (task 4). |
+| Current hosting | The capstone project serves rebuilt Charlottesville directly on Vercel. The original Vercel/Oracle app serves Charlottesville and DC from `main` (task 4); both were verified through its public API. |
 | Optional hosting tools | Provisioning, systemd, Caddy, area-pool upload, backup and smoke scripts integrated as a portable VM recipe. No Azure VM is needed for the existing deployment. |
 | Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Serving the DC pilot on the VM; measurements in task 4. |
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
-| Rivanna | Cluster configuration, dry-run and smoke support integrated. No jobs submitted. |
-| Graphs and pools | Shipped Charlottesville graph is unchanged. The signal-preserving builders have not rebuilt production graphs or pools. |
+| Cluster precompute | Per the November 11 team update, batch `b1` (New York and Los Angeles) is running on the UVA CS cluster. Rivanna allocation has not been verified in this session. |
+| Graphs and pools | Repository graph remains unchanged for compatibility. The rebuilt graph and complete 95 MB pool file are deployed on the separate capstone project; the original Oracle assets remain in place. |
 
 See [validation.md](validation.md) for the before/after routing checks and
 pool comparison. Local sample pools are benchmark fixtures, not a complete
@@ -36,20 +49,21 @@ usable only if they belong to that same tile graph. Missing or corrupt pools
 fall back to live routing; missing tile graphs produce a coverage error.
 
 `RUNLINE_TILE_GRAPHS_CACHE` defaults to two graphs per worker. The VM service
-uses `/srv/runline/pools`, `/srv/runline/metros`, and `/var/cache/runline`.
+recipe uses `/srv/runline/pools`, `/srv/runline/metros`, and `/var/cache/runline`;
+the existing Oracle service paths are recorded in task 4.
 Measure the actual metro graphs before sizing a VM; Charlottesville memory
 measurements do not establish DC's memory needs.
 
 ## Remaining work, in order
 
-### 1. Review and merge the integrated code
+### 1. Source integration
 
-The recovery branch brings together `host-pools-vm`, `serve-metro-tiles`,
+PR #5 is merged. The recovery branch brought together `host-pools-vm`, `serve-metro-tiles`,
 `pool-hit-rate`, `signal-tags-and-metrics`, and the already combined
 `rivanna-slurm-on-metro`. Validation results belong with its PR. Do not push
 to `main` directly.
 
-### 2. Recover and archive the existing artifacts
+### 2. Preserve the DC deployment and archive the existing artifacts
 
 Krish's Charlottesville file has 13,092 pools, about 110 MB. The DC pilot
 has 72,237 cells with pools, about 20.25 million loops, and a 2.3 GB SQLite
@@ -58,7 +72,8 @@ Krish shared a Drive folder separately; the complete files are not in this
 checkout. Keep the exact matching graphs and `plan.json.gz` with each pool.
 The originals on the CS cluster's `/bigtemp` are volatile.
 
-The old DC merge needs its index added using its exact plan:
+The deployed DC file has been indexed (task 4). For an unindexed archive,
+add the index using its exact plan:
 
 ```bash
 .venv/bin/python scripts/merge_pools.py --plan plan.json.gz --add-index pools.sqlite
@@ -76,7 +91,8 @@ build dependencies (`osmnx`, `osmium` for PBF inputs, and `rasterio` for
 Copernicus elevation). Confirm the elevation bake is complete before
 publishing. Recompute pools on those exact graphs using the pool-generation
 fixes in this branch, which exclude unusable loops and choose origins inside
-routable cells. Production rebuilds have not run during this recovery.
+routable cells. Charlottesville's rebuild is complete on the capstone project. DC and the
+top-50 coverage remains incomplete; the team reports batch `b1` is running.
 
 ### 4. Update the existing hosted backend
 
