@@ -9,7 +9,7 @@ Written for Rohan when Krish handed off the remaining work, as of `24402ba`.
 | Pool serving (`src/runline/serving.py`) | Merged. Works locally. The API's `source` field says `pool` or `live` |
 | Deployed app | Vercel serves the page; `/api` goes to an Oracle VM that has the Charlottesville pool (task 1) |
 | Charlottesville pools | Built: 13,092 pools, 110 MB. Hosted on the Oracle VM |
-| DC pilot | Finished: 72,237 cells with pools, 20.25M loops, 2.3 GB. Serving can't read this file yet (task 2) |
+| DC pilot | Finished: 72,237 cells with pools, 20.25M loops, 2.3 GB. Served from the VM (task 2) |
 | Top 50 metros | Not run |
 
 Pool files are gitignored. Krish shares them in a Drive folder, sent separately.
@@ -68,21 +68,35 @@ has an iptables `REJECT` rule; port rules must go above it, then
 for hours; the account was upgraded to Pay As You Go to get it, which keeps
 Always Free resources free.
 
-### 2. Serve DC
+### 2. Serve DC (done)
 
-Copying the file is not enough. Serving assumes one area, one graph and one
-pool file. A metro run differs:
+A metro run is many tiles, and a cell's pool only means something on its own
+tile's graph, so serving now works per tile (`src/runline/metros.py`):
 
-- `merge_pools.py` writes each tile's graph hash to a `tiles` table and no
-  `graph` entry to `meta`, so `_checked_pool_file` rejects the file.
-- A pool's node ids belong to its tile's graph, so serving must find the cell's
-  owning tile (`runline.tiling.owned_cells`, or the run's `plan.json.gz`) and
-  load that graph.
-- `containing_area` and `/api/areas` only know areas in the graph manifest.
+- `merge_pools.py --plan` writes a `cells` table (every planned cell and its
+  tile) and the plan's metros to `meta`. Files merged before that need
+  `scripts/index_pool_tiles.py --plan <plan.json.gz> <pools.sqlite>` once.
+- Any `*.sqlite` in the pools directory with a `cells` table is a metro file.
+  Its tile graphs (`<tile>.pkl.gz` from `build_tile_graphs.py`) go in
+  `pools/tile-graphs/`, or `RUNLINE_TILE_GRAPHS_DIR`.
+- A request finds its cell's tile, checks the graph's hash against `tiles` and
+  serves the pool there. A cell with no usable pool plans live on that tile's
+  graph; over 12 miles it gets the limited-coverage warning, since tiles are
+  sized for 12. `/api/areas` and the outside-coverage message list the metros.
+- Loaded tiles stay in memory, `RUNLINE_TILE_CACHE` of them (default 4; the VM
+  uses 16).
 
-This needs DC's tile graphs and plan as well as the pools. Size the server by
-measuring tile graph load time and memory first. They have not been measured
-for serving, and the top 50 metros have 8,675 tiles.
+DC on the VM: `pools/washington-dc.sqlite` (2.3 GB, indexed) and its 230 tile
+graphs (4.2 GB). The pilot's plan was lost from `/bigtemp`; it was rebuilt with
+`plan_tile_pools.py --metro washington-dc` (`metros.json` is unchanged since),
+and the index script confirmed every pooled cell and tile matches. Measured: a
+tile graph is 49k–124k nodes, loads in 2–4 s and holds about 650 MB, so 16 is
+about 10.5 GB. The first request in a tile takes about 9 s; later ones in it
+take 0.2–0.9 s. 15 miles planned live in 33 s with the warning.
+
+For a batch: copy its `pools.sqlite` (index it if merged before this change),
+its tiles' graphs and nothing else. Every tile of a batch must be in
+`tile-graphs/`, or its cells fall back to live and then fail.
 
 ### 3. Raise the hit rate
 
