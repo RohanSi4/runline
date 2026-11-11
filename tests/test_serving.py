@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import sqlite3
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -106,6 +107,27 @@ def test_ranking_matches_the_live_rules(built, pools_dir) -> None:
     assert all(route.score_components for route in routes)
     round_first = [route.metrics.compactness < 0.2 for route in routes]
     assert round_first == sorted(round_first)
+
+
+@pytest.mark.parametrize("available", [1, 2])
+def test_two_distinct_in_band_routes_can_answer_but_one_falls_back(built, pools_dir, available) -> None:
+    original = serving.serve_from_pool(_origin(built), _preferences())
+    area, _, _, pool = built
+    replacement = {
+        **pool,
+        "loops": [{"nodes": list(r.node_ids), "metrics": asdict(r.metrics)} for r in original[:available]],
+    }
+    with sqlite3.connect(pools_dir / f"{area.slug}.sqlite") as database:
+        database.execute("UPDATE pools SET pool = ?, loops = ?", (encode_pool(replacement), available))
+
+    if available == 1:
+        assert serving.serve_from_pool(_origin(built), _preferences()) is None
+    else:
+        result = plan_routes(_origin(built), _preferences(), cache_directory=pools_dir, elevation_source="none")
+        assert result.source == "pool" and len(result.candidates) == 2
+        assert "2 distinct routes" in result.warnings[0]
+        assert all(abs(r.metrics.distance_miles - MILES) <= 0.25 for r in result.candidates)
+        assert all(r.metrics.repeated_fraction <= serving.MAX_DOUBLED_BACK for r in result.candidates)
 
 
 def _loop_nodes(pool: dict) -> set[int]:

@@ -8,10 +8,13 @@ come out near the requested distance, measures them as drawn, ranks them with
 the same scoring live routes use, and draws the winners.
 
 Pools are an optimization, never a requirement. ``serve_from_pool`` returns
-None whenever it cannot give a full answer (no file, an old format, a pool
+None whenever it cannot give a usable answer (no file, an old format, a pool
 built from a different graph, a cell with no pool, too few loops in the
 distance band that don't double back, a drive-radius request) and the planner
 searches live.
+
+The default request asks for up to three routes. Two distinct, in-band
+routes are a usable answer; one triggers live planning for more choice.
 
 A start inside a metro precomputed on tiles (runline.metros) resolves the
 same way: its cell names the owning tile, ``containing_area`` returns that
@@ -343,13 +346,14 @@ def _ranked(small: nx.DiGraph, measured: list[RouteCandidate], preferences: Rout
     """The top routes, or none and the reason there are too few."""
 
     count = preferences.result_count
-    if len(measured) < count:
+    minimum = 2 if count == 3 else count
+    if len(measured) < minimum:
         return [], "few in band"
     kept = [candidate for candidate in measured if candidate.metrics.repeated_fraction <= MAX_DOUBLED_BACK]
-    if len(kept) < count:
+    if len(kept) < minimum:
         return [], "few without doubling back"
     ranked = _distinct_by_length(small, rank_candidates(kept, preferences), count)
-    if len(ranked) < count:
+    if len(ranked) < minimum:
         return [], "few distinct"
     return ranked, ""
 
