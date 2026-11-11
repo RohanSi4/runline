@@ -103,14 +103,30 @@ def _current_meta(path: str) -> dict | None:
     return meta
 
 
-def _fingerprint(path: Path) -> str:
-    """The graph hash scripts/precompute_pools.py records, read in chunks."""
+def file_sha256(path: Path) -> str:
+    """A file's full sha256, read in chunks."""
 
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
-    return digest.hexdigest()[:16]
+    return digest.hexdigest()
+
+
+def graph_fingerprint(sha256: str) -> str:
+    """The graph hash scripts/precompute_pools.py records, from the file's full sha256.
+
+    scripts/batch_manifest.py hashes every archived file once and takes tile
+    graph hashes from those digests through this.
+    """
+
+    return sha256[:16]
+
+
+def _fingerprint(path: Path) -> str:
+    """The graph hash scripts/precompute_pools.py records."""
+
+    return graph_fingerprint(file_sha256(path))
 
 
 @functools.lru_cache(maxsize=8)

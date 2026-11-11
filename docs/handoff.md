@@ -187,7 +187,13 @@ The batch config now includes Washington with Baltimore in `b6` and has an
 empty `done` list: the old pilot must be recomputed for signal-preserving
 graphs. Do not reuse old tile graphs or shards in a new run directory:
 existing outputs are skipped rather than rebuilt. Archive each completed
-batch, its plan, shards and exact tile graphs before proceeding.
+batch, its plan, shards and exact tile graphs before proceeding: when `b1`
+(or any batch) finishes, follow "When a batch finishes" in
+[slurm/README.md](../slurm/README.md#when-a-batch-finishes).
+`slurm/archive_batch.sh` writes a manifest and transfer-sized tar parts,
+`scripts/batch_manifest.py --verify` checks the copy, and
+`scripts/stage_metro_run.py` turns it into servable metro runs and smoke
+tests them. Do not purge scratch until the copy verifies.
 
 ## Repo rules and operational traps
 
