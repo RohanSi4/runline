@@ -172,9 +172,9 @@ input::placeholder { color: var(--faint); }
 .route-line { stroke-linecap: round; stroke-linejoin: round; transition: stroke-opacity .25s, stroke-width .25s; }
 .route-casing { stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 2px 5px rgb(0 0 0 / 40%)); }
 .start-pin { width: 20px; height: 20px; border: 5px solid #172115; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 2px var(--lime), 0 0 0 8px rgb(217 249 119 / 16%), 0 3px 10px rgb(0 0 0 / 35%); }
-.start-pin::after { content: "A"; display: block; color: #172115; font: 700 9px/10px "DM Sans", system-ui, sans-serif; text-align: center; }
+.start-pin { display: grid; place-items: center; color: #172115; font: 700 9px/10px "DM Sans", system-ui, sans-serif; }
 .finish-pin { display: grid; place-items: center; width: 22px; height: 22px; border: 3px solid #2d1d18; border-radius: 6px; background: var(--route-3); box-shadow: 0 0 0 2px var(--route-3), 0 0 0 7px rgb(255 159 133 / 14%), 0 3px 10px rgb(0 0 0 / 35%); }
-.finish-pin::after { content: "B"; color: #2d1d18; font: 700 11px/1 "DM Sans", system-ui, sans-serif; }
+.finish-pin { color: #2d1d18; font: 700 11px/1 "DM Sans", system-ui, sans-serif; }
 
 .map-toolbar { position: absolute; z-index: 500; top: 22px; left: 24px; right: 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; pointer-events: none; }
 .map-context { display: flex; align-items: center; gap: 12px; max-width: calc(100% - 112px); min-height: 59px; padding: 11px 15px 11px 11px; border: 1px solid rgb(170 191 152 / 22%); border-radius: 12px; background: rgb(20 30 23 / 94%); box-shadow: 0 10px 30px rgb(0 0 0 / 12%); backdrop-filter: blur(18px); }
