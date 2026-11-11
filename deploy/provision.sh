@@ -12,7 +12,7 @@
 #   --ref      git branch, tag or commit to run (default main)
 #   --repo     git URL to clone (default the public GitHub repo)
 #   --workers  uvicorn workers (default: from RAM, see below)
-#   --swap-gb  swap file size when none exists (default 2)
+#   --swap-gb  swap file size when none exists (default 2; 0 leaves swap alone)
 #   --uploader login that copies pool files up (default the sudo user)
 set -euo pipefail
 
@@ -78,18 +78,22 @@ step "swap"
 # The B1s has 1 GB. One worker peaked at 775 MB in testing, so swap is what
 # turns a burst of drive-radius requests into a slow answer instead of an
 # out-of-memory kill.
-if ! swapon --show=NAME --noheadings | grep -q .; then
-  if [[ ! -f /swapfile ]]; then
-    fallocate -l "${SWAP_GB}G" /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile
+if [[ "$SWAP_GB" == 0 ]]; then
+  echo "left alone (--swap-gb 0)"
+else
+  if ! swapon --show=NAME --noheadings | grep -q .; then
+    if [[ ! -f /swapfile ]]; then
+      fallocate -l "${SWAP_GB}G" /swapfile
+      chmod 600 /swapfile
+      mkswap /swapfile
+    fi
+    swapon /swapfile
   fi
-  swapon /swapfile
+  grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  # Prefer dropping file cache to swapping out the graph a worker searches.
+  echo 'vm.swappiness=10' > /etc/sysctl.d/90-runline.conf
+  sysctl -q -p /etc/sysctl.d/90-runline.conf
 fi
-grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-# Prefer dropping file cache to swapping out the graph a worker searches.
-echo 'vm.swappiness=10' > /etc/sysctl.d/90-runline.conf
-sysctl -q -p /etc/sysctl.d/90-runline.conf
 
 step "users and directories"
 id runline >/dev/null 2>&1 || useradd --system --home-dir /opt/runline --shell /usr/sbin/nologin runline
@@ -154,7 +158,11 @@ echo "uvicorn with $WORKERS worker(s) on $cpus CPU(s), ${total_mb} MB RAM"
 step "caddy for $DOMAIN"
 sites=$(echo "$DOMAIN" | sed 's/,/, /g')
 sed "s|^RUNLINE_SITES {|$sites {|" "$APP/deploy/Caddyfile" > /etc/caddy/Caddyfile.new
-caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile.new >/dev/null
+# Quiet when the config is good; Caddy logs a page of JSON either way.
+if ! output=$(caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile.new 2>&1); then
+  echo "$output" >&2
+  exit 1
+fi
 mv /etc/caddy/Caddyfile.new /etc/caddy/Caddyfile
 systemctl enable --quiet caddy
 systemctl reload-or-restart caddy

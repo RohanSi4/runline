@@ -19,8 +19,9 @@ browser ──HTTPS──> Caddy :443 ──> uvicorn 127.0.0.1:8000 ──> gra
 | `backup_pools.sh` | Copies pool files to Azure Blob Storage | Laptop |
 | `../scripts/pool_smoke.py` | Checks a pool file matches the graph, then that a server answers `source: pool` | Either |
 
-Nothing here has been run against Azure yet. The scripts were tested locally
-as far as possible without a VM (see the end of this file).
+Nothing here has been run against Azure yet. `provision.sh` has run end to
+end in a local Ubuntu 24.04 container under systemd (see the end of this
+file).
 
 ## Sizing: one worker on a B1s
 
@@ -47,6 +48,14 @@ worker's peak, sampled every 30 ms.
 | Live, 3 / 8 / 12 mi | 0.11 / 1.7 / 2.2 s (0.03-2.9 s) |
 | Live with a 5 mile drive radius, 8-12 mi | 7-8 s |
 | Uncovered start, downloads off | 422 in 3 ms |
+
+Linux agrees. The same worst-case sequence against the service as
+`provision.sh` installs it, on Ubuntu 24.04 in a local container (arm64,
+Python 3.12), used 207 MB of anonymous memory once the graph loaded, about
+530 MB with the cache full and 736 MB at worst (757 MB RSS). Rerun with the
+limits a B1s would get (`MemoryHigh=564M`, `MemoryMax=764M`), it finished
+with no OOM kill or restart, 186 MB swapped out and latencies within about
+10%; the container's swap is faster than an Azure disk, so expect more there.
 
 The full 110 MB Charlottesville pool changes the disk numbers, not the memory
 ones. Serving opens the SQLite file per request, reads one 8-9 KB row and
@@ -286,12 +295,16 @@ the VM's IP, then rerun `provision.sh` with both names,
 
 ## What was tested without a VM
 
-- `pool_smoke.py` against a real uvicorn running this checkout with
-  `PYTHONPATH=src`, downloads off and a scratch pools and cache directory:
-  pooled cells answered `source: pool`, the same starts on an unpooled
-  surface answered `live`. It also rejects a pool whose graph hash doesn't
-  match.
-- The remote half of `upload_pools.sh`, run locally with the VM paths swapped
-  for scratch ones: checksum, check against the graph, rename into place.
-- `bash -n` on every script. `provision.sh`, the unit and the Caddyfile have
-  not run on Ubuntu; step 2 is their first real run, so watch its output.
+- `provision.sh` in an Ubuntu 24.04 container booted with systemd, cloning
+  this branch from a git bundle, with `--domain localhost --swap-gb 0`. It ran
+  twice cleanly (the second time as an update), the unit started as
+  `runline` with its environment, and Caddy served `https://localhost` with
+  its internal CA, redirected port 80, gzipped JSON and set the headers.
+- The remote half of `upload_pools.sh`, verbatim, as the uploader in that
+  container: checksum, graph check, rename. Then `pool_smoke.py` inside it
+  against the service: pooled cells answered `source: pool` in 10-41 ms
+  warm, and the same starts on an unpooled surface answered `live`.
+- `pool_smoke.py` rejects a pool whose graph hash doesn't match.
+- Not tested: Azure itself, x86_64, a real certificate from Let's Encrypt,
+  making the swap file, and `backup_pools.sh` (it needs `az`). Step 2 is the
+  first real run, so read its output.
