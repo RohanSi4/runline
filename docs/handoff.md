@@ -4,11 +4,13 @@
 
 Claude's November 10 work is integrated on `codex/resume-runline` in the
 `runline-recovery` checkout. The original five branches and their worktrees
-are preserved. `main` has not been merged or deployed from this checkout.
+are preserved. The integration includes upstream `32a7876`, which hosts the existing API
+on Oracle. This recovery has not changed the deployed backend.
 
 | Work | Current state |
 |---|---|
-| VM hosting | Provisioning, systemd, Caddy, area-pool upload, backup and smoke scripts integrated. Azure deployment remains to be done. |
+| Current hosting | Charlottesville pools are already on Krish's Oracle VM; Vercel proxies `/api`. A live five-mile pool request was checked during recovery. |
+| Optional hosting tools | Provisioning, systemd, Caddy, area-pool upload, backup and smoke scripts integrated as a portable VM recipe. No Azure VM is needed for the existing deployment. |
 | Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Tested with cropped Charlottesville tile graphs; actual DC artifacts are unavailable locally. |
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
@@ -76,12 +78,36 @@ publishing. Recompute pools on those exact graphs using the pool-generation
 fixes in this branch, which exclude unusable loops and choose origins inside
 routable cells. Production rebuilds have not run during this recovery.
 
-### 4. Host and verify
+### 4. Update the existing hosted backend
 
-Follow [deploy/README.md](../deploy/README.md). The last recorded Vercel
-deployment serves Charlottesville live; this recovery did not redeploy it.
-The runbook covers provisioning, upload, backups and rollback. Hosting is
-done only when a deployed request returns `source: pool`.
+Krish already completed pool hosting in upstream PR #4. Vercel serves the
+page and proxies `/api/*` to an Oracle VM at
+`https://129-153-47-234.sslip.io`. A health check and an actual five-mile
+request confirmed the deployed API works during this recovery. The proxy in
+`vercel.json` is preserved.
+
+The recorded server setup is Ubuntu 24.04 on `VM.Standard.A1.Flex` (ARM),
+4 OCPUs, 24 GB RAM and 190 GB disk, in Krish's Oracle account. The existing
+`runline.service` runs uvicorn on `127.0.0.1:8765` with downloads disabled,
+behind Caddy. Only Charlottesville's pool file is hosted.
+
+After a code merge, the recorded update procedure is to SSH into the VM,
+run `git pull` in `~/runline`, then `sudo systemctl restart runline`.
+Confirm the new commit and a request's `source` afterwards. A graph rebuild
+also requires its matching pool file; an old pool will be ignored.
+
+The optional [deploy/README.md](../deploy/README.md) describes a separate
+portable VM recipe. Its paths (`/opt/runline/app` and `/srv/runline`) and
+uvicorn port (8000) differ from the existing Oracle setup. The current
+backend does not need to move to Azure or adopt those paths.
+
+Recorded Oracle traps: the public IP is ephemeral, so recreating the VM
+changes the hostname in `vercel.json`. Its Ubuntu image had an iptables
+`REJECT` rule; allow rules had to precede it and be saved with
+`netfilter-persistent save`. Krish upgraded the account to Pay As You Go to
+obtain A1 capacity and configured a $1 monthly budget email. Check current
+resource eligibility and subscription limits before any infrastructure
+change; these are deployment records, not a fresh billing audit.
 
 Before serving DC, measure its actual tile graphs:
 
@@ -89,10 +115,8 @@ Before serving DC, measure its actual tile graphs:
 .venv/bin/python scripts/measure_tile_graphs.py metros/washington-dc/tile-graphs --together 2
 ```
 
-Keep the complete app on one origin, or explicitly implement CORS if the
-frontend and API are hosted separately. The hosting runbook's cloud pricing
-and eligibility notes must be checked against the selected subscription
-before provisioning.
+Vercel's existing rewrite keeps browser requests on one origin, so no CORS
+change is needed for this deployment.
 
 ### 5. Run the metros on Rivanna
 

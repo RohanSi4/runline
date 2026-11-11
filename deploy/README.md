@@ -1,9 +1,15 @@
-# Hosting RunLine on one VM
+# Optional VM deployment recipe
 
-Handoff task 1: serve route pools in production. Vercel can't hold the 110 MB
-pool file (250 MB limit), and serving needs the pool and the graph on local
-disk, so the whole app moves to a small Linux VM. FastAPI already serves
-`web/`, so one process answers the page and the API:
+Production already serves Charlottesville pools from Krish's Oracle VM,
+with Vercel proxying `/api/*`; see [the handoff](../docs/handoff.md).
+Its existing service runs from `~/runline` on port 8765. The recipe here uses
+`/opt/runline/app` and port 8000, and is intended for a separate deployment,
+not an in-place update of that service.
+
+These scripts can host the whole app on a Linux VM, with optional Azure
+creation and Blob backup commands below. Serving needs the pool and graph
+on local disk. FastAPI already serves `web/`, so one process can answer both
+the page and API:
 
 ```
 browser ──HTTPS──> Caddy :443 ──> uvicorn 127.0.0.1:8000 ──> graphs/ (in the checkout)

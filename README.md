@@ -6,9 +6,9 @@ trails and hills. It suggests up to three routes, favoring fewer traffic
 lights, major-road crossings and repeated sections. Download a route as a
 GPX file, the route format compatible watches and navigation apps import.
 
-**Current coverage:** Charlottesville, Virginia, planned live on the deployed
-app. The code can now serve saved routes, but they are not hosted yet; the top
-50 US metro areas are the goal.
+**Current coverage:** Charlottesville, Virginia, answered from saved routes on
+the deployed app, falling back to live planning when none fit. The top 50 US
+metro areas are the goal.
 
 **Try it:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
 capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
@@ -197,9 +197,9 @@ metros after the shipped areas.
 
 **Status:**
 
-- **Charlottesville:** route pools are computed and serving works locally. The
-  deployed app still plans live because the 110 MB pool file is not hosted;
-  `deploy/README.md` is the runbook for hosting it on a small VM.
+- **Charlottesville:** route pools are computed and served. Vercel proxies
+  `/api` to Krish's Oracle VM, which holds the 110 MB pool file. The optional
+  `deploy/` tooling is a portable VM recipe; the existing backend is retained.
 - **Washington, DC:** the pilot finished, with 72,237 cells and 2.3 GB of pools.
   Serving metro tiles works in tests; serving DC needs its tile graphs and
   plan copied from the cluster (see `docs/handoff.md`, task 2).
