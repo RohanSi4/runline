@@ -16,6 +16,7 @@ trusted input; never point RUNLINE_GRAPHS_DIR at a directory you do not own.
 from __future__ import annotations
 
 import gzip
+import importlib.util
 import json
 import os
 import pickle
@@ -62,13 +63,22 @@ def graphs_root() -> Path:
     return Path(__file__).resolve().parents[2] / "graphs"
 
 
+def _osmnx_installed() -> bool:
+    return importlib.util.find_spec("osmnx") is not None
+
+
 def downloads_allowed() -> bool:
     """Live Overpass downloads are fine locally but never on a serverless host."""
 
     override = os.environ.get("RUNLINE_ALLOW_OSM_DOWNLOAD")
     if override is not None:
         return override.strip().lower() not in {"", "0", "false", "no"}
-    return not os.environ.get("VERCEL")
+    if os.environ.get("VERCEL"):
+        return False
+    # Downloads go through osmnx, which requirements.txt leaves out. A server
+    # installed from it (deploy/provision.sh) would otherwise answer an
+    # uncovered start with an ImportError and a 500, not the coverage message.
+    return _osmnx_installed()
 
 
 @lru_cache(maxsize=4)
