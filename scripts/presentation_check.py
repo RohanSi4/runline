@@ -79,6 +79,7 @@ def main(argv=None) -> int:
     parser.add_argument("--require-pool", action="store_true")
     parser.add_argument("--capture", action="store_true", help="save full responses for a local offline demo")
     parser.add_argument("--timeout", type=float, default=90)
+    parser.add_argument("--expected-commit", help="require /api/version to identify this exact backend release")
     args = parser.parse_args(argv)
     api = args.api.rstrip("/")
     session = requests.Session()
@@ -94,6 +95,11 @@ def main(argv=None) -> int:
         if get("/api/health").json().get("status") != "ok":
             raise ValueError("health check is not ok")
         report["checks"].append("health")
+        if args.expected_commit:
+            report["release"] = get("/api/version").json()
+            if report["release"].get("commit") != args.expected_commit:
+                raise ValueError("API is not running the expected release")
+            report["checks"].append("backend-release")
         report["areas"] = get("/api/areas").json()["areas"]
         if not report["areas"]:
             raise ValueError("no supported areas")

@@ -83,6 +83,16 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/version")
+async def version() -> dict[str, str]:
+    """Identify the API release independently of the proxied frontend."""
+
+    return {
+        "version": app.version,
+        "commit": os.environ.get("RUNLINE_BUILD_SHA") or os.environ.get("VERCEL_GIT_COMMIT_SHA") or "unknown",
+    }
+
+
 @app.post("/api/routes")
 async def routes(request: RouteRequest) -> dict:
     try:
