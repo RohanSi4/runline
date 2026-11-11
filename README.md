@@ -6,9 +6,9 @@ trails and hills. It suggests up to three routes, favoring fewer traffic
 lights, major-road crossings and repeated sections. Download a route as a
 GPX file, the route format compatible watches and navigation apps import.
 
-**Current coverage:** Charlottesville, Virginia, answered from saved routes on
-the deployed app, falling back to live planning when none fit. The top 50 US
-metro areas are the goal.
+**Current coverage:** Charlottesville, Virginia, and the Washington, DC area,
+answered from saved routes on the deployed app, falling back to live planning
+when none fit. The top 50 US metro areas are the goal.
 
 **Try it:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
 capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
@@ -204,9 +204,9 @@ metros after the shipped areas.
 - **Charlottesville:** route pools are computed and served. Vercel proxies
   `/api` to Krish's Oracle VM, which holds the 110 MB pool file. The optional
   `deploy/` tooling is a portable VM recipe; the existing backend is retained.
-- **Washington, DC:** the pilot finished, with 72,237 cells and 2.3 GB of pools.
-  Serving metro tiles works in tests; serving DC needs its tile graphs and
-  plan copied from the cluster (see `docs/handoff.md`, task 2).
+- **Washington, DC:** the pilot's 72,237 cells (2.3 GB of pools) are served
+  from its 230 tile graphs on the Oracle VM; the first request in a tile takes
+  6–9 s while its graph loads (`docs/handoff.md`, task 4).
 - **Top 50 metro areas:** not run yet.
 
 `docs/handoff.md` lists the remaining work, and `slurm/README.md` is the
