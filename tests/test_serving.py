@@ -196,6 +196,20 @@ def test_the_planner_reports_where_routes_came_from(built, pools_dir, tmp_path: 
     assert result.source == "live" and result.candidates
 
 
+def test_a_corrupt_pool_plans_live_instead_of_failing(built, pools_dir, tmp_path: Path, caplog) -> None:
+    area, _, cell, _ = built
+    database = sqlite3.connect(pools_dir / f"{area.slug}.sqlite")
+    database.execute("UPDATE pools SET pool = ? WHERE cell = ?", (b"not lzma at all", cell))
+    database.commit()
+    database.close()
+
+    with caplog.at_level("ERROR", logger="runline.planner"):
+        result = plan_routes(_origin(built), _preferences(), cache_directory=tmp_path, elevation_source="none")
+
+    assert result.source == "live" and result.candidates
+    assert "planning live" in caplog.text
+
+
 def test_the_api_serves_a_pool_route_with_gpx(built, pools_dir) -> None:
     from runline.api import RouteRequest, routes
 

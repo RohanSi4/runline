@@ -153,6 +153,10 @@ def test_merge_indexes_every_planned_cell_by_its_tile(run) -> None:
 
     assert cells == run["owner"]
     assert set(run["pools"]) <= set(cells)
+    database = sqlite3.connect(run["directory"] / "pools.sqlite")
+    built_on = dict(database.execute("SELECT cell, tile FROM pools"))
+    database.close()
+    assert built_on == {cell: run["owner"][cell] for cell in run["pools"]}
     assert all(len(graph) == 16 and radius > 0 for graph, _, radius in tiles.values())
     assert {metro for _, metro, _ in tiles.values()} == {"west-toy", "east-toy"}
     assert meta["metro_index"] == merge_pools.METRO_INDEX_VERSION
@@ -239,6 +243,18 @@ def test_a_tile_graph_that_is_not_the_pools_graph_is_ignored(served, tmp_path, m
     assert "built from graph" in caplog.text
 
 
+def test_a_pool_built_on_another_tile_is_not_served(served, tmp_path, monkeypatch) -> None:
+    directory = _copy_run(served, tmp_path, monkeypatch)
+    cell, origin, miles = _best_request(served)
+    database = sqlite3.connect(directory / "pools.sqlite")
+    database.execute("UPDATE pools SET tile = 'elsewhere' WHERE cell = ?", (cell,))
+    database.commit()
+    database.close()
+    preferences = RoutePreferences(miles, surface=SurfacePreference.MIXED, result_count=1)
+
+    assert serving.serve_from_pool(origin, preferences) is None
+
+
 def test_a_missing_tile_graph_is_a_clear_422(served, tmp_path, monkeypatch) -> None:
     directory = _copy_run(served, tmp_path, monkeypatch)
     cell, origin, miles = _best_request(served)
@@ -275,6 +291,7 @@ def _strip_index(path: Path) -> None:
         INSERT INTO old_tiles SELECT tile, graph FROM tiles;
         DROP TABLE tiles;
         ALTER TABLE old_tiles RENAME TO tiles;
+        ALTER TABLE pools DROP COLUMN tile;
         """
     )
     database.close()
@@ -285,6 +302,7 @@ def _index(path: Path) -> tuple:
     try:
         return (
             sorted(database.execute("SELECT * FROM cells")),
+            sorted(database.execute("SELECT cell, surface, tile FROM pools")),
             sorted(database.execute("SELECT tile, graph, metro, latitude, longitude, radius_meters FROM tiles")),
             sorted(database.execute("SELECT key, value FROM meta")),
         )
@@ -320,6 +338,48 @@ def test_adding_an_index_from_the_wrong_plan_changes_nothing(run, tmp_path) -> N
     assert merge_pools.main(["--plan", str(wrong), "--add-index", str(merged)]) == 1
 
     assert sqlite3.connect(merged).execute("SELECT sql FROM sqlite_master ORDER BY name").fetchall() == before
+
+
+def _rewrite_header(path: Path, **changes) -> None:
+    with gzip.open(path, "rt") as stream:
+        lines = stream.readlines()
+    lines[0] = json.dumps({**json.loads(lines[0]), **changes}) + "\n"
+    with gzip.open(path, "wt") as stream:
+        stream.writelines(lines)
+
+
+def test_merge_refuses_units_from_a_dirty_tree_among_clean_ones(run, tmp_path, capsys) -> None:
+    shards = tmp_path / "shards"
+    shutil.copytree(run["root"] / "shards", shards)
+    first = sorted(shards.iterdir())[0]
+    with gzip.open(first, "rt") as stream:
+        dirty = json.loads(stream.readline())["dirty_src"]
+    _rewrite_header(first, dirty_src=not dirty)
+
+    assert merge_pools.main(["--plan", str(run["directory"] / "plan.json.gz"), "--input", str(shards)]) == 1
+    assert "'dirty_src'" in capsys.readouterr().out
+    assert not (shards / "pools.sqlite").exists()
+
+
+def test_merge_refuses_a_tile_whose_units_were_built_on_different_graphs(run, tmp_path, capsys) -> None:
+    shards = tmp_path / "shards"
+    shutil.copytree(run["root"] / "shards", shards)
+    # Split one unit in two, as a tile with more cells than a unit holds is.
+    unit = run["plan"]["units"][0]
+    halves = [
+        {**unit, "id": f"{unit['id']}a", "cells": unit["cells"][:1]},
+        {**unit, "id": f"{unit['id']}b", "cells": unit["cells"][1:]},
+    ]
+    plan = tmp_path / "plan.json.gz"
+    with gzip.open(plan, "wt") as stream:
+        json.dump({**run["plan"], "units": [*halves, *run["plan"]["units"][1:]]}, stream)
+    original = shards / f"{unit['id']}.jsonl.gz"
+    shutil.copy(original, shards / f"{unit['id']}a.jsonl.gz")
+    original.rename(shards / f"{unit['id']}b.jsonl.gz")
+    _rewrite_header(shards / f"{unit['id']}b.jsonl.gz", graph="0" * 16)
+
+    assert merge_pools.main(["--plan", str(plan), "--input", str(shards)]) == 1
+    assert "recompute the stale units" in capsys.readouterr().out
 
 
 def test_tile_graphs_load_lazily_and_stay_within_the_cache(served, monkeypatch) -> None:

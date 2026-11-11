@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,8 @@ from .osm import generate_loops, graph_radius_meters, prepare_core
 from .scoring import rank_candidates
 from .serving import serve_from_pool
 from .starts import discover_public_starts
+
+LOGGER = logging.getLogger("runline.planner")
 
 
 @dataclass(frozen=True)
@@ -62,7 +65,13 @@ def plan_routes(
     elevation_source: str = "open-meteo",
     start_candidate_limit: int = 5,
 ) -> PlanResult:
-    pooled = serve_from_pool(origin, preferences)
+    try:
+        pooled = serve_from_pool(origin, preferences)
+    except Exception:
+        # Pools are an optimization, never a requirement: a corrupt row or
+        # an unreadable file is logged and the request plans live.
+        LOGGER.exception("serving from pools failed; planning live")
+        pooled = None
     if pooled:
         return PlanResult(candidates=pooled, discovered_starts=0, fetched_elevation_cells=0, warnings=(), source="pool")
 

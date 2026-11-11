@@ -173,7 +173,7 @@ def build_start_candidates(ox, slug: str, latitude: float, longitude: float, rad
     from runline.osm import _routable_core
 
     drive = _routable_core(drive)
-    drive_payload = gzip.compress(pickle.dumps(drive, protocol=5), 6)
+    drive_payload = gzip.compress(pickle.dumps(drive, protocol=5), 6, mtime=0)
     (GRAPHS_DIR / f"{slug}-drive.pkl.gz").write_bytes(drive_payload)
     print(
         f"  {slug}: {len(entries)} start candidates, "
@@ -214,7 +214,9 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
         # instances, so an unbaked graph refetches on every request.
         bake_elevation(slug, graph)
 
-        payload = gzip.compress(pickle.dumps(graph, protocol=5), 6)
+        # mtime=0: pools are tied to this file's sha256, and gzip's header
+        # would otherwise change it on every rebuild.
+        payload = gzip.compress(pickle.dumps(graph, protocol=5), 6, mtime=0)
         GRAPHS_DIR.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(payload)
 
@@ -285,7 +287,7 @@ def main() -> int:
             with gzip.open(path, "rb") as handle:
                 graph = pickle.load(handle)
             bake_elevation(area["slug"], graph)
-            path.write_bytes(gzip.compress(pickle.dumps(graph, protocol=5), 6))
+            path.write_bytes(gzip.compress(pickle.dumps(graph, protocol=5), 6, mtime=0))
         entries = [existing[area["slug"]] for area in selected]
     elif arguments.starts_only:
         import osmnx as ox

@@ -72,6 +72,9 @@ def pools_root() -> Path:
 class PoolFile:
     path: Path
     grid_meters: float
+    # A metro file's rows for one tile only: the pool must be the one built
+    # on the graph serving loads.
+    tile: str | None = None
 
 
 def _current_meta(path: str) -> dict | None:
@@ -149,7 +152,7 @@ def _tile_pool_file(area: Area) -> PoolFile | None:
     # Each tile has its own graph; the merge recorded the hash of each.
     if not _tile_graph_matches(area.metro_pools, tile.slug, tile.graph, str(graph_path), graph_path.stat().st_mtime):
         return None
-    return pools
+    return dataclasses.replace(pools, tile=tile.slug)
 
 
 def pool_file(area: Area) -> PoolFile | None:
@@ -164,7 +167,12 @@ def pool_file(area: Area) -> PoolFile | None:
 def load_pool(pool: PoolFile, cell: str, surface: str) -> dict | None:
     database = sqlite3.connect(f"file:{pool.path}?mode=ro", uri=True)
     try:
-        row = database.execute("SELECT pool FROM pools WHERE cell = ? AND surface = ?", (cell, surface)).fetchone()
+        if pool.tile is None:
+            row = database.execute("SELECT pool FROM pools WHERE cell = ? AND surface = ?", (cell, surface)).fetchone()
+        else:
+            row = database.execute(
+                "SELECT pool FROM pools WHERE cell = ? AND surface = ? AND tile = ?", (cell, surface, pool.tile)
+            ).fetchone()
     finally:
         database.close()
     return decode_pool(row[0]) if row else None

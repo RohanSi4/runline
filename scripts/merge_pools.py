@@ -10,12 +10,15 @@ writes <input>/pools.sqlite, refusing to start while any unit is missing.
 Either way there is one row per (cell, surface). Each row holds the pool
 packed by runline.pools (format 2; read it with runline.pools.decode_pool), so
 the file can be served as-is or uploaded to an object store. Shards built
-from a different graph (area runs) or commit than the first one are refused
-rather than mixed; a metro run records each tile's graph hash in ``tiles``.
+from a different graph (area runs), commit, dirty tree, targets or surfaces
+than the first one are refused rather than mixed; a metro run records each
+tile's graph hash in ``tiles`` and refuses a tile whose units disagree on it.
 
 A metro run also writes the index serving needs (runline.metros): ``cells``
-maps every planned cell to the tile that owns it, ``tiles`` gains each tile's
-metro and disc, and ``meta`` gains the metro labels and ``metro_index``. A
+maps every planned cell to the tile that owns it, ``pools.tile`` records the
+tile each pool was built on (from its shard's header; the two must agree),
+``tiles`` gains each tile's metro and disc, and ``meta`` gains the metro
+labels and ``metro_index``. A
 file merged before the index existed (the DC pilot) gets it from its plan
 alone, without the shards:
 
@@ -102,6 +105,17 @@ def write_index(database: sqlite3.Connection, plan: dict, tiles: dict, labels: d
     stray = database.execute("SELECT COUNT(*) FROM pools WHERE cell NOT IN (SELECT cell FROM cells)").fetchone()[0]
     if stray:
         return f"{stray} pools are for cells the plan does not have; is this its plan?"
+    if "tile" not in {row[1] for row in database.execute("PRAGMA table_info(pools)")}:
+        # Merged before pools recorded their tile: every unit's shard was
+        # its planned tile's, so the plan says which. This rewrites every
+        # row, so it takes minutes and its own size in free disk on DC.
+        database.execute("ALTER TABLE pools ADD COLUMN tile TEXT")
+        database.execute("UPDATE pools SET tile = (SELECT tile FROM cells WHERE cells.cell = pools.cell)")
+    elsewhere = database.execute(
+        "SELECT COUNT(*) FROM pools JOIN cells USING (cell) WHERE pools.tile IS NOT cells.tile"
+    ).fetchone()[0]
+    if elsewhere:
+        return f"{elsewhere} pools were built on a tile the plan does not give their cell; is this its plan?"
     grid = database.execute("SELECT value FROM meta WHERE key = 'grid_meters'").fetchone()
     if grid is None or json.loads(grid[0]) != plan["grid_meters"]:
         return "the file and the plan use different grids"
@@ -173,8 +187,9 @@ def main(argv=None) -> int:
         if missing:
             print(f"{len(missing)} of {len(shards)} units missing, e.g. {missing[:3]}; rerun the failed tasks")
             return 1
-        # Tiles have their own graphs, so only the build must match.
-        keys = ("format", "commit", "grid_meters", "targets")
+        # Tiles have their own graphs, so only the build must match; each
+        # tile's graph is checked across its units below.
+        keys = ("format", "commit", "dirty_src", "grid_meters", "targets", "surfaces")
         output = arguments.output or arguments.input / "pools.sqlite"
     else:
         shards = sorted((arguments.input / arguments.area).glob("shard-*.jsonl.gz"))
@@ -184,7 +199,7 @@ def main(argv=None) -> int:
         if arguments.expect_shards and len(shards) != arguments.expect_shards:
             print(f"found {len(shards)} shards, expected {arguments.expect_shards}; rerun the failed tasks")
             return 1
-        keys = ("format", "area", "graph", "commit", "grid_meters", "targets")
+        keys = ("format", "area", "graph", "commit", "dirty_src", "grid_meters", "targets", "surfaces")
         output = arguments.output or arguments.input / f"{arguments.area}.sqlite"
 
     temporary = output.with_suffix(".tmp")
@@ -199,10 +214,13 @@ def main(argv=None) -> int:
             surface TEXT NOT NULL,
             loops INTEGER NOT NULL,
             pool BLOB NOT NULL,
+            tile TEXT,
             PRIMARY KEY (cell, surface)
         ) WITHOUT ROWID;
         """
     )
+    # tile: the tile whose graph a metro pool's node ids belong to, from its
+    # shard's header; NULL for an area run.
 
     def refuse(message: str) -> int:
         print(message)
@@ -211,6 +229,7 @@ def main(argv=None) -> int:
         return 1
 
     reference = None
+    tile_graphs: dict[str, str | None] = {}
     rows = 0
     for shard in shards:
         with gzip.open(shard, "rt", encoding="utf-8") as stream:
@@ -222,13 +241,21 @@ def main(argv=None) -> int:
                 reference = build
             elif build != reference:
                 return refuse(f"{shard.name} was built from {build}, not {reference}")
-            if "tile" in header:
-                database.execute("INSERT OR REPLACE INTO tiles VALUES (?, ?)", (header["tile"], header["graph"]))
+            tile = header.get("tile")
+            if tile is not None:
+                # Units of one tile on different graphs would serve some
+                # cells' node ids on the wrong graph.
+                if tile_graphs.setdefault(tile, header["graph"]) != header["graph"]:
+                    return refuse(
+                        f"{shard.name} was built on {tile} graph {header['graph']}, "
+                        f"other units on {tile_graphs[tile]}; recompute the stale units"
+                    )
+                database.execute("INSERT OR REPLACE INTO tiles VALUES (?, ?)", (tile, header["graph"]))
             for line in stream:
                 record = json.loads(line)
                 database.execute(
-                    "INSERT OR REPLACE INTO pools VALUES (?, ?, ?, ?)",
-                    (record["cell"], record["surface"], record["loops"], base64.b64decode(record["pool"])),
+                    "INSERT OR REPLACE INTO pools VALUES (?, ?, ?, ?, ?)",
+                    (record["cell"], record["surface"], record["loops"], base64.b64decode(record["pool"]), tile),
                 )
                 rows += 1
     database.executemany(
