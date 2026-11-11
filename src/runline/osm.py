@@ -19,6 +19,7 @@ from .coverage import (
     unsupported_message,
 )
 from .geo import destination, distance_meters
+from .metros import metro_tile_graph, metro_tile_radius_meters
 from .models import (
     METERS_PER_MILE,
     Coordinate,
@@ -992,6 +993,16 @@ def load_graph(origin: Coordinate, radius_meters: float, cache_directory: Path) 
     area = find_area(origin, radius_meters)
     if area is not None:
         return crop_to_radius(load_area_graph(area), origin, radius_meters)
+
+    # A metro pool's tile holds every loop up to the tiles' longest target
+    # from any start in a cell it owns (runline.tiling); longer requests get
+    # what the tile has.
+    tile = metro_tile_graph(origin)
+    if tile is not None:
+        graph = crop_to_radius(tile, origin, radius_meters)
+        if radius_meters > metro_tile_radius_meters():
+            graph.graph["coverage_limited"] = True
+        return graph
 
     if not downloads_allowed():
         partial_area = containing_area(origin)

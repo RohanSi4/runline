@@ -11,7 +11,10 @@ Either way there is one row per (cell, surface). Each row holds the pool
 packed by runline.pools (format 2; read it with runline.pools.decode_pool), so
 the file can be served as-is or uploaded to an object store. Shards built
 from a different graph (area runs) or commit than the first one are refused
-rather than mixed; a metro run records each tile's graph hash in ``tiles``.
+rather than mixed; a metro run records each tile's graph hash in ``tiles``,
+each cell's owning tile in ``cells`` and the plan's metros in ``meta``, which
+serving (runline.metros) needs. scripts/index_pool_tiles.py adds the last two
+to a file merged before they existed.
 """
 
 from __future__ import annotations
@@ -41,9 +44,16 @@ def main(argv=None) -> int:
     if bool(arguments.area) == bool(arguments.plan):
         parser.error("pass exactly one of --area or --plan")
 
+    extra = {}
+    database_cells = []
     if arguments.plan:
         with gzip.open(arguments.plan, "rt", encoding="utf-8") as stream:
-            units = [unit["id"] for unit in json.load(stream)["units"]]
+            plan = json.load(stream)
+        units = [unit["id"] for unit in plan["units"]]
+        extra = {"metros": plan.get("metros", [])}
+        # Serving reads a cell's owning tile to load the graph its pool was
+        # built on, or to plan live there when the cell has no usable pool.
+        database_cells = [(cell, unit["tile"]) for unit in plan["units"] for cell in unit["cells"]]
         shards = [arguments.input / f"{unit}.jsonl.gz" for unit in units]
         missing = [shard.name for shard in shards if not shard.exists()]
         if missing:
@@ -70,6 +80,7 @@ def main(argv=None) -> int:
         """
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE tiles (tile TEXT PRIMARY KEY, graph TEXT) WITHOUT ROWID;
+        CREATE TABLE cells (cell TEXT PRIMARY KEY, tile TEXT NOT NULL) WITHOUT ROWID;
         CREATE TABLE pools (
             cell TEXT NOT NULL,
             surface TEXT NOT NULL,
@@ -107,9 +118,10 @@ def main(argv=None) -> int:
                     (record["cell"], record["surface"], record["loops"], base64.b64decode(record["pool"])),
                 )
                 rows += 1
+    database.executemany("INSERT OR REPLACE INTO cells VALUES (?, ?)", database_cells)
     database.executemany(
         "INSERT INTO meta VALUES (?, ?)",
-        [(key, json.dumps(value)) for key, value in reference.items()],
+        [(key, json.dumps(value)) for key, value in {**reference, **extra}.items()],
     )
     database.commit()
     database.close()

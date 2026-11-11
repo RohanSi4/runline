@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
 from .coverage import CoverageError, area_labels, areas, load_area_places
+from .metros import metro_labels
 from .export import candidate_feature
 from .gpx import candidate_to_gpx
 from .models import (
@@ -147,7 +148,7 @@ async def routes(request: RouteRequest) -> dict:
 
 @app.get("/api/areas")
 async def supported_areas() -> dict:
-    return {"areas": list(area_labels())}
+    return {"areas": list(dict.fromkeys((*area_labels(), *metro_labels())))}
 
 
 @app.get("/api/places")

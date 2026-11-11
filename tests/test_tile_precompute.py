@@ -159,6 +159,11 @@ def test_merge_takes_every_unit_of_the_plan(tile_run) -> None:
     assert all(decode_pool(pool)["loops"] for _, pool in rows)
     tiles = dict(database.execute("SELECT tile, graph FROM tiles"))
     assert tiles["sea-000"] is None and len(tiles["cville-000"]) == 16
+    # Every planned cell names its tile, pooled or not, for serving.
+    cells = dict(database.execute("SELECT cell, tile FROM cells"))
+    assert cells == {**{cell: "cville-000" for cell in [*tile_run["cells"], "200:0:0"]}, "200:0:1": "sea-000"}
+    metros = json.loads(database.execute("SELECT value FROM meta WHERE key = 'metros'").fetchone()[0])
+    assert metros == ["test"]
 
 
 def test_merge_waits_for_missing_units(tile_run, tmp_path: Path) -> None:

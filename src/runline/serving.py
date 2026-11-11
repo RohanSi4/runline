@@ -11,6 +11,9 @@ None whenever it cannot give a full answer (no file, an old format, a pool
 built from a different graph, a cell with no pool, too few loops in the
 distance band that don't double back, a drive-radius request) and the planner
 searches live.
+
+Area pools are one graph per file; metro pools (runline.metros) are served on
+the graph of the tile that owns the start's cell.
 """
 
 from __future__ import annotations
@@ -20,7 +23,6 @@ import functools
 import hashlib
 import json
 import logging
-import os
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +31,7 @@ import networkx as nx
 
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id
+from .metros import find_tile, load_tile, pools_root
 from .models import METERS_PER_MILE, Coordinate, RouteCandidate, RouteMetrics, RoutePreferences, StartCandidate
 from .osm import (
     _distinct_by_length,
@@ -52,13 +55,6 @@ MAX_CONNECTOR_METERS = 300.0
 # ranking's limit are left out, and with too few left the planner searches
 # live, which has many more loops to choose from.
 MAX_DOUBLED_BACK = MAX_REPEATED
-
-
-def pools_root() -> Path:
-    override = os.environ.get("RUNLINE_POOLS_DIR")
-    if override:
-        return Path(override)
-    return Path(__file__).resolve().parents[2] / "pools"
 
 
 @dataclass(frozen=True)
@@ -100,7 +96,11 @@ def pool_file(area: Area) -> PoolFile | None:
 
 
 def load_pool(pool: PoolFile, cell: str, surface: str) -> dict | None:
-    database = sqlite3.connect(f"file:{pool.path}?mode=ro", uri=True)
+    return _read_pool(pool.path, cell, surface)
+
+
+def _read_pool(path: Path, cell: str, surface: str) -> dict | None:
+    database = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     try:
         row = database.execute("SELECT pool FROM pools WHERE cell = ? AND surface = ?", (cell, surface)).fetchone()
     finally:
@@ -161,23 +161,47 @@ def _route_graph(graph: nx.MultiDiGraph, routes: list[tuple[int, ...]], preferen
     return small
 
 
+def _pool_source(origin: Coordinate):
+    """(pool file, cell, graph loader) for the origin, or None.
+
+    An area pool comes first; otherwise a metro run whose ``cells`` table owns
+    the origin's cell, served on that cell's tile graph.
+    """
+
+    area = containing_area(origin)
+    if area is not None:
+        pool_source = pool_file(area)
+        if pool_source is not None:
+            cell = cell_id(origin.latitude, origin.longitude, pool_source.grid_meters)
+            return pool_source.path, cell, lambda: load_area_graph(area)
+    match = find_tile(origin)
+    if match is None:
+        return None
+
+    def tile_graph():
+        loaded = load_tile(match)
+        # Pool node ids only mean something on the graph they were built from.
+        return loaded[0] if loaded and loaded[1] else None
+
+    return match.pool.path, match.cell, tile_graph
+
+
 def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[RouteCandidate] | None:
     """Ranked routes from the origin's pool, or None if live planning should answer."""
 
     if preferences.drive_radius_miles:
         return None
-    area = containing_area(origin)
-    if area is None:
+    source = _pool_source(origin)
+    if source is None:
         return None
-    pool_source = pool_file(area)
-    if pool_source is None:
-        return None
-    cell = cell_id(origin.latitude, origin.longitude, pool_source.grid_meters)
-    pool = load_pool(pool_source, cell, preferences.surface.value)
+    path, cell, load_graph = source
+    pool = _read_pool(path, cell, preferences.surface.value)
     if pool is None:
         return None
 
-    graph = load_area_graph(area)
+    graph = load_graph()
+    if graph is None:
+        return None
     start_node = _nearest_node(graph, origin)
     connector = _connector(graph, start_node, pool["origin_node"])
     if connector is None:
