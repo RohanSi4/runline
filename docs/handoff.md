@@ -1,5 +1,13 @@
 # RunLine handoff
 
+## Unified public app
+
+The original URL now uses the combined API: rebuilt Charlottesville locally,
+DC through the existing Oracle regional service. See
+[unified-deployment.md](unified-deployment.md) for deployment/rollback and
+[presentation-script.md](presentation-script.md) for the click-through.
+The earlier deployment records below remain as history.
+
 ## Presentation preparation
 
 Integration PR #5 is merged. Presentation work is on

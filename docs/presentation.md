@@ -1,5 +1,14 @@
 # Capstone presentation — November 11, 1 pm Eastern
 
+## Current unified app
+
+Use https://runline-nine.vercel.app for both rebuilt Charlottesville and DC.
+Both public URLs use the combined backend; no tab switch is required for DC.
+See [presentation-script.md](presentation-script.md) for the five-minute script
+and [unified-deployment.md](unified-deployment.md) for the hosting arrangement.
+The pinned snapshot and rehearsals below document the earlier standalone
+Charlottesville release.
+
 ## Links
 
 - Public presentation build: https://runline-capstone.vercel.app
