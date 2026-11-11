@@ -149,14 +149,11 @@ sliver. Two options that share over 70% of their length count as one.
 
 ## Architecture
 
-The figure records the original Oracle deployment. The combined API now serves
-rebuilt Charlottesville on Vercel and forwards DC to Oracle.
+<img src="docs/readme/architecture.svg" alt="The browser loads runline-nine.vercel.app, whose /api rewrite reaches FastAPI on runline-capstone.vercel.app with the rebuilt Charlottesville graph and complete pool. On a coverage miss it forwards the request through RUNLINE_REMOTE_API to the Oracle VM, which serves Washington, DC from its tile graphs and pools." width="100%">
 
-The diagram describes the original Oracle-backed deployment. The separate
-capstone build runs the same API directly on Vercel with the rebuilt
-Charlottesville graph and complete 95 MB pool file.
-
-<img src="docs/readme/architecture.svg" alt="The Vercel page proxies API requests to FastAPI on Oracle, which ranks saved loops first and plans live when no pool fits. Pools and their exact graph files live on the VM." width="100%">
+The capstone backend is released from a committed SHA with
+`scripts/release_capstone.py`, which verifies its data against
+`deploy/capstone-artifacts.json`; see [unified deployment](docs/unified-deployment.md).
 
 | Part | What it does | Where |
 |---|---|---|

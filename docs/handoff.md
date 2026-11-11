@@ -6,6 +6,8 @@ The original URL now uses the combined API: rebuilt Charlottesville locally,
 DC through the existing Oracle regional service. See
 [unified-deployment.md](unified-deployment.md) for deployment/rollback and
 [presentation-script.md](presentation-script.md) for the click-through.
+Redeploy the capstone backend with `scripts/release_capstone.py`, which
+verifies its data against `deploy/capstone-artifacts.json`.
 The earlier deployment records below remain as history.
 
 ## Presentation preparation
