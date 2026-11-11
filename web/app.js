@@ -245,6 +245,9 @@ function selectRoute(index, fit = true) {
 
 function renderRoutes(payload) {
   clearRoutes();
+  if (payload.origin) {
+    setStart(payload.origin.latitude, payload.origin.longitude, address.value || "Start here");
+  }
   state.routes = payload.routes;
   const routeList = document.getElementById("route-list");
   routeList.replaceChildren();
