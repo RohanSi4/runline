@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/assets/vendor/leaflet-1.9.4/leaflet.css">
   <link rel="manifest" href="/assets/manifest.webmanifest">
   <link rel="icon" href="/assets/app-icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/styles.css?v=6">
+  <link rel="stylesheet" href="/assets/styles.css?v=7">
 </head>
 <body>
   <a class="skip-link" href="#route-form">Skip to route planner</a>
@@ -23,19 +23,12 @@
       <span class="brand-mark" aria-hidden="true"><span></span></span>
       <span>runline<span class="brand-period">.</span></span>
     </a>
-    <div class="header-section"><span class="header-divider" aria-hidden="true"></span><span>Route studio</span></div>
-    <p class="header-note">A better way around.</p>
+    <div class="header-section"><span class="header-divider" aria-hidden="true"></span><h1>Route planner</h1></div>
     <button id="mobile-map" class="mobile-map" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>View map</button>
   </header>
 
   <main class="app-shell">
     <section class="planner" aria-label="Route planner">
-      <div class="intro">
-        <div class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span>Go out. Come back different.</div>
-        <h1>Your distance. Fewer interruptions.</h1>
-        <p>Quiet streets. Open trails. A route that feels like you.</p>
-      </div>
-
       <form id="route-form" tabindex="-1">
         <fieldset class="route-mode">
           <legend>Route type</legend>
@@ -45,7 +38,7 @@
             <input id="mode-point-to-point" type="radio" name="route_mode" value="point_to_point">
             <label for="mode-point-to-point"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10m-4-4 4 4-4 4"/></svg>Start → finish</label>
           </div>
-          <p class="mode-hint" id="mode-hint"></p>
+          <p class="mode-hint" id="mode-hint" hidden></p>
         </fieldset>
         <div class="field start-field">
           <label for="address"><span class="field-index">01</span>Start</label>
@@ -89,7 +82,7 @@
         </div>
 
         <fieldset>
-          <legend>Surface <span>Find your footing</span></legend>
+          <legend>Surface</legend>
           <div class="segmented" data-control="surface">
             <button type="button" aria-pressed="false" data-value="road"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 3-3 18M17 3l3 18M12 4v3m0 4v3m0 4v3"/></svg>Road</button>
             <button class="active" type="button" aria-pressed="true" data-value="mixed"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19c0-6 16-4 16-10 0-3-4-4-7-4M4 5h4m-2-2v4"/></svg>Mixed</button>
@@ -98,7 +91,7 @@
         </fieldset>
 
         <fieldset id="elevation-controls">
-          <legend>Elevation <span>Choose your effort</span></legend>
+          <legend>Elevation</legend>
           <div class="segmented" data-control="elevation">
             <button type="button" aria-pressed="false" data-value="flat">Flat</button>
             <button class="active" type="button" aria-pressed="true" data-value="balanced">Balanced</button>
@@ -116,7 +109,6 @@
           </div>
         </fieldset>
 
-        <div class="priority-note"><span class="priority-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><div><strong>Built for fewer interruptions</strong><span>Signals, busy roads and repeats count against a route.</span></div></div>
         <div class="planner-action">
           <button class="generate" type="submit"><span>Generate routes</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
           <p class="form-status" id="form-status" aria-live="polite"></p>
@@ -125,40 +117,22 @@
       </form>
 
       <section class="results" id="results" aria-label="Route results" hidden>
-        <div class="results-heading"><div><span class="eyebrow">The shortlist</span><h2>Best routes</h2></div><span id="result-context"></span></div>
+        <div class="results-heading"><div><h2 id="route-count">Routes</h2><p id="request-summary"></p></div><span id="result-context"></span></div>
         <div id="route-list"></div>
       </section>
-      <footer class="planner-footer"><span class="footer-mark" aria-hidden="true">↻</span>Made for the way you move.</footer>
-      <p class="install-hint">Take Runline with you. Add it to your home screen from your browser’s menu.</p>
     </section>
 
     <section class="map-panel" aria-label="Route map" tabindex="-1">
       <div id="map"></div>
       <div class="map-toolbar">
-        <div class="map-context"><span class="map-context-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 17a5 5 0 0 1 0-10h12a4 4 0 0 1 0 8H9m3-3-3 3 3 3"/></svg></span><div><h2 id="route-count">Your next loop</h2><p id="request-summary">Set your distance. Find your rhythm.</p></div><span id="route-source" class="source-badge" hidden></span></div>
         <div class="map-actions">
           <button id="map-style" type="button" aria-pressed="false" aria-label="Toggle light basemap" title="Toggle light basemap"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>
           <button id="reset-view" type="button" aria-label="Fit route map" title="Fit route map"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/></svg></button>
         </div>
       </div>
 
-      <div class="map-welcome" aria-label="Map instructions">
-        <div class="welcome-symbol" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="49"/><circle cx="60" cy="60" r="34"/><path d="M28 68c5-32 60-42 65-13 5 26-51 42-52 19-1-18 25-29 34-15"/><circle class="welcome-point" cx="28" cy="68" r="5"/></svg></div>
-        <span class="eyebrow">Less stop. More flow.</span>
-        <h2>The long way.<br><em>Your way.</em></h2>
-        <p>Choose where to start.<br>We’ll find your way from there.</p>
-        <div class="welcome-hint"><span aria-hidden="true">↖</span>Or click anywhere on the map to start.</div>
-      </div>
-      <div class="map-tip" id="map-tip"><span></span>Type a place, or click the map</div>
-      <p id="route-insight" class="route-insight" hidden></p>
+      <div class="map-tip" id="map-tip"><span></span>Click map to set start</div>
 
-      <div class="surface-panel" id="surface-panel" hidden>
-        <div class="surface-heading"><span>Under your feet</span><span class="surface-key"><i aria-hidden="true"></i>Trail</span></div>
-        <div class="surface-track" aria-hidden="true"><span id="surface-trail-fill"></span></div>
-        <div class="surface-labels"><span id="surface-trail-label">—</span><span id="surface-other-label">—</span></div>
-      </div>
-
-      <div class="map-compass" aria-hidden="true"><span>N</span><svg viewBox="0 0 24 24"><path d="m12 3 6 18-6-5-6 5 6-18Z"/></svg></div>
       <div class="selected-summary" id="selected-summary" hidden>
         <div class="summary-primary"><span id="summary-distance">—</span><small id="summary-start">Start here</small></div>
         <div><span id="summary-gain">—</span><small>Elevation gain</small></div>
@@ -171,7 +145,7 @@
 
       <section class="run-panel" id="run-panel" aria-labelledby="run-title" hidden>
         <div class="run-panel-heading">
-          <div><span class="eyebrow">Out in the open</span><h2 id="run-title" tabindex="-1">Your run</h2></div>
+          <div><h2 id="run-title" tabindex="-1">Your run</h2></div>
           <button id="run-close" class="run-close" type="button">Exit run</button>
         </div>
         <p class="run-status" id="run-status" role="status">Ready when you are.</p>
@@ -192,6 +166,6 @@
   </main>
   <script src="/assets/vendor/leaflet-1.9.4/leaflet.js"></script>
   <script src="/assets/run.js?v=1"></script>
-  <script src="/assets/app.js?v=6"></script>
+  <script src="/assets/app.js?v=7"></script>
 </body>
 </html>
