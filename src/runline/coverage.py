@@ -26,6 +26,7 @@ from pathlib import Path
 import networkx as nx
 
 from .geo import distance_meters
+from .metros import metro_labels
 from .models import Coordinate
 
 MANIFEST_NAME = "manifest.json"
@@ -192,10 +193,11 @@ def unsupported_message(origin: Coordinate, radius_meters: float) -> str:
     """
 
     available = areas()
-    if not available:
+    labels = tuple(dict.fromkeys((*(area.label for area in available), *metro_labels())))
+    if not labels:
         return "No map data is available in this deployment yet."
 
-    joined = ", ".join(area.label for area in available)
+    joined = ", ".join(labels)
     containing = [
         area
         for area in available

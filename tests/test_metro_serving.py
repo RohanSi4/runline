@@ -127,7 +127,7 @@ def test_a_start_outside_every_metro_cell_is_unsupported(metro, tmp_path: Path) 
     elsewhere = Coordinate(metro["origin"].latitude + 0.05, metro["origin"].longitude)
     assert metros.find_tile(elsewhere) is None
     assert serving.serve_from_pool(elsewhere, _preferences()) is None
-    with pytest.raises(CoverageError):
+    with pytest.raises(CoverageError, match="Supported areas: testmetro"):
         plan_routes(elsewhere, _preferences(), cache_directory=tmp_path, elevation_source="none")
 
 
