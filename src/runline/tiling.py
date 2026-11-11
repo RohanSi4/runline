@@ -35,6 +35,7 @@ from .geo import EARTH_RADIUS_METERS
 from .grid import (
     METERS_PER_DEGREE_LATITUDE,
     METERS_PER_DEGREE_LONGITUDE,
+    cell_centre,
     cell_half_diagonal_meters,
     column_width_degrees,
     row_centre_latitude,
@@ -411,3 +412,59 @@ def owned_cells(config: dict, boundaries: dict) -> dict[str, list[str]]:
     for (row, column), index in zip(keys.tolist(), owner.tolist()):
         owned[tiles[index]["slug"]].append(f"{grid}:{row}:{column}")
     return owned
+
+
+def owned_cells_after(config: dict, boundaries: dict, done: list[str]) -> dict[str, list[str]]:
+    """``owned_cells`` for the tiles left once the ``done`` metros have run alone.
+
+    A metro run on its own (a pilot, ``plan_tile_pools.py --metro``) computed
+    every cell of its own boundary on its own tiles. Pooled with its
+    neighbours, ownership differs at the edges: some of its cells go to a
+    neighbour's tile, which would compute them a second time, and some of the
+    neighbour's cells go to its tiles, which no later run includes. So, from
+    the all-metro ownership: drop the done metros' cells from every other
+    tile, and give each cell a done tile owned, but the done run never had,
+    to the nearest other tile that reaches it. The result has no done tile,
+    and with the done runs it covers every cell exactly once.
+    """
+
+    done = set(done)
+    unknown = done - {metro["slug"] for metro in config["metros"]}
+    if unknown:
+        raise ValueError(f"no metro matching {sorted(unknown)}")
+    grid_meters = config["grid_meters"]
+    computed: set[str] = set()
+    for metro in config["metros"]:
+        if metro["slug"] in done:
+            computed.update(metro_cells(boundaries[metro["slug"]], grid_meters).ids())
+
+    full = owned_cells(config, boundaries)
+    done_tiles = {tile["slug"] for metro in config["metros"] if metro["slug"] in done for tile in metro["tiles"]}
+    owned = {
+        tile: [cell for cell in cells if cell not in computed]
+        for tile, cells in full.items()
+        if tile not in done_tiles
+    }
+    orphans = sorted(
+        {cell for tile, cells in full.items() if tile in done_tiles for cell in cells if cell not in computed}
+    )
+    if orphans:
+        tiles = [tile for metro in config["metros"] if metro["slug"] not in done for tile in metro["tiles"]]
+        centres = [cell_centre(cell) for cell in orphans]
+        owner = assign_cells(
+            np.array([centre.latitude for centre in centres]),
+            np.array([centre.longitude for centre in centres]),
+            np.array([tile["latitude"] for tile in tiles]),
+            np.array([tile["longitude"] for tile in tiles]),
+            np.array([tile["reach_meters"] for tile in tiles]),
+        )
+        if (owner < 0).any():
+            raise ValueError(f"{int((owner < 0).sum())} cells are reached only by a done metro's tiles")
+        for cell, index in zip(orphans, owner.tolist()):
+            owned[tiles[index]["slug"]].append(cell)
+
+    def order(cell: str) -> tuple[int, int]:
+        _, row, column = cell.split(":")
+        return int(row), int(column)
+
+    return {tile: sorted(cells, key=order) for tile, cells in owned.items()}

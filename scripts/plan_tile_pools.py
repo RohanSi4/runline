@@ -22,6 +22,15 @@ The plan also lists each tile's metro and disc and each metro's label
 ("tiles", "labels"), which merge_pools.py copies into the merged file for
 serving. Keep plan.json.gz with the pools: it is how a merged file gets its
 cell index back (merge_pools.py --add-index).
+
+--done names metros that already ran on their own (the DC pilot). A pilot
+covers its own boundary on its own tiles, which is not quite the share an
+all-metro plan would give it: a neighbour's tiles own some of its cells, and
+its tiles own some of the neighbour's. With --done those pilot cells leave
+every batch, and the neighbour cells the pilot's tiles would have owned go to
+the nearest other tile that reaches them (runline.tiling.owned_cells_after),
+so the pilot plus the batches still compute every cell once. For DC that
+moves 604 cells out of Baltimore's batch and 480 Baltimore cells into it.
 """
 
 from __future__ import annotations
@@ -38,7 +47,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from shapely.geometry import shape  # noqa: E402
 
-from runline.tiling import metro_label, owned_cells  # noqa: E402
+from runline.tiling import metro_label, owned_cells, owned_cells_after  # noqa: E402
 
 DEFAULT_CELLS_PER_UNIT = 50
 PLAN_VERSION = 1
@@ -96,7 +105,12 @@ def main(argv=None) -> int:
     chosen = parser.add_mutually_exclusive_group()
     chosen.add_argument("--metro", nargs="+", help="only these metro slugs (a pilot)")
     chosen.add_argument("--batch", nargs="+", help="these metros' share of a plan of every metro")
+    parser.add_argument(
+        "--done", nargs="+", default=[], help="with --batch: metros that already ran on their own (a pilot)"
+    )
     arguments = parser.parse_args(argv)
+    if arguments.done and not arguments.batch:
+        parser.error("--done needs --batch")
 
     config = json.loads(arguments.metros.read_text(encoding="utf-8"))
     if arguments.metro:
@@ -108,13 +122,21 @@ def main(argv=None) -> int:
         feature["properties"]["slug"]: shape(feature["geometry"])
         for feature in json.loads(arguments.boundaries.read_text(encoding="utf-8"))["features"]
     }
-    owned = owned_cells(config, boundaries)
     metros = [metro["slug"] for metro in config["metros"]]
     if arguments.batch:
-        unknown = sorted(set(arguments.batch) - set(metros))
+        unknown = sorted((set(arguments.batch) | set(arguments.done)) - set(metros))
         if unknown:
             print(f"no metro matching {unknown}")
             return 1
+        overlap = sorted(set(arguments.batch) & set(arguments.done))
+        if overlap:
+            print(f"{overlap} already ran; take them out of the batch or out of --done")
+            return 1
+    if arguments.done:
+        owned = owned_cells_after(config, boundaries, arguments.done)
+    else:
+        owned = owned_cells(config, boundaries)
+    if arguments.batch:
         kept = {tile["slug"] for metro in config["metros"] if metro["slug"] in arguments.batch for tile in metro["tiles"]}
         owned = {tile: cells for tile, cells in owned.items() if tile in kept}
         metros = [slug for slug in metros if slug in arguments.batch]
@@ -124,6 +146,7 @@ def main(argv=None) -> int:
         "grid_meters": config["grid_meters"],
         "max_miles": config["max_miles"],
         "metros": metros,
+        "done": sorted(arguments.done),
         "units": units,
         # For serving: merge_pools.py copies these into the merged file, so
         # it does not depend on config/metros.json staying unchanged.
