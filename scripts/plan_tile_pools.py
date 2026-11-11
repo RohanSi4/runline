@@ -17,6 +17,11 @@ cell, so 50 cells is about an hour.
 metro and keeps only the named metros' tiles, so batches run one after
 another split the cells exactly as one run of all 50 would, with no cell in
 two batches. slurm/run_batch.sh uses it with config/metro-batches.json.
+
+The plan also lists each tile's metro and disc and each metro's label
+("tiles", "labels"), which merge_pools.py copies into the merged file for
+serving. Keep plan.json.gz with the pools: it is how a merged file gets its
+cell index back (merge_pools.py --add-index).
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from shapely.geometry import shape  # noqa: E402
 
-from runline.tiling import owned_cells  # noqa: E402
+from runline.tiling import metro_label, owned_cells  # noqa: E402
 
 DEFAULT_CELLS_PER_UNIT = 50
 PLAN_VERSION = 1
@@ -53,6 +58,33 @@ def plan_units(owned: dict[str, list[str]], cells_per_unit: int) -> list[dict]:
                 }
             )
     return units
+
+
+def plan_index(config: dict, owned: dict[str, list[str]], metros: list[str]) -> dict:
+    """Each planned tile's metro and disc, and each metro's label.
+
+    Serving finds a request's tile from its cell, then needs the tile's disc
+    to know whether live planning on the tile graph covers the route. Older
+    plans lack these keys; merge_pools.py then reads config/metros.json.
+    """
+
+    tiles = {
+        tile["slug"]: {
+            "metro": metro["slug"],
+            "latitude": tile["latitude"],
+            "longitude": tile["longitude"],
+            "radius_meters": tile["radius_meters"],
+        }
+        for metro in config["metros"]
+        for tile in metro["tiles"]
+        if tile["slug"] in owned
+    }
+    labels = {
+        metro["slug"]: metro_label(metro.get("name", metro["slug"]))
+        for metro in config["metros"]
+        if metro["slug"] in metros
+    }
+    return {"tiles": tiles, "labels": labels}
 
 
 def main(argv=None) -> int:
@@ -93,6 +125,9 @@ def main(argv=None) -> int:
         "max_miles": config["max_miles"],
         "metros": metros,
         "units": units,
+        # For serving: merge_pools.py copies these into the merged file, so
+        # it does not depend on config/metros.json staying unchanged.
+        **plan_index(config, owned, metros),
     }
     arguments.output.mkdir(parents=True, exist_ok=True)
     path = arguments.output / "plan.json.gz"

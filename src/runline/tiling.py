@@ -370,6 +370,15 @@ def metro_slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text).strip("-")
 
 
+def metro_label(name: str) -> str:
+    """'New York--Jersey City--Newark, NY--NJ' -> 'New York, NY', for the app."""
+
+    place, _, states = name.rpartition(",")
+    if not place:
+        return name.split("--")[0].strip()
+    return f"{place.split('--')[0].strip()}, {states.strip().split('--')[0]}"
+
+
 def owned_cells(config: dict, boundaries: dict) -> dict[str, list[str]]:
     """Cell ids each tile of a metros config owns, over all metros at once.
 

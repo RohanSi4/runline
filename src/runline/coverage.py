@@ -11,6 +11,10 @@ Graphs are stored as gzipped pickles rather than GraphML: for a 40k-node graph
 that is a 0.9s load with a 145MB peak, against 6.3s and 737MB for GraphML.
 The pickles are build artifacts committed alongside the code, so they are
 trusted input; never point RUNLINE_GRAPHS_DIR at a directory you do not own.
+
+Metros precomputed on tiles (runline.metros) are covered too: after the
+manifest's areas, a start inside a metro gets its owning tile as an Area.
+The same trust applies to RUNLINE_METROS_DIR.
 """
 
 from __future__ import annotations
@@ -45,6 +49,9 @@ class Area:
     starts_filename: str | None = None
     drive_filename: str | None = None
     places_filename: str | None = None
+    # A metro tile (runline.metros): its run's merged pools file, and
+    # ``filename`` is the tile graph's full path. None for a shipped area.
+    metro_pools: str | None = None
 
     def covers(self, origin: Coordinate, radius_meters: float) -> bool:
         """True when a disc of ``radius_meters`` around origin fits inside this area."""
@@ -97,7 +104,11 @@ def areas() -> tuple[Area, ...]:
 
 
 def area_labels() -> tuple[str, ...]:
-    return tuple(area.label for area in areas())
+    """Shipped areas, then the metros served from tiles."""
+
+    from .metros import metro_labels
+
+    return tuple(dict.fromkeys((*(area.label for area in areas()), *metro_labels())))
 
 
 def find_area(origin: Coordinate, radius_meters: float) -> Area | None:
@@ -105,7 +116,10 @@ def find_area(origin: Coordinate, radius_meters: float) -> Area | None:
 
     covering = [area for area in areas() if area.covers(origin, radius_meters)]
     if not covering:
-        return None
+        from .metros import tile_area
+
+        tile = tile_area(origin)
+        return tile if tile is not None and tile.covers(origin, radius_meters) else None
     return min(covering, key=lambda area: distance_meters(area.center, origin))
 
 
@@ -124,6 +138,10 @@ def load_area_graph(area: Area) -> nx.MultiDiGraph:
     disk.
     """
 
+    if area.metro_pools:
+        from .metros import load_tile_graph
+
+        return load_tile_graph(area)
     path = graphs_root() / area.filename
     if not path.exists():
         raise CoverageError(
@@ -141,7 +159,9 @@ def containing_area(origin: Coordinate) -> Area | None:
         if distance_meters(area.center, origin) <= area.radius_meters
     ]
     if not inside:
-        return None
+        from .metros import tile_area
+
+        return tile_area(origin)
     return min(inside, key=lambda area: distance_meters(area.center, origin))
 
 
@@ -192,10 +212,11 @@ def unsupported_message(origin: Coordinate, radius_meters: float) -> str:
     """
 
     available = areas()
-    if not available:
+    labels = area_labels()
+    if not labels:
         return "No map data is available in this deployment yet."
 
-    joined = ", ".join(area.label for area in available)
+    joined = ", ".join(labels)
     containing = [
         area
         for area in available

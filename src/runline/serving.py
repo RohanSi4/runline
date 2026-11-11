@@ -11,6 +11,12 @@ None whenever it cannot give a full answer (no file, an old format, a pool
 built from a different graph, a cell with no pool, too few loops in the
 distance band that don't double back, a drive-radius request) and the planner
 searches live.
+
+A start inside a metro precomputed on tiles (runline.metros) resolves the
+same way: its cell names the owning tile, ``containing_area`` returns that
+tile as an Area, ``pool_file`` checks the metro's file and the tile's graph
+hash, and ``load_area_graph`` loads that tile's graph, which is the one the
+pool's node ids belong to. On a miss, live planning runs on the same tile.
 """
 
 from __future__ import annotations
@@ -29,6 +35,7 @@ import networkx as nx
 
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id
+from .metros import tile_for
 from .models import METERS_PER_MILE, Coordinate, RouteCandidate, RouteMetrics, RoutePreferences, StartCandidate
 from .osm import (
     _distinct_by_length,
@@ -67,9 +74,8 @@ class PoolFile:
     grid_meters: float
 
 
-@functools.lru_cache(maxsize=8)
-def _checked_pool_file(path: str, graph_path: str, modified: float) -> PoolFile | None:
-    """The pool file if it matches this code and this graph; cached per mtime."""
+def _current_meta(path: str) -> dict | None:
+    """A pool file's meta if it is readable and in this code's pool format."""
 
     try:
         database = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
@@ -83,16 +89,72 @@ def _checked_pool_file(path: str, graph_path: str, modified: float) -> PoolFile 
     if meta.get("format") != FORMAT_VERSION:
         LOGGER.warning("ignoring %s: pool format %s, expected %s", path, meta.get("format"), FORMAT_VERSION)
         return None
+    return meta
+
+
+def _fingerprint(path: Path) -> str:
+    """The graph hash scripts/precompute_pools.py records, read in chunks."""
+
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()[:16]
+
+
+@functools.lru_cache(maxsize=8)
+def _checked_pool_file(path: str, graph_path: str, modified: float) -> PoolFile | None:
+    """The pool file if it matches this code and this graph; cached per mtime."""
+
+    meta = _current_meta(path)
+    if meta is None:
+        return None
     # Pools store node ids, which only mean something on the graph they were
     # built from. The hash matches scripts/precompute_pools.py.
-    fingerprint = hashlib.sha256(Path(graph_path).read_bytes()).hexdigest()[:16]
+    fingerprint = _fingerprint(Path(graph_path))
     if meta.get("graph") != fingerprint:
         LOGGER.warning("ignoring %s: built from graph %s, not %s", path, meta.get("graph"), fingerprint)
         return None
     return PoolFile(Path(path), float(meta["grid_meters"]))
 
 
+@functools.lru_cache(maxsize=8)
+def _checked_metro_file(path: str, modified: float) -> PoolFile | None:
+    """A metro's merged file if its pools are in this code's format; cached per mtime."""
+
+    meta = _current_meta(path)
+    return PoolFile(Path(path), float(meta["grid_meters"])) if meta else None
+
+
+@functools.lru_cache(maxsize=4096)
+def _tile_graph_matches(pools: str, tile: str, expected: str, graph_path: str, modified: float) -> bool:
+    """Whether a tile graph is the one its pools were built on; hashed once per mtime."""
+
+    fingerprint = _fingerprint(Path(graph_path))
+    if fingerprint != expected:
+        LOGGER.warning("ignoring %s pools in %s: built from graph %s, not %s", tile, pools, expected, fingerprint)
+    return fingerprint == expected
+
+
+def _tile_pool_file(area: Area) -> PoolFile | None:
+    """The metro file for a tile Area, if its pools fit this code and the tile's graph."""
+
+    tile = tile_for(area)
+    graph_path = Path(area.filename)
+    if tile is None or tile.graph is None or not graph_path.exists():
+        return None
+    pools = _checked_metro_file(area.metro_pools, Path(area.metro_pools).stat().st_mtime)
+    if pools is None:
+        return None
+    # Each tile has its own graph; the merge recorded the hash of each.
+    if not _tile_graph_matches(area.metro_pools, tile.slug, tile.graph, str(graph_path), graph_path.stat().st_mtime):
+        return None
+    return pools
+
+
 def pool_file(area: Area) -> PoolFile | None:
+    if area.metro_pools:
+        return _tile_pool_file(area)
     path = pools_root() / f"{area.slug}.sqlite"
     if not path.exists():
         return None

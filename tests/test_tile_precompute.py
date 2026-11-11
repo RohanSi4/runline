@@ -77,6 +77,10 @@ def test_units_split_tiles_and_tasks_cover_every_unit_once() -> None:
         assert [unit for block in blocks for unit in block] == units
 
 
+def _disc(centre: Coordinate, radius_meters: float) -> dict:
+    return {"latitude": centre.latitude, "longitude": centre.longitude, "radius_meters": radius_meters}
+
+
 @pytest.fixture(scope="module")
 def tile_run(tmp_path_factory) -> dict:
     """A plan with the shipped Charlottesville graph standing in for a tile."""
@@ -100,6 +104,11 @@ def tile_run(tmp_path_factory) -> dict:
             {"id": "cville-000-p00", "tile": "cville-000", "cells": [*cells, "200:0:0"]},
             {"id": "sea-000-p00", "tile": "sea-000", "cells": ["200:0:1"]},
         ],
+        "tiles": {
+            "cville-000": {"metro": "test", **_disc(area.center, area.radius_meters)},
+            "sea-000": {"metro": "test", **_disc(Coordinate(0.001, 0.003), 1000.0)},
+        },
+        "labels": {"test": "Test, VA"},
     }
     plan_path = root / "plan.json.gz"
     with gzip.open(plan_path, "wt", encoding="utf-8") as stream:
