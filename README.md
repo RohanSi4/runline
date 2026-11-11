@@ -184,8 +184,8 @@ loops, the 10 within ±0.25 mi of 5 miles, and the 3 that ranking picks.</sub>
 <sub>Local integration measurements: 40 seeded Charlottesville starts × five
 3–12 mile distances, mixed surface, using pools for 278 sampled cells.
 Quality is compared on the 192 pool hits, including connectors; latency is
-measured over each source's answers. The deployed backend has not yet been
-updated with these changes. See [validation](docs/validation.md) for the
+measured over each source's answers. The deployed backend has run these
+changes since November 11. See [validation](docs/validation.md) for the
 before/after checks, scope and reproduction.</sub>
 
 **To try it locally,** put a pool file at `pools/charlottesville-va.sqlite`.
@@ -207,7 +207,8 @@ metros after the shipped areas.
 - **Washington, DC:** the pilot's 72,237 cells (2.3 GB of pools) are served
   from its 230 tile graphs on the Oracle VM; the first request in a tile takes
   6–9 s while its graph loads (`docs/handoff.md`, task 4).
-- **Top 50 metro areas:** not run yet.
+- **Top 50 metro areas:** batch `b1` (New York and Los Angeles) is running on
+  the UVA CS cluster; the other batches have not started.
 
 `docs/handoff.md` lists the remaining work, and `slurm/README.md` is the
 cluster runbook.
