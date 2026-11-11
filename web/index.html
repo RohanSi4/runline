@@ -3,39 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f2ea">
-  <title>Runline</title>
+  <meta name="theme-color" content="#101713">
+  <meta name="description" content="Find your next running loop. Compare distance, trails, climbing and traffic signals, then take your route with you.">
+  <title>Runline — Find your rhythm</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Manrope:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="/assets/styles.css?v=3">
+  <link rel="stylesheet" href="/assets/styles.css?v=5">
 </head>
 <body>
+  <a class="skip-link" href="#route-form">Skip to route planner</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Runline home">
+      <span class="brand-mark" aria-hidden="true"><span></span></span>
+      <span>runline<span class="brand-period">.</span></span>
+    </a>
+    <div class="header-section"><span class="header-divider" aria-hidden="true"></span><span>Route studio</span></div>
+    <p class="header-note">A better way around.</p>
+    <button id="mobile-map" class="mobile-map" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>View map</button>
+  </header>
+
   <main class="app-shell">
     <section class="planner" aria-label="Route planner">
-      <header class="brand-row">
-        <a class="brand" href="/" aria-label="Runline home">
-          <span class="brand-mark" aria-hidden="true"><span></span></span>
-          <span>runline</span>
-        </a>
-        <span class="mode-pill">Loop builder</span>
-      </header>
-
       <div class="intro">
+        <div class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span>Go out. Come back different.</div>
         <h1>Your distance. Fewer interruptions.</h1>
-        <p>Routes shaped around the way you actually want to run.</p>
+        <p>Quiet streets. Open trails. A loop that feels like you.</p>
       </div>
 
-      <form id="route-form">
+      <form id="route-form" tabindex="-1">
         <div class="field start-field">
-          <label for="address">Start</label>
+          <label for="address"><span class="field-index">01</span>Start</label>
           <div class="input-shell">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
             <input id="address" name="address" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="address-suggestions" value="The Rotunda, UVA" placeholder="Start typing a street or place">
-            <button class="icon-button" id="locate" type="button" aria-label="Use my location">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-            </button>
+            <button class="icon-button" id="locate" type="button" aria-label="Use my location" title="Use my location"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
           </div>
           <ul class="suggestions" id="address-suggestions" role="listbox" aria-label="Address suggestions" hidden></ul>
           <input id="latitude" type="hidden" value="38.035556">
@@ -44,7 +47,7 @@
 
         <div class="distance-row">
           <div class="field distance-field">
-            <label for="distance">Distance</label>
+            <label for="distance"><span class="field-index">02</span>Distance</label>
             <div class="distance-input"><input id="distance" type="number" min="1" max="30" step="0.5" value="3" required><span>miles</span></div>
           </div>
           <div class="quick-distances" aria-label="Quick distances">
@@ -56,16 +59,16 @@
         </div>
 
         <fieldset>
-          <legend>Surface</legend>
+          <legend>Surface <span>Find your footing</span></legend>
           <div class="segmented" data-control="surface">
-            <button type="button" aria-pressed="false" data-value="road">Road</button>
-            <button class="active" type="button" aria-pressed="true" data-value="mixed">Mixed</button>
-            <button type="button" aria-pressed="false" data-value="trail">Trail</button>
+            <button type="button" aria-pressed="false" data-value="road"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 3-3 18M17 3l3 18M12 4v3m0 4v3m0 4v3"/></svg>Road</button>
+            <button class="active" type="button" aria-pressed="true" data-value="mixed"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19c0-6 16-4 16-10 0-3-4-4-7-4M4 5h4m-2-2v4"/></svg>Mixed</button>
+            <button type="button" aria-pressed="false" data-value="trail"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3-7 10h4l-5 6h16l-5-6h4L12 3ZM12 19v3"/></svg>Trail</button>
           </div>
         </fieldset>
 
         <fieldset>
-          <legend>Elevation</legend>
+          <legend>Elevation <span>Choose your effort</span></legend>
           <div class="segmented" data-control="elevation">
             <button type="button" aria-pressed="false" data-value="flat">Flat</button>
             <button class="active" type="button" aria-pressed="true" data-value="balanced">Balanced</button>
@@ -74,7 +77,7 @@
         </fieldset>
 
         <fieldset>
-          <legend>Better starts <span>max drive</span></legend>
+          <legend>Better starts <span>Max drive</span></legend>
           <div class="segmented four" data-control="drive">
             <button class="active" type="button" aria-pressed="true" data-value="0">Here</button>
             <button type="button" aria-pressed="false" data-value="1">1 mi</button>
@@ -83,35 +86,57 @@
           </div>
         </fieldset>
 
-        <div class="priority-note">
-          <span class="priority-icon" aria-hidden="true"></span>
-          <div><strong>Low-interruption routing</strong><span>Signals and major crossings carry the highest penalty.</span></div>
+        <div class="priority-note"><span class="priority-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><div><strong>Built for fewer interruptions</strong><span>Signals, busy roads and repeats count against a route.</span></div></div>
+        <div class="planner-action">
+          <button class="generate" type="submit"><span>Generate routes</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
+          <p class="form-status" id="form-status" aria-live="polite"></p>
+          <p class="coverage-hint" id="coverage-hint" hidden></p>
         </div>
-
-        <button class="generate" type="submit"><span>Generate routes</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
-        <p class="form-status" id="form-status" aria-live="polite"></p>
-        <p class="coverage-hint" id="coverage-hint" hidden></p>
       </form>
 
       <section class="results" id="results" aria-label="Route results" hidden>
-        <div class="results-heading"><h2>Best routes</h2><span id="result-context"></span></div>
+        <div class="results-heading"><div><span class="eyebrow">The shortlist</span><h2>Best routes</h2></div><span id="result-context"></span></div>
         <div id="route-list"></div>
       </section>
+      <footer class="planner-footer"><span class="footer-mark" aria-hidden="true">↻</span>Made for the way you move.</footer>
     </section>
 
-    <section class="map-panel" aria-label="Route map">
+    <section class="map-panel" aria-label="Route map" tabindex="-1">
       <div id="map"></div>
+      <div class="map-toolbar">
+        <div class="map-context"><span class="map-context-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 17a5 5 0 0 1 0-10h12a4 4 0 0 1 0 8H9m3-3-3 3 3 3"/></svg></span><div><h2 id="route-count">Your next loop</h2><p id="request-summary">Set your distance. Find your rhythm.</p></div><span id="route-source" class="source-badge" hidden></span></div>
+        <div class="map-actions">
+          <button id="map-style" type="button" aria-pressed="false" aria-label="Toggle light basemap" title="Toggle light basemap"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button>
+          <button id="reset-view" type="button" aria-label="Fit route map" title="Fit route map"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/></svg></button>
+        </div>
+      </div>
+
+      <div class="map-welcome" aria-label="Map instructions">
+        <div class="welcome-symbol" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="49"/><circle cx="60" cy="60" r="34"/><path d="M28 68c5-32 60-42 65-13 5 26-51 42-52 19-1-18 25-29 34-15"/><circle class="welcome-point" cx="28" cy="68" r="5"/></svg></div>
+        <span class="eyebrow">Less stop. More flow.</span>
+        <h2>The long way.<br><em>Your way.</em></h2>
+        <p>Choose a start and a distance.<br>We’ll find a few ways around.</p>
+        <div class="welcome-hint"><span aria-hidden="true">↖</span>Or click anywhere on the map to start.</div>
+      </div>
       <div class="map-tip" id="map-tip"><span></span>Type a place, or click the map</div>
+      <p id="route-insight" class="route-insight" hidden></p>
+
+      <div class="surface-panel" id="surface-panel" hidden>
+        <div class="surface-heading"><span>Under your feet</span><span class="surface-key"><i aria-hidden="true"></i>Trail</span></div>
+        <div class="surface-track" aria-hidden="true"><span id="surface-trail-fill"></span></div>
+        <div class="surface-labels"><span id="surface-trail-label">—</span><span id="surface-other-label">—</span></div>
+      </div>
+
+      <div class="map-compass" aria-hidden="true"><span>N</span><svg viewBox="0 0 24 24"><path d="m12 3 6 18-6-5-6 5 6-18Z"/></svg></div>
       <div class="selected-summary" id="selected-summary" hidden>
-        <div><span id="summary-distance">—</span><small id="summary-start">Start here</small></div>
-        <div><span id="summary-gain">—</span><small>Elevation</small></div>
-        <div><span id="summary-signals">—</span><small>Signals</small></div>
-        <button id="download-gpx" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>GPX</button>
+        <div class="summary-primary"><span id="summary-distance">—</span><small id="summary-start">Start here</small></div>
+        <div><span id="summary-gain">—</span><small>Elevation gain</small></div>
+        <div><span id="summary-signals">—</span><small>Traffic signals</small></div>
+        <button id="download-gpx" type="button" aria-label="Download selected route as GPX"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v4h14v-4"/></svg>Download GPX</button>
       </div>
     </section>
   </main>
-
   <script src="/assets/vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script src="/assets/app.js?v=4"></script>
+  <script src="/assets/app.js?v=5"></script>
 </body>
 </html>
