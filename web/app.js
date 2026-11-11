@@ -261,9 +261,9 @@ function invalidateRoutes() {
   clearRoutes();
   state.request = null;
   document.body.classList.remove("has-routes");
-  ["results", "selected-summary", "route-source", "route-insight", "surface-panel"].forEach((id) => setOptionalHidden(id, true));
-  optionalText("route-count", state.mode === "point_to_point" ? "Your next route" : "Your next loop");
-  optionalText("request-summary", state.mode === "point_to_point" ? "Choose your start and finish." : "Set your distance. Find your rhythm.");
+  ["results", "selected-summary"].forEach((id) => setOptionalHidden(id, true));
+  optionalText("route-count", "Routes");
+  optionalText("request-summary", "");
   if (!state.loading) showStatus("");
 }
 
@@ -277,24 +277,6 @@ function requestSummary(request) {
   const elevation = { flat: "Flat", balanced: "Balanced", hilly: "Hilly" }[request.elevation] || "Balanced";
   if (request.mode === "point_to_point") return `Start → finish · ${surface}`;
   return `${request.distance_miles} mi · ${surface} · ${elevation}`;
-}
-
-function updateSelectedDetails(metrics) {
-  const signals = metrics.traffic_signal_events;
-  const crossings = metrics.major_crossing_events;
-  const repetition = Math.round(metrics.repeated_fraction * 100);
-  optionalText("route-insight", `${signals} mapped signal${signals === 1 ? "" : "s"} · ${crossings} major crossing${crossings === 1 ? "" : "s"} · ${repetition}% repeated`);
-  setOptionalHidden("route-insight", false);
-  const trail = Math.round(metrics.trail_fraction * 100);
-  optionalText("surface-trail-label", `${trail}% trail`);
-  optionalText("surface-other-label", `${100 - trail}% other surfaces`);
-  const fill = document.getElementById("surface-trail-fill");
-  if (fill) fill.style.width = `${trail}%`;
-  const panel = document.getElementById("surface-panel");
-  if (panel) {
-    panel.hidden = false;
-    panel.setAttribute("aria-label", `Surface composition: ${trail}% trail, ${100 - trail}% other surfaces`);
-  }
 }
 
 function selectRoute(index, fit = true) {
@@ -321,7 +303,6 @@ function selectRoute(index, fit = true) {
   optionalText("summary-gain", metrics.elevation_coverage >= 0.95 ? `${Math.round(metrics.elevation_gain_feet)} ft` : "—");
   optionalText("summary-signals", String(metrics.traffic_signal_events));
   setOptionalHidden("selected-summary", false);
-  updateSelectedDetails(metrics);
   if (fit) map.fitBounds(state.layers[index].getBounds().pad(0.12));
 }
 
@@ -436,10 +417,8 @@ function renderRoutes(payload, request = null) {
   map.fitBounds(allBounds.pad(0.1));
   setOptionalHidden("results", false);
   optionalText("result-context", payload.discovered_starts ? `${payload.discovered_starts} nearby starts checked` : "Starting here");
-  optionalText("route-count", `${state.routes.length} route${state.routes.length === 1 ? "" : "s"} to explore`);
+  optionalText("route-count", `${state.routes.length} route${state.routes.length === 1 ? "" : "s"}`);
   optionalText("request-summary", requestSummary(request));
-  optionalText("route-source", payload.source === "pool" ? "Saved route matches" : "Freshly planned");
-  setOptionalHidden("route-source", false);
   selectRoute(0, false);
   const results = document.getElementById("results");
   // Reveal the cards within the desktop planner without moving the mobile
@@ -575,7 +554,7 @@ async function loadCoverage() {
     const { areas } = await response.json();
     if (!areas || !areas.length) return;
     const hint = document.getElementById("coverage-hint");
-    hint.textContent = `Map data available for ${areas.join(" · ")}`;
+    hint.textContent = areas.join(" · ");
     hint.hidden = false;
   } catch (_error) {
     // The hint is decorative; failing to load it must not block the form.
@@ -608,6 +587,8 @@ function pickEndpoint(target) {
   document.getElementById("pick-start")?.setAttribute("aria-pressed", String(target === "start"));
   document.getElementById("pick-finish")?.setAttribute("aria-pressed", String(target === "finish"));
   showStatus(`Click the map to set your ${target}.`);
+  const tip = document.getElementById("map-tip");
+  if (tip) { tip.textContent = `Click map to set ${target}`; tip.hidden = false; }
   if (window.matchMedia?.("(max-width: 780px)").matches) jumpToMap();
 }
 
@@ -621,6 +602,7 @@ function setRouteMode(mode) {
   distanceInput.disabled = direct;
   distanceInput.required = !direct;
   destinationAddress.required = direct;
+  setOptionalHidden("mode-hint", !direct);
   document.body.classList.toggle("point-to-point", direct);
   if (state.finishMarker) state.finishMarker.remove();
   state.finishMarker = null;
@@ -628,8 +610,6 @@ function setRouteMode(mode) {
     setFinish(destinationLatitude.value, destinationLongitude.value, destinationAddress.value);
   }
   if (latitude.value && longitude.value) setStart(latitude.value, longitude.value, address.value);
-  const copy = document.querySelector(".map-welcome > p");
-  if (copy) copy.textContent = direct ? "Choose a start and finish. Find a quieter way there." : "Choose a start and a distance. We’ll find a few ways around.";
   if (direct) pickEndpoint("finish");
 }
 

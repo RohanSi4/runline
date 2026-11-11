@@ -265,25 +265,12 @@ test("missing elevation coverage is shown as unavailable rather than zero climbi
   assert.equal(ui.get("summary-gain").textContent, "—");
 });
 
-test("selected surface composition uses each route's measured fraction", async () => {
-  const ui = app(), pending = ui.submit(); ui.respond(); await pending;
-  assert.equal(ui.get("surface-trail-fill").style.width, "20%");
-  assert.equal(ui.get("surface-trail-label").textContent, "20% trail");
-  assert.equal(ui.get("surface-other-label").textContent, "80% other surfaces");
-  await ui.get("route-list").children[1].fire("click");
-  assert.equal(ui.get("surface-trail-fill").style.width, "80%");
-  assert.equal(ui.get("surface-trail-label").textContent, "80% trail");
-  assert.equal(ui.get("surface-other-label").textContent, "20% other surfaces");
-  assert.match(ui.get("surface-panel").getAttribute("aria-label"), /80% trail/);
-});
-
 test("changing the start clears old route exports and measured details", async () => {
   const ui = app(), pending = ui.submit(); ui.respond(); await pending;
   ui.get("address").value = "A different synthetic place";
   await ui.get("address").fire("input");
   assert.equal(ui.state().routes.length, 0);
   assert.equal(ui.get("selected-summary").hidden, true);
-  assert.equal(ui.get("surface-panel").hidden, true);
   await ui.get("download-gpx").fire("click");
   assert.equal(ui.blobs.length, 0);
 });

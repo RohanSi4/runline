@@ -15,7 +15,8 @@ def test_health_and_frontend_are_served() -> None:
     response = asyncio.run(index())
     frontend = Path(response.path).read_text(encoding="utf-8")
 
-    assert "Your distance. Fewer interruptions." in frontend
+    assert 'id="route-form"' in frontend
+    assert 'id="start-run"' in frontend
 
 
 def test_backend_release_can_be_verified_independently_of_frontend(monkeypatch) -> None:
