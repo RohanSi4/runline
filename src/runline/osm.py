@@ -27,7 +27,7 @@ from .models import (
     RoutePreferences,
     SurfacePreference,
 )
-from .scoring import MIN_COMPACTNESS, ROUND_ENOUGH, rank_candidates
+from .scoring import MAX_REPEATED, MIN_COMPACTNESS, ROUND_ENOUGH, rank_candidates
 
 
 TRAIL_HIGHWAYS = {"bridleway", "footway", "path", "track"}
@@ -920,6 +920,11 @@ def generate_loops(
         if 0.55 * preferences.target_distance_miles <= metrics.distance_miles <= 1.5 * preferences.target_distance_miles:
             candidates.append(RouteCandidate(f"route-{len(candidates) + 1:03d}", tuple(nodes), (), metrics))
 
+    if pool_size is not None:
+        # Serving never answers with a loop that doubles back (see
+        # serving.MAX_DOUBLED_BACK), so such loops would only take the slots
+        # of ones it can serve. Live ranking keeps them as a last resort.
+        candidates = [candidate for candidate in candidates if candidate.metrics.repeated_fraction <= MAX_REPEATED]
     pool = _distinct_by_length(
         collapsed,
         rank_candidates(candidates, preferences),

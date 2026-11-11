@@ -124,6 +124,12 @@ in the distance band.
   pool quality figures read slightly better than they should.
 - Consider returning 2 routes when only 2 are in band.
 
+**Status (branch `pool-hit-rate`, stopped early at the usage limit):**
+- Done: loops are restarted where they pass closest to the runner, read from the runner's cell and its 8 neighbours, and the whole drawn route (connector included) is measured with `measure_route`. Pool mode drops loops over `MAX_REPEATED`, and a cell's origin must lie inside the cell. Both precompute changes must land before task 4.
+- Measured (compare_pools, 40 starts x 5 distances, mixed, local pools for 278 cells): main today is 56%, not 71%, because fc527ee's doubling-back filter came after that figure (24402ba's serving gives exactly 71% on the same pools). The precompute fix alone gives 61%, nearest-point anchoring 77%, and all nine cells 96% (8 misses, 2 starts; start 25 is a 2-node fragment) at 71 ms median, with crossings/mi .208 against .299 when neighbours are only a fallback.
+- Two routes when only 2 are in band would rescue 3 of the 10 remaining misses (27 of 87 before), so it is not worth an API change.
+- Left: bench/shape_audit before and after for the osm.py change (pool mode only; expected identical, but unverified, though commit 549657c says identical), the live-vs-pool quality table from `compare_pools.py` with live planning, and README/routing-study numbers. `load_pool` is now unused (`load_pools` replaced it), so put the serve-metro-tiles corrupt-pool handling there when merging.
+
 ### 4. Run the top 50 metros
 
 Follow `slurm/README.md`. The estimate, scaled from DC, is about 65,000 CPU-hours
