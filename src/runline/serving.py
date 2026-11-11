@@ -268,7 +268,10 @@ def _route_graph(graph: nx.MultiDiGraph, routes: list[tuple[int, ...]], preferen
     def add(u: int, v: int) -> None:
         if small.has_edge(u, v):
             return
-        best = min(graph[u][v].values(), key=lambda data: _edge_preference_cost(data, graph.nodes[v], preferences))
+        best = min(
+            graph[u][v].values(),
+            key=lambda data: _edge_preference_cost(data, graph.nodes[v], preferences, graph.nodes[u]),
+        )
         small.add_edge(u, v, **best)
         small.nodes[u].update(graph.nodes[u])
         small.nodes[v].update(graph.nodes[v])

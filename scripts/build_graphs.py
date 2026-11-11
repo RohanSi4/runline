@@ -202,12 +202,15 @@ def build_area(area: dict, *, force: bool, known: dict | None = None) -> dict:
             latitude, longitude = ox.geocoder.geocode(area["query"])
             latitude, longitude = float(latitude), float(longitude)
 
-        graph = ox.graph.graph_from_point(
-            (latitude, longitude),
-            dist=radius,
-            network_type="walk",
-            simplify=True,
-            retain_all=True,
+        # What ox.graph.graph_from_point(..., network_type="walk",
+        # simplify=True, retain_all=True) builds, plus the signal tags and
+        # nodes it would drop (runline.pbf.walk_graph_from_responses).
+        from osmnx import _overpass
+        from runline.pbf import tile_polygons, walk_graph_from_responses
+
+        polygon, buffered = tile_polygons(latitude, longitude, radius)
+        graph = walk_graph_from_responses(
+            _overpass._download_overpass_network(buffered, "walk", None), polygon, buffered
         )
         # Bake terrain elevation into the graph. The per-request Open-Meteo
         # cache lives in /tmp on a serverless host and is wiped between

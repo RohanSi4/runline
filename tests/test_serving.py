@@ -15,7 +15,7 @@ from runline.coverage import areas, graphs_root, load_area_graph
 from runline.geo import destination, distance_meters
 from runline.grid import cell_centre, cell_id, neighbouring_cells
 from runline.models import Coordinate, RoutePreferences, SurfacePreference
-from runline.osm import _is_signal, _nearest_node, doubled_back_fraction
+from runline.osm import _nearest_node, doubled_back_fraction, signal_events
 from runline.planner import plan_routes
 from runline.pools import FORMAT_VERSION, encode_pool
 from scripts.precompute_pools import area_cells, cell_origin, cell_pool, prepare_area
@@ -181,10 +181,14 @@ def test_a_connector_is_measured_like_the_rest_of_the_route(built, pools_dir) ->
     nodes = route.node_ids
 
     def cheapest(u, v):
-        return min(graph[u][v].values(), key=lambda data: serving._edge_preference_cost(data, graph.nodes[v], _preferences()))
+        return min(
+            graph[u][v].values(),
+            key=lambda data: serving._edge_preference_cost(data, graph.nodes[v], _preferences(), graph.nodes[u]),
+        )
 
     meters = sum(float(cheapest(u, v)["length"]) for u, v in zip(nodes, nodes[1:]))
-    signals = sum(1 for node in nodes[1:] if _is_signal(graph.nodes[node]))
+    small = serving._route_graph(graph, [nodes], _preferences())
+    signals = signal_events(small, list(nodes))
     assert route.metrics.distance_miles == pytest.approx(meters / 1609.344)
     assert route.metrics.traffic_signal_events == signals
     assert abs(route.metrics.distance_miles - MILES) <= 0.25
