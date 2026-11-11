@@ -32,6 +32,12 @@ WEB_ROOT = PROJECT_ROOT / "web"
 
 
 def cache_root() -> Path:
+    # A server install runs as a user that cannot write the checkout, so it
+    # names a directory it owns (deploy/runline.service uses systemd's
+    # CacheDirectory) rather than falling through to a shared /tmp.
+    override = os.environ.get("RUNLINE_CACHE_DIR")
+    if override:
+        return Path(override)
     if os.environ.get("VERCEL"):
         return Path(tempfile.gettempdir()) / "runline-cache"
     local_cache = PROJECT_ROOT / "cache"

@@ -58,6 +58,13 @@ You own the Vercel project, so moving the site or its domain is your call.
 - Set `RUNLINE_POOLS_DIR` if the files live outside the repo's `pools/`.
 - Done when a deployed request returns `source: pool`.
 
+**Progress (branch `host-pools-vm`).** Everything short of creating the VM is
+done: `deploy/README.md` is the runbook (exact `az` commands, provisioning,
+pool upload, Blob backups, and the Vercel decision), with measured memory per
+worker behind its choice of one worker on a B1s. `scripts/pool_smoke.py`
+checks a pool file against the graph and then that a server answers
+`source: pool`. Not yet run on Azure.
+
 ### 2. Serve DC
 
 Copying the file is not enough. Serving assumes one area, one graph and one

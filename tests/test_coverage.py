@@ -103,6 +103,16 @@ def test_downloads_are_disabled_on_vercel(monkeypatch) -> None:
     assert coverage.downloads_allowed() is True
 
 
+def test_downloads_need_osmnx_unless_forced(monkeypatch) -> None:
+    monkeypatch.delenv("RUNLINE_ALLOW_OSM_DOWNLOAD", raising=False)
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setattr(coverage, "_osmnx_installed", lambda: False)
+    assert coverage.downloads_allowed() is False
+
+    monkeypatch.setattr(coverage, "_osmnx_installed", lambda: True)
+    assert coverage.downloads_allowed() is True
+
+
 def test_missing_manifest_yields_no_areas(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("RUNLINE_GRAPHS_DIR", str(tmp_path / "absent"))
     coverage._read_manifest.cache_clear()

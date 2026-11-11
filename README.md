@@ -198,7 +198,8 @@ metros after the shipped areas.
 **Status:**
 
 - **Charlottesville:** route pools are computed and serving works locally. The
-  deployed app still plans live because the 110 MB pool file is not hosted.
+  deployed app still plans live because the 110 MB pool file is not hosted;
+  `deploy/README.md` is the runbook for hosting it on a small VM.
 - **Washington, DC:** the pilot finished, with 72,237 cells and 2.3 GB of pools.
   Serving metro tiles works in tests; serving DC needs its tile graphs and
   plan copied from the cluster (see `docs/handoff.md`, task 2).
