@@ -8,7 +8,7 @@ import pytest
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="client-state checks need Node")
-def test_address_response_and_pin_state() -> None:
+def test_client_route_and_request_flow() -> None:
     result = subprocess.run(
         ["node", "--test", str(Path(__file__).with_name("web_flow.mjs"))],
         capture_output=True, text=True,
