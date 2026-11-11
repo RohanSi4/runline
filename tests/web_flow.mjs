@@ -75,7 +75,7 @@ function payload() {
     routes: [route(5.01, 0, 100, 0.2, "<gpx>first</gpx>"), route(4.98, 2, 250, 0.8, "<gpx>second</gpx>")] };
 }
 
-function app() {
+function app({ runFactory } = {}) {
   const ids = new Map();
   const get = id => {
     if (!ids.has(id)) ids.set(id, element());
@@ -113,7 +113,8 @@ function app() {
   const context = vm.createContext({
     console, Blob, setTimeout, clearTimeout,
     requestAnimationFrame(callback) { callback(); },
-    window: { matchMedia() { return { matches: false }; }, addEventListener() {} },
+    window: { matchMedia() { return { matches: false }; }, addEventListener() {},
+      ...(runFactory ? { RunlineRun: { create: runFactory } } : {}) },
     matchMedia() { return { matches: false }; },
     navigator: {},
     document: { body, documentElement: element("html"), getElementById: get,
@@ -146,6 +147,12 @@ function app() {
       const button = group.children.find(item => item.dataset.value === String(value));
       await group.fire("click", { target: button });
     },
+    async mode(value) {
+      const radio = get(value === "loop" ? "mode-loop" : "mode-point-to-point");
+      radio.checked = true;
+      await radio.fire("change");
+    },
+    mapClick(latitude, longitude) { mapEvents.get("click")({ latlng: { lat: latitude, lng: longitude } }); },
   };
 }
 
@@ -299,4 +306,84 @@ test("an error for an old start does not become the new start's error", async ()
   assert.match(ui.get("form-status").textContent, /Start changed/);
   assert.doesNotMatch(ui.get("form-status").textContent, /outside coverage/);
   assert.equal(ui.generate.disabled, false);
+});
+
+function directPayload() {
+  const data = payload();
+  data.mode = "point_to_point";
+  data.source = "live";
+  data.destination = { latitude: 10.01, longitude: 20.02 };
+  data.routes = [data.routes[0]];
+  data.routes[0].feature.geometry.coordinates = [[20, 10], [20.02, 10.01]];
+  return data;
+}
+
+test("start-to-finish sends a destination without loop-only preferences and renders an open path", async () => {
+  const ui = app();
+  await ui.choose("elevation", "hilly"); await ui.choose("drive", 1);
+  await ui.mode("point_to_point");
+  ui.get("destination-address").value = "Synthetic finish";
+  ui.get("destination-latitude").value = "10.01";
+  ui.get("destination-longitude").value = "20.02";
+  const pending = ui.submit();
+  const body = JSON.parse(ui.requests.at(-1).options.body);
+  assert.equal(body.mode, "point_to_point");
+  assert.equal(body.distance_miles, undefined);
+  assert.equal(body.drive_radius_miles, 0);
+  assert.equal(body.elevation, "balanced");
+  assert.deepEqual(body.destination, { latitude: 10.01, longitude: 20.02 });
+  ui.respond(directPayload()); await pending;
+  assert.equal(ui.state().routes.length, 1);
+  assert.deepEqual(Array.from(ui.state().finishMarker.points), [10.01, 20.02]);
+  assert.match(ui.get("request-summary").textContent, /Start → finish/);
+  assert.equal(ui.get("distance").disabled, true);
+  await ui.mode("loop");
+  assert.equal(ui.get("distance").disabled, false);
+  assert.equal(ui.get("destination-field").hidden, true);
+});
+
+test("a closed loop from a legacy backend is rejected for a direct request", async () => {
+  const ui = app(); await ui.mode("point_to_point");
+  ui.get("destination-address").value = "Synthetic finish";
+  const pending = ui.submit();
+  const invalid = directPayload(); invalid.routes[0].feature.geometry.coordinates.push([20, 10]);
+  ui.respond(invalid); await pending;
+  assert.equal(ui.state().routes.length, 0);
+  assert.match(ui.get("form-status").textContent, /could not be read/i);
+});
+
+test("a destination edited during planning discards the old path", async () => {
+  const ui = app(); await ui.mode("point_to_point");
+  ui.get("destination-address").value = "Synthetic finish";
+  const pending = ui.submit();
+  ui.get("destination-address").value = "A different finish";
+  ui.respond(directPayload()); await pending;
+  assert.equal(ui.state().routes.length, 0);
+  assert.match(ui.get("form-status").textContent, /changed/i);
+});
+
+test("map endpoint controls select finish independently from start", async () => {
+  const ui = app(); await ui.mode("point_to_point");
+  ui.mapClick(11, 21);
+  assert.equal(ui.get("destination-latitude").value, "11.000000");
+  assert.equal(Number(ui.get("latitude").value), 1);
+  await ui.get("pick-start").fire("click"); ui.mapClick(12, 22);
+  assert.equal(ui.get("latitude").value, "12.000000");
+  assert.equal(ui.get("destination-latitude").value, "11.000000");
+});
+
+test("Run uses the selected route and prevents planner edits while the session is active", async () => {
+  let selected, active = false;
+  const ui = app({ runFactory({ getSelectedRoute, onActiveChange }) {
+    return { isActive: () => active, start() { selected = getSelectedRoute(); active = true; onActiveChange(true); } };
+  } });
+  const pending = ui.submit(); ui.respond(); await pending;
+  await ui.get("route-list").children[1].fire("click");
+  await ui.get("start-run").fire("click");
+  assert.equal(selected.gpx, "<gpx>second</gpx>");
+  ui.mapClick(11, 21);
+  assert.equal(Number(ui.get("latitude").value), 10);
+  await ui.submit();
+  assert.equal(ui.requests.length, 1);
+  assert.equal(ui.state().routes.length, 2);
 });

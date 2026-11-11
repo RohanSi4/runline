@@ -30,6 +30,10 @@ capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 4. **Generate routes**, compare the cards, and download the one you like as
    **GPX**.
 
+You can also choose **Start → finish** for a direct Charlottesville route, or
+select **Run this route** to record a foreground GPS session on your phone.
+See [phone Run mode](docs/run-mode.md) for controls, coverage and limits.
+
 ## A real example
 
 <img src="docs/readme/real-loops.svg" alt="The three loops RunLine returns for 5 miles from the Charlottesville map centre, 5.06, 4.98 and 5.12 miles, with a start and finish marker and a scale bar" width="100%">

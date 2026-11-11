@@ -23,6 +23,7 @@ from .models import (
     SurfacePreference,
 )
 from .planner import geocode_address, plan_routes
+from .point_to_point import plan_point_to_point
 
 
 LOGGER = logging.getLogger("runline.api")
@@ -39,7 +40,7 @@ def remote_api() -> str:
 def remote_routes(request: "RouteRequest", origin: Coordinate) -> dict:
     # Resolve an address once, then let the regional service use its own exact
     # graph/pools. Never forward to this site's public proxy (which would loop).
-    body = request.model_dump(exclude={"address"})
+    body = request.model_dump(exclude={"address", "mode", "destination"})
     body.update(latitude=origin.latitude, longitude=origin.longitude)
     try:
         response = requests.post(remote_api() + "/api/routes", json=body, timeout=(5, 75))
@@ -100,22 +101,40 @@ app = FastAPI(title="Runline", version="0.1.0")
 app.mount("/assets", StaticFiles(directory=WEB_ROOT), name="assets")
 
 
-class RouteRequest(BaseModel):
+class LocationRequest(BaseModel):
     address: str | None = Field(default=None, max_length=300)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
-    distance_miles: float = Field(gt=0, le=30)
+
+    @model_validator(mode="after")
+    def has_start(self) -> "LocationRequest":
+        if self.address and self.address.strip():
+            return self
+        if self.latitude is None or self.longitude is None:
+            raise ValueError("provide an address or a map location")
+        return self
+
+
+class RouteRequest(LocationRequest):
+    mode: Literal["loop", "point_to_point"] = "loop"
+    destination: LocationRequest | None = None
+    distance_miles: float | None = Field(default=None, gt=0, le=30)
     drive_radius_miles: Literal[0, 1, 3, 5] = 0
     surface: Literal["road", "mixed", "trail"] = "mixed"
     elevation: Literal["flat", "balanced", "hilly"] = "balanced"
     result_count: int = Field(default=3, ge=1, le=5)
 
     @model_validator(mode="after")
-    def has_start(self) -> "RouteRequest":
-        if self.address and self.address.strip():
-            return self
-        if self.latitude is None or self.longitude is None:
-            raise ValueError("provide an address or a map location")
+    def valid_mode(self) -> "RouteRequest":
+        if self.mode == "loop" and self.distance_miles is None:
+            raise ValueError("choose a distance for your loop")
+        if self.mode == "point_to_point":
+            if self.destination is None:
+                raise ValueError("choose a finish location")
+            if self.drive_radius_miles:
+                raise ValueError("nearby starts are only available for loops")
+            if self.distance_miles is not None or self.elevation != "balanced":
+                raise ValueError("distance and elevation preferences are only available for loops")
         return self
 
 
@@ -153,25 +172,43 @@ async def routes(request: RouteRequest) -> dict:
         else:
             origin = Coordinate(float(request.latitude), float(request.longitude))
         preferences = RoutePreferences(
-            target_distance_miles=request.distance_miles,
+            target_distance_miles=request.distance_miles or 1,
             drive_radius_miles=request.drive_radius_miles,
             surface=SurfacePreference(request.surface),
             elevation=ElevationPreference(request.elevation),
             result_count=request.result_count,
         )
-        result = await run_in_threadpool(
-            plan_routes,
-            origin,
-            preferences,
-            cache_directory=CACHE_ROOT,
-            start_candidate_limit=2,
-        )
+        if request.mode == "point_to_point":
+            finish = request.destination
+            if finish.address and finish.address.strip():
+                try:
+                    destination = await run_in_threadpool(geocode_address, finish.address.strip(), CACHE_ROOT)
+                except ValueError as error:
+                    raise HTTPException(status_code=422, detail=str(error)) from error
+            else:
+                destination = Coordinate(float(finish.latitude), float(finish.longitude))
+            result = await run_in_threadpool(
+                plan_point_to_point, origin, destination, preferences,
+                cache_directory=CACHE_ROOT,
+            )
+        else:
+            result = await run_in_threadpool(
+                plan_routes,
+                origin,
+                preferences,
+                cache_directory=CACHE_ROOT,
+                start_candidate_limit=2,
+            )
     except HTTPException:
         raise
     except CoverageError as error:
-        if remote_api():
+        # The legacy regional service ignores unknown fields. Forwarding a
+        # destination there could silently return a loop instead of a path.
+        if request.mode == "loop" and remote_api():
             return await run_in_threadpool(remote_routes, request, origin)
         # Expected outcome for an unsupported location, not a fault.
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     except requests.RequestException as error:
         LOGGER.exception("upstream request failed while planning routes")
@@ -192,8 +229,10 @@ async def routes(request: RouteRequest) -> dict:
             status_code=422,
             detail="No viable loops found. Try another distance or surface preference.",
         )
-    return {
-        "origin": {"latitude": origin.latitude, "longitude": origin.longitude},
+    actual_origin = result.candidates[0].coordinates[0] if request.mode == "point_to_point" else origin
+    response = {
+        "mode": request.mode,
+        "origin": {"latitude": actual_origin.latitude, "longitude": actual_origin.longitude},
         "discovered_starts": result.discovered_starts,
         "source": result.source,
         "warnings": result.warnings,
@@ -207,11 +246,21 @@ async def routes(request: RouteRequest) -> dict:
             for index, candidate in enumerate(result.candidates, start=1)
         ],
     }
+    if request.mode == "point_to_point":
+        actual_finish = result.candidates[0].coordinates[-1]
+        response["destination"] = {"latitude": actual_finish.latitude, "longitude": actual_finish.longitude}
+    return response
 
 
 @app.get("/api/areas")
 async def supported_areas() -> dict:
     return {"areas": await run_in_threadpool(combined_area_labels)}
+
+
+@app.get("/api/capabilities")
+async def capabilities() -> dict:
+    return {"modes": {"loop": {"areas": await run_in_threadpool(combined_area_labels)},
+                       "point_to_point": {"areas": [area.label for area in areas()]}}}
 
 
 @app.get("/api/places")
