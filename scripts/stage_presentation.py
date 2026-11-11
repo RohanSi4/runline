@@ -36,6 +36,7 @@ def main(argv=None) -> int:
     parser.add_argument("--project-config", type=Path, required=True, help="existing Vercel .vercel/project.json")
     parser.add_argument("--sample", action="store_true")
     parser.add_argument("--offline-demo", type=Path)
+    parser.add_argument("--remote-api", help="regional API for starts outside the staged graph (use the backend's direct URL)")
     args = parser.parse_args(argv)
     if args.output.exists():
         parser.error("choose a fresh staging directory")
@@ -79,6 +80,10 @@ def main(argv=None) -> int:
     config = json.loads((ROOT / "vercel.json").read_text())
     config["routes"] = [{"src": "/(.*)", "dest": "app.py"}]
     config["builds"][0]["config"]["includeFiles"].append("pools/**")
+    if args.remote_api:
+        if not args.remote_api.startswith("https://"):
+            parser.error("regional API must use HTTPS")
+        config.setdefault("env", {})["RUNLINE_REMOTE_API"] = args.remote_api.rstrip("/")
     (args.output / "vercel.json").write_text(json.dumps(config, indent=2) + "\n")
     (args.output / ".vercelignore").write_text(".git/\n.private/\n.env*\n**/__pycache__/\n")
     (args.output / ".vercel").mkdir()

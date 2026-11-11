@@ -31,6 +31,52 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WEB_ROOT = PROJECT_ROOT / "web"
 
 
+def remote_api() -> str:
+    """Optional regional backend, independent of this site's public URL."""
+    return os.environ.get("RUNLINE_REMOTE_API", "").strip().rstrip("/")
+
+
+def remote_routes(request: "RouteRequest", origin: Coordinate) -> dict:
+    # Resolve an address once, then let the regional service use its own exact
+    # graph/pools. Never forward to this site's public proxy (which would loop).
+    body = request.model_dump(exclude={"address"})
+    body.update(latitude=origin.latitude, longitude=origin.longitude)
+    try:
+        response = requests.post(remote_api() + "/api/routes", json=body, timeout=(5, 75))
+        payload = response.json()
+        if response.status_code == 422:
+            raise HTTPException(status_code=422, detail=payload.get("detail") or "No routes available for this start.")
+        response.raise_for_status()
+        if (not isinstance(payload, dict) or not isinstance(payload.get("origin"), dict)
+                or payload.get("source") not in ("pool", "live")
+                or not isinstance(payload.get("routes"), list) or not payload["routes"]
+                or any(not isinstance(route, dict) or not {"feature", "gpx"} <= route.keys()
+                       for route in payload["routes"])):
+            raise ValueError("invalid regional route response")
+        return payload
+    except HTTPException:
+        raise
+    except (requests.RequestException, ValueError, AttributeError):
+        LOGGER.exception("regional route service is unavailable")
+        raise HTTPException(status_code=503, detail="The regional route service is unavailable right now. Try again shortly.") from None
+
+
+def combined_area_labels() -> list[str]:
+    labels = list(area_labels())
+    if remote_api():
+        try:
+            response = requests.get(remote_api() + "/api/areas", timeout=(3, 5))
+            response.raise_for_status()
+            remote = response.json()["areas"]
+            if not isinstance(remote, list) or not all(isinstance(label, str) for label in remote):
+                raise ValueError("invalid regional coverage response")
+            labels.extend(remote)
+        except (requests.RequestException, ValueError, KeyError, TypeError):
+            # A regional outage must not hide or disable the local dataset.
+            LOGGER.warning("regional coverage is unavailable", exc_info=True)
+    return list(dict.fromkeys(labels))
+
+
 def cache_root() -> Path:
     # A server install runs as a user that cannot write the checkout, so it
     # names a directory it owns (deploy/runline.service uses systemd's
@@ -123,6 +169,8 @@ async def routes(request: RouteRequest) -> dict:
     except HTTPException:
         raise
     except CoverageError as error:
+        if remote_api():
+            return await run_in_threadpool(remote_routes, request, origin)
         # Expected outcome for an unsupported location, not a fault.
         raise HTTPException(status_code=422, detail=str(error)) from error
     except requests.RequestException as error:
@@ -163,7 +211,7 @@ async def routes(request: RouteRequest) -> dict:
 
 @app.get("/api/areas")
 async def supported_areas() -> dict:
-    return {"areas": list(area_labels())}
+    return {"areas": await run_in_threadpool(combined_area_labels)}
 
 
 @app.get("/api/places")

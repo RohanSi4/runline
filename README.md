@@ -6,15 +6,15 @@ trails and hills. It suggests up to three routes, favoring fewer traffic
 lights, major-road crossings and repeated sections. Download a route as a
 GPX file, the route format compatible watches and navigation apps import.
 
-**Current coverage:** the capstone build serves Charlottesville, Virginia.
-The original Oracle-backed deployment also serves Washington, DC. Both use
+**Current coverage:** Charlottesville, Virginia, and the Washington, DC pilot
+are available through one app. The rebuilt Charlottesville graph and pools
+are served directly; DC uses the existing Oracle regional backend. Both use
 saved routes with live planning when none fit. The top 50 US metro areas
 remain the goal.
 
-**Capstone build:** [runline-capstone.vercel.app](https://runline-capstone.vercel.app)
-— rebuilt Charlottesville graph and all 11,417 pools.
-
-**Original deployment (also DC):** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
+**Try it:** [runline-nine.vercel.app](https://runline-nine.vercel.app)
+— rebuilt Charlottesville data and DC in one app.
+[Alternate URL](https://runline-capstone.vercel.app) · CS 4971
 capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 
 <img src="docs/readme/app.webp" alt="The RunLine app after a 5 mile request from the Rotunda: the form on the left, three route cards of 5.10, 4.95 and 5.08 miles with no traffic signals, and the selected route drawn on the map with a GPX download button" width="100%">
@@ -75,9 +75,9 @@ score) and `preview.html` (a map to compare them) into `output/rotunda-5/`.
 .venv/bin/python -m pytest -q
 ```
 
-**Coverage when you run it yourself.** The capstone deployment serves
-Charlottesville; the original app also serves the DC pilot. Other starts
-receive a coverage error. A local copy can also
+**Coverage when you run it yourself.** Both public URLs serve Charlottesville
+and the DC pilot through the combined backend. Other starts receive a
+coverage error. A local copy can also
 download OpenStreetMap data for a start elsewhere, which takes from seconds to
 minutes, and caches it under `cache/`. Set `RUNLINE_ALLOW_OSM_DOWNLOAD=0` to
 turn that off.
@@ -145,6 +145,9 @@ sliver. Two options that share over 70% of their length count as one.
 
 ## Architecture
 
+The figure records the original Oracle deployment. The combined API now serves
+rebuilt Charlottesville on Vercel and forwards DC to Oracle.
+
 The diagram describes the original Oracle-backed deployment. The separate
 capstone build runs the same API directly on Vercel with the rebuilt
 Charlottesville graph and complete 95 MB pool file.
@@ -154,7 +157,7 @@ Charlottesville graph and complete 95 MB pool file.
 | Part | What it does | Where |
 |---|---|---|
 | Browser | Map, form, route comparison, GPX download (HTML/JS + Leaflet) | `web/` |
-| Route planner | Finds, measures and ranks loops (Python, FastAPI on Oracle) | `src/runline/` |
+| Route planner | Finds, measures and ranks loops (FastAPI on Vercel, regional DC API on Oracle) | `src/runline/` |
 | Saved map data | Charlottesville graph and metro tile graphs, built ahead of time | `graphs/`, metro run directories |
 | Precompute | Generates saved routes on the UVA CS cluster | `scripts/precompute_pools.py`, `slurm/` |
 | Serving | Answers from saved routes, or hands back to the planner | `src/runline/serving.py` |
@@ -209,12 +212,12 @@ metros after the shipped areas.
 
 **Status:**
 
-- **Charlottesville:** route pools are computed and served. Vercel proxies
-  `/api` to Krish's Oracle VM, which holds the 110 MB pool file. The optional
-  `deploy/` tooling is a portable VM recipe; the existing backend is retained.
-- **Capstone deployment:** the rebuilt graph and complete 95 MB pool file are
-  hosted directly on Vercel at the capstone URL. Its ten-scenario rehearsal
+- **Charlottesville:** the rebuilt graph and complete 95 MB pool file are
+  hosted directly on Vercel behind both public URLs. Its ten-scenario rehearsal
   returned 30 closed in-band routes with matching GPX exports.
+- **Unified hosting:** the original frontend proxies to the combined API.
+  Starts outside its local graph use the direct Oracle regional service.
+  See [unified deployment](docs/unified-deployment.md).
 - **Washington, DC:** Krish's Oracle deployment now serves the pilot
   (72,237 cells, 2.3 GB of pools, 230 tile graphs). A live five-mile request
   returned three closed in-band pool routes with matching GPX. Its
