@@ -9,3 +9,5 @@ def no_local_pools(monkeypatch, tmp_path_factory) -> None:
 
     monkeypatch.setenv("RUNLINE_POOLS_DIR", str(tmp_path_factory.getbasetemp() / "no-pools"))
     monkeypatch.setenv("RUNLINE_METROS_DIR", str(tmp_path_factory.getbasetemp() / "no-metros"))
+    # Tile graphs are read from local files only unless a test turns fetching on.
+    monkeypatch.delenv("RUNLINE_TILE_GRAPHS_URL", raising=False)
