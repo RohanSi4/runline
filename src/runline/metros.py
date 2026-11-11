@@ -22,6 +22,10 @@ measure_tile_graphs.py measures what one costs, to size the server.
 A tile is handed to the rest of the code as an ``Area`` whose disc is the
 tile's, so live planning treats it like a shipped area: runline.coverage
 asks this module after the manifest's areas, which keep priority.
+
+With RUNLINE_TILE_GRAPHS_URL set, a tile graph missing from ``tile-graphs/``
+is fetched into a bounded disk cache on first use (runline.tile_fetch).
+Unset, only the run's own files are read.
 """
 
 from __future__ import annotations
@@ -34,6 +38,8 @@ import pickle
 import sqlite3
 import threading
 from collections import OrderedDict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -44,6 +50,7 @@ from .coverage import Area, CoverageError
 from .geo import destination
 from .grid import cell_id
 from .models import Coordinate
+from .tile_fetch import TileGraphFetcher, configured_url
 
 LOGGER = logging.getLogger("runline.metros")
 
@@ -249,6 +256,12 @@ class _TileGraphs:
     def held(self) -> int:
         return len(self._graphs)
 
+    def held_paths(self) -> set[str]:
+        """Files of the graphs in memory or loading, which the disk cache must keep."""
+
+        with self._lock:
+            return {path for path, _ in (*self._graphs, *self._loading)}
+
     def clear(self) -> None:
         with self._lock:
             self._graphs.clear()
@@ -256,10 +269,37 @@ class _TileGraphs:
 
 
 TILE_GRAPHS = _TileGraphs()
+FETCHER = TileGraphFetcher()
+
+
+@contextmanager
+def tile_graph_file(area: Area) -> Iterator[Path]:
+    """The tile's graph file: the run's own, else a fetched copy when fetching is on.
+
+    The path may not exist, as when the run lacks it and fetching is off. A
+    fetched copy is kept on disk until the block ends. Raises
+    MapDataUnavailable if fetching is on and the download fails.
+    """
+
+    path = Path(area.filename)
+    tile = None if path.exists() or not configured_url() else tile_for(area)
+    if tile is None or tile.graph is None:
+        yield path
+        return
+    run = Path(area.metro_pools).parent.name
+    with FETCHER.use(run, tile.slug, tile.graph, area.label, TILE_GRAPHS.held_paths) as fetched:
+        yield fetched
 
 
 def load_tile_graph(area: Area) -> nx.MultiDiGraph:
-    path = Path(area.filename)
-    if not path.exists():
-        raise CoverageError(f"Map data for {area.label} is missing from this deployment.")
-    return TILE_GRAPHS.get(path)
+    with tile_graph_file(area) as path:
+        if not path.exists():
+            raise CoverageError(f"Map data for {area.label} is missing from this deployment.")
+        loads = TILE_GRAPHS.loads
+        graph = TILE_GRAPHS.get(path)
+        fetched = path != Path(area.filename)
+    if fetched and TILE_GRAPHS.loads != loads:
+        # A cold load can push another fetched graph out of memory, which
+        # frees its file for the disk cache to evict.
+        FETCHER.evict(TILE_GRAPHS.held_paths())
+    return graph

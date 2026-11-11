@@ -56,7 +56,22 @@ each start cell to its owning tile. Pool rows from neighboring cells are
 usable only if they belong to that same tile graph. Missing or corrupt pools
 fall back to live routing; missing tile graphs produce a coverage error.
 
-`RUNLINE_TILE_GRAPHS_CACHE` defaults to two graphs per worker. The VM service
+`RUNLINE_TILE_GRAPHS_CACHE` defaults to two graphs per worker.
+
+Tile graphs can instead live in object storage (prototype, off by default).
+Set `RUNLINE_TILE_GRAPHS_URL` to a base URL laid out like the metros
+directory (`<base>/<run>/tile-graphs/<tile>.pkl.gz`) or a template with
+`{run}`, `{tile}` and `{graph}`; it must be HTTPS. A graph missing locally
+is then downloaded once (per-tile lock, shared across workers by a lock
+file), checked against the hash `pools.sqlite` records for that tile, and
+renamed into `RUNLINE_TILE_DISK_CACHE_DIR` (default
+`$RUNLINE_CACHE_DIR/tile-graphs`). `RUNLINE_TILE_DISK_CACHE_GB` (default 20)
+bounds that cache; least recently used files go first, never one held in
+memory. `RUNLINE_TILE_FETCH_TIMEOUT` (default 60 s) bounds a download. A
+failed or mismatched fetch is a 503 and is not retried for 15 s. The pool
+file itself must still be local. With the URL unset, nothing changes.
+
+The VM service
 recipe uses `/srv/runline/pools`, `/srv/runline/metros`, and `/var/cache/runline`;
 the existing Oracle service paths are recorded in task 4.
 Measure the actual metro graphs before sizing a VM; Charlottesville memory

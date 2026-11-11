@@ -40,6 +40,10 @@ class CoverageError(RuntimeError):
     """No precomputed graph covers the requested location."""
 
 
+class MapDataUnavailable(CoverageError):
+    """The location is covered, but its map could not be fetched right now (runline.tile_fetch)."""
+
+
 @dataclass(frozen=True)
 class Area:
     slug: str

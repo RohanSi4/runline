@@ -212,7 +212,10 @@ The API's `source` field then says `pool` or `live`.
 from its cell, loads that tile's graph on first use, and keeps at most
 `RUNLINE_TILE_GRAPHS_CACHE` (default 2) graphs in memory. A start with no
 usable pool plans live on the same tile graph. `/api/areas` lists the served
-metros after the shipped areas.
+metros after the shipped areas. Optionally, `RUNLINE_TILE_GRAPHS_URL` fetches
+missing tile graphs from object storage on first use, hash-checked, into a
+disk cache bounded by `RUNLINE_TILE_DISK_CACHE_GB`; see the
+[handoff](docs/handoff.md#how-the-app-fits-together).
 
 **Status:**
 

@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
-from .coverage import CoverageError, area_labels, areas, load_area_places
+from .coverage import CoverageError, MapDataUnavailable, area_labels, areas, load_area_places
 from .export import candidate_feature
 from .gpx import candidate_to_gpx
 from .models import (
@@ -201,6 +201,9 @@ async def routes(request: RouteRequest) -> dict:
             )
     except HTTPException:
         raise
+    except MapDataUnavailable as error:
+        # A covered tile whose graph could not be fetched: temporary, not a fault.
+        raise HTTPException(status_code=503, detail=str(error)) from error
     except CoverageError as error:
         # The legacy regional service ignores unknown fields. Forwarding a
         # destination there could silently return a loop instead of a path.

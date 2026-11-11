@@ -7,7 +7,7 @@ from typing import Any
 
 import requests
 
-from .coverage import CoverageError
+from .coverage import CoverageError, MapDataUnavailable
 from .elevation import enrich_graph_open_meteo
 from .models import Coordinate, RouteCandidate, RoutePreferences, StartCandidate
 from .osm import generate_loops, graph_radius_meters, prepare_core
@@ -67,6 +67,9 @@ def plan_routes(
 ) -> PlanResult:
     try:
         pooled = serve_from_pool(origin, preferences)
+    except MapDataUnavailable:
+        # Live planning needs the same tile graph that just failed to fetch.
+        raise
     except Exception:
         # Pools are an optimization, never a requirement: a corrupt row or
         # an unreadable file is logged and the request plans live.
