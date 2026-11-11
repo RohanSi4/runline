@@ -10,7 +10,10 @@ GPX file, the route format compatible watches and navigation apps import.
 the deployed app, falling back to live planning when none fit. The top 50 US
 metro areas are the goal.
 
-**Try it:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
+**Capstone build:** [runline-capstone.vercel.app](https://runline-capstone.vercel.app)
+— rebuilt Charlottesville graph and all 11,417 pools.
+
+**Original deployment:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
 capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 
 <img src="docs/readme/app.webp" alt="The RunLine app after a 5 mile request from the Rotunda: the form on the left, three route cards of 5.10, 4.95 and 5.08 miles with no traffic signals, and the selected route drawn on the map with a GPX download button" width="100%">
@@ -173,20 +176,19 @@ start has no good answer saved, the planner searches live instead.
 <sub>One real route pool, from the Charlottesville map centre: all 113 saved
 loops, the 10 within ±0.25 mi of 5 miles, and the 3 that ranking picks.</sub>
 
-| | Planned live | Saved route pools |
-|---|---|---|
-| Median request time | 1.41 s | 76 ms |
-| Requests answered in the sample | 200 / 200 | 192 / 200 (96%) |
-| Median absolute distance error | 0.104 mi | 0.083 mi |
-| Median major crossings per mile | 0.274 | 0.208 |
-| Median repeated fraction | 2.4% | 2.3% |
+| Complete rebuilt Charlottesville pool check | Result |
+|---|---:|
+| Requests answered from pools | 548 / 600 (91.3%) |
+| Local median pooled time | 64 ms |
+| Local p95 pooled time | 129 ms |
+| Mixed / road / trail hit rates | 92.0% / 90.5% / 91.5% |
 
-<sub>Local integration measurements: 40 seeded Charlottesville starts × five
-3–12 mile distances, mixed surface, using pools for 278 sampled cells.
-Quality is compared on the 192 pool hits, including connectors; latency is
-measured over each source's answers. The deployed backend has not yet been
-updated with these changes. See [validation](docs/validation.md) for the
-before/after checks, scope and reproduction.</sub>
+<sub>40 seeded starts × five 3–12 mile distances × three surfaces. Twenty hits
+returned two qualifying routes; other requests plan live. This check skipped
+live timing. The historical paired study on the original graph measured 76 ms
+pooled versus 1.41 s live; see [validation](docs/validation.md) for that study
+and [presentation release](docs/presentation-release.md) for the new dataset
+and public deployment checks.</sub>
 
 **To try it locally,** put a pool file at `pools/charlottesville-va.sqlite`.
 The API's `source` field then says `pool` or `live`.
@@ -204,6 +206,9 @@ metros after the shipped areas.
 - **Charlottesville:** route pools are computed and served. Vercel proxies
   `/api` to Krish's Oracle VM, which holds the 110 MB pool file. The optional
   `deploy/` tooling is a portable VM recipe; the existing backend is retained.
+- **Capstone deployment:** the rebuilt graph and complete 95 MB pool file are
+  hosted directly on Vercel at the capstone URL. Its ten-scenario rehearsal
+  returned 30 closed in-band routes with matching GPX exports.
 - **Washington, DC:** the pilot finished, with 72,237 cells and 2.3 GB of pools.
   Serving metro tiles works in tests; serving DC needs its tile graphs and
   plan copied from the cluster (see `docs/handoff.md`, task 2).

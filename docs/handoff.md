@@ -6,8 +6,9 @@ Integration PR #5 is merged. Active presentation work is on
 `codex/presentation-ready` in the `runline-presentation` checkout, tracked by
 PR #6. See [presentation.md](presentation.md) for the demo sequence and
 [presentation-release.md](presentation-release.md) for its measured results.
-A rebuilt graph and a complete 315-pool demo sample are validated locally;
-the complete area's 96-shard build is running separately from fixed sources.
+The rebuilt graph and complete 11,417-pool, 605,206-loop dataset are audited
+and deployed to the capstone URL. All 96 shards finished without failures;
+the complete package and audit are attached to the capstone draft release.
 A separate public presentation deployment is available at
 https://runline-capstone.vercel.app, with a hosted recorded fallback. The original Oracle
 backend has not been updated in this session because SSH access is missing.
@@ -27,7 +28,7 @@ on Oracle. This recovery has not changed the deployed backend.
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
 | Rivanna | Cluster configuration, dry-run and smoke support integrated. No jobs submitted. |
-| Graphs and pools | Shipped Charlottesville graph is unchanged. The signal-preserving builders have not rebuilt production graphs or pools. |
+| Graphs and pools | Repository graph remains unchanged for compatibility. The rebuilt graph and complete 95 MB pool file are deployed on the separate capstone project; the original Oracle assets remain in place. |
 
 See [validation.md](validation.md) for the before/after routing checks and
 pool comparison. Local sample pools are benchmark fixtures, not a complete
@@ -88,7 +89,8 @@ build dependencies (`osmnx`, `osmium` for PBF inputs, and `rasterio` for
 Copernicus elevation). Confirm the elevation bake is complete before
 publishing. Recompute pools on those exact graphs using the pool-generation
 fixes in this branch, which exclude unusable loops and choose origins inside
-routable cells. Production rebuilds have not run during this recovery.
+routable cells. Charlottesville's rebuild is complete on the capstone project. DC and the
+top-50 rebuilds have not run.
 
 ### 4. Update the existing hosted backend
 

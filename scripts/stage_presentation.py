@@ -80,7 +80,7 @@ def main(argv=None) -> int:
     config["routes"] = [{"src": "/(.*)", "dest": "app.py"}]
     config["builds"][0]["config"]["includeFiles"].append("pools/**")
     (args.output / "vercel.json").write_text(json.dumps(config, indent=2) + "\n")
-    (args.output / ".vercelignore").write_text(".git/\n**/__pycache__/\n")
+    (args.output / ".vercelignore").write_text(".git/\n.private/\n.env*\n**/__pycache__/\n")
     (args.output / ".vercel").mkdir()
     shutil.copy2(args.project_config, args.output / ".vercel/project.json")
     if args.offline_demo:

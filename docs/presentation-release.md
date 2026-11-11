@@ -119,3 +119,43 @@ and audits/packages the complete artifact before invoking an optional
 upload callback. Its progress is recorded in
 `output/presentation/completion-status.json`. No generated data is committed
 to the repository.
+
+
+## Completed area build and public rollout — November 11
+
+All **96/96 shards** completed with no failures in **12,728 seconds (3.54 h)**.
+The complete file contains **11,417 pools and 605,206 loops**, all three
+surfaces, and is **95.0 MiB**. Its SHA-256 is
+`c18a02a032cc1e4e825bea010cddc840863ec9a386f1ae4342de14801024f03c`.
+Every stored loop passed the exact-graph edge, closure and repetition audit.
+The complete archive and checksum report are attached to the draft release.
+The completion supervisor finished successfully and no retry was required.
+
+The complete-data Vercel build fit within the platform's current limits.
+Candidate road-surface routes and the backend revision were verified before
+promotion. The public capstone URL now points to deployment
+`dpl_4Wr3A7vyhR9Pw8sUuiyPkihU62aq`. Runtime application files are unchanged
+from the pinned `77f6c3e` release; later commits contain tooling and notes.
+The original Oracle-backed domain was preserved.
+
+The final unauthenticated public rehearsal passed all ten scenarios: **30
+closed, in-band routes with matching GPX tracks**, nine pooled scenarios and
+one live nearby-start scenario. The backend revision, health, coverage,
+autocomplete, local assets and both validation-error checks also passed.
+Warm public pooled requests in this rehearsal took 425–850 ms; the first
+request took 2,679 ms and the nearby-start request 9,012 ms. These are single
+rehearsal observations, not load-test guarantees.
+
+A separate local 600-request pool check used all three surfaces:
+
+| Surface | Pool hits / requests |
+|---|---:|
+| Mixed | 184 / 200 (92.0%) |
+| Road | 181 / 200 (90.5%) |
+| Trail | 183 / 200 (91.5%) |
+| All | 548 / 600 (91.3%) |
+
+Twenty hits returned two qualifying routes. Median pooled time was 64 ms,
+p95 129 ms; the other 52 requests require live planning. This check skipped
+live timing and should not be combined with the historical paired study as
+if they were the same experiment.

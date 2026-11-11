@@ -9,7 +9,7 @@
 
 The presentation deployment is pinned to application commit
 `77f6c3e14fb1816338dd71477fc8069ffa14b6d2`, graph hash prefix
-`66b524897627167e`, and the 315-pool sample. Its public alias is independent
+`66b524897627167e`, and the complete 11,417-pool dataset. Its public alias is independent
 of the original app's Oracle proxy.
 
 ## Demo order
@@ -23,7 +23,7 @@ of the original app's Oracle proxy.
 3. Use the quick **3**, **8**, or **12** mile buttons to show distance changes.
    These four default-start cases have been rehearsed against the rebuilt API.
 4. Change surface or hills to explain how preferences influence cost/ranking.
-   A surface without a matching sample pool plans live on the same graph.
+   If no saved loops qualify, the request plans live on the same graph.
 5. If time permits, show **Better starts → 1 mi**. It compares additional
    starts and takes longer than a saved-pool request.
 
@@ -49,8 +49,8 @@ routes. Explain that distinction when using it.
   nationwide coverage has not been computed or deployed.
 - Charlottesville is the demonstrated coverage. The original live app uses
   Vercel's frontend and Krish's Oracle API. The separate presentation build
-  runs the new API and rebuilt graph directly, with sample pools; other
-  covered starts and surfaces still plan live.
+  runs the new API and rebuilt graph directly, with the complete rebuilt Charlottesville pool file. Requests with no
+  qualifying saved loops still plan live.
 
 ## Evidence and limits
 
@@ -88,9 +88,22 @@ build alone does not establish that the right backend is running. The
 
 ## Work still outside the demo
 
-The complete Charlottesville pool replacement is building in 96 resumable
-shards from a fixed source checkout. Do not interrupt it or mix shards from
-another graph/build. Keep the exact graph and matching SQLite file together.
-DC's full artifacts and Oracle SSH access have not been found in this
-session. No Rivanna allocation was verified and no cluster jobs were started.
-The top-50 precompute is a multi-day run; do not present it as complete.
+The complete Charlottesville build finished all 96 shards with no failures,
+producing 11,417 pools and 605,206 loops in 3.54 hours. Every stored loop was
+audited against the matching graph before packaging. The complete dataset is
+now deployed at the public capstone URL. Its final ten-scenario rehearsal
+passed: 30 closed in-band routes, matching GPX tracks, nine pooled scenarios
+and one live nearby-start scenario.
+
+The 600-request check (40 starts × five distances × three surfaces) answered
+548 requests from pools (91.3%): mixed 184/200, road 181/200, trail 183/200.
+Twenty hits returned two qualifying routes. Other requests fell back to live
+planning. Local median pooled latency was 64 ms; public warm pooled requests
+in the rehearsal took about 0.4–0.9 s, with a 2.7 s first request.
+
+The complete and sample packages are attached to the capstone draft release;
+its source application remains pinned to commit `77f6c3e`. Keep the exact
+graph and SQLite file together. DC's artifacts and Oracle SSH access remain
+unavailable in this session. No Rivanna allocation was verified and no cluster
+jobs were started. The top-50 precompute is a multi-day run, not a completed
+part of the demo.
