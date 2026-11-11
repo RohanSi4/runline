@@ -41,7 +41,7 @@ from pathlib import Path
 import networkx as nx
 
 from .coverage import Area, CoverageError
-from .geo import destination
+from .geo import destination, distance_meters
 from .grid import cell_id
 from .models import Coordinate
 
@@ -178,15 +178,107 @@ def tile_area(origin: Coordinate) -> Area | None:
             continue
         if tile.graph is None:
             return None
-        return Area(
-            slug=tile.slug,
-            label=tile.label,
-            center=tile.center,
-            radius_meters=tile.radius_meters,
-            filename=str(run.graphs / f"{tile.slug}.pkl.gz"),
-            metro_pools=str(run.pools),
-        )
+        return _as_area(run, tile)
     return None
+
+
+def _as_area(run: MetroRun, tile: Tile) -> Area:
+    return Area(
+        slug=tile.slug,
+        label=tile.label,
+        center=tile.center,
+        radius_meters=tile.radius_meters,
+        filename=str(run.graphs / f"{tile.slug}.pkl.gz"),
+        metro_pools=str(run.pools),
+    )
+
+
+@dataclass(frozen=True)
+class DirectTiles:
+    """The tiles a start -> finish request could run on, in the order to try them.
+
+    ``metros`` names the metros whose cells hold either endpoint, so a miss
+    can say the endpoints are too far apart rather than outside coverage.
+    """
+
+    areas: tuple[Area, ...]
+    metros: tuple[str, ...]
+
+
+def direct_tiles(start: Coordinate, finish: Coordinate) -> DirectTiles:
+    """Tile Areas whose disc holds both endpoints: owning tiles first, then the rest.
+
+    A tile graph is the whole disc the plan records for it (build_tile_graphs.py
+    cuts the tile's disc), so a disc holding both endpoints holds a direct
+    path's ends. The start's owning tile goes first, being the one loop
+    requests from there already loaded; then the finish's; then every other
+    tile holding both, deepest inside first, which covers endpoints in the
+    overlap of neighbouring tiles. At least one endpoint must sit in a planned
+    cell of some metro. Paths are not stitched across tiles.
+    """
+
+    runs = metro_runs()
+    owners = []
+    for point in (start, finish):
+        for run in runs:
+            tile = _owning_tile(run, point)
+            if tile is not None:
+                owners.append((run, tile))
+                break
+    if not owners:
+        return DirectTiles((), ())
+
+    def depth(tile: Tile) -> float:
+        return tile.radius_meters - max(distance_meters(tile.center, start), distance_meters(tile.center, finish))
+
+    holding = [
+        (run, tile) for run in runs for tile in run.tiles.values()
+        if tile.graph is not None and depth(tile) >= 0
+    ]
+    first = [pair for pair in owners if pair in holding]
+    rest = sorted((pair for pair in holding if pair not in first), key=lambda pair: -depth(pair[1]))
+    ordered = list(dict.fromkeys((run, tile) for run, tile in (*first, *rest)))
+    return DirectTiles(
+        tuple(_as_area(run, tile) for run, tile in ordered),
+        tuple(dict.fromkeys(tile.label for _, tile in owners)),
+    )
+
+
+@lru_cache(maxsize=64)
+def _graph_files(path: str, modified: float) -> frozenset[str]:
+    try:
+        return frozenset(entry.name for entry in os.scandir(path))
+    except OSError:
+        return frozenset()
+
+
+def _present_graphs(run: MetroRun) -> frozenset[str]:
+    """File names in a run's tile-graphs directory, re-read when it changes."""
+
+    try:
+        modified = run.graphs.stat().st_mtime
+    except OSError:
+        return frozenset()
+    return _graph_files(str(run.graphs), modified)
+
+
+def direct_metro_labels() -> tuple[str, ...]:
+    """Metros whose every tile with streets has its graph on this server.
+
+    Direct routes run on tile graphs alone (they need no pools), so this is
+    what /api/capabilities reports for start -> finish. A metro with any tile
+    graph missing is left out rather than advertised and then refused.
+    """
+
+    complete: dict[str, bool] = {}
+    for run in metro_runs():
+        present = _present_graphs(run)
+        for tile in run.tiles.values():
+            if tile.graph is None:
+                continue
+            here = f"{tile.slug}.pkl.gz" in present
+            complete[tile.label] = complete.get(tile.label, True) and here
+    return tuple(label for label, ok in complete.items() if ok)
 
 
 def tile_for(area: Area) -> Tile | None:
