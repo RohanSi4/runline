@@ -46,7 +46,6 @@ from runline.osm import (
     MAX_SHARED_LENGTH_FRACTION,
     PREPARED_KEY,
     _edge_lengths,
-    _nearest_node,
     _routable_core,
     collapse_graph,
     generate_loops,
@@ -147,8 +146,40 @@ def drop_near_duplicates(core, candidates) -> list:
     return kept
 
 
+CELL_NODES_KEY = "_runline_cell_nodes"
+
+
+def cell_origin(core, cell: str) -> int | None:
+    """The routable node in the cell nearest its centre, or None if it has none.
+
+    Cells are listed from every mapped node, but loops start on the routable
+    core. Taking the core node nearest the centre wherever it lies gave 377 of
+    Charlottesville's 4,364 cells an origin outside the cell; 342 of those have
+    no core node at all, and mostly got a copy of a neighbour's pool. Serving
+    reads the neighbours' pools itself, so those cells now get none.
+    """
+
+    grid_meters = float(cell.split(":", 1)[0])
+    cached = core.graph.get(CELL_NODES_KEY)
+    if cached is None or cached[0] != grid_meters:
+        by_cell: dict[str, list[int]] = {}
+        for node, data in core.nodes(data=True):
+            by_cell.setdefault(cell_id(float(data["y"]), float(data["x"]), grid_meters), []).append(node)
+        cached = core.graph[CELL_NODES_KEY] = (grid_meters, by_cell)
+    nodes = cached[1].get(cell)
+    if not nodes:
+        return None
+    centre = cell_centre(cell)
+    return min(
+        nodes,
+        key=lambda node: distance_meters(centre, Coordinate(float(core.nodes[node]["y"]), float(core.nodes[node]["x"]))),
+    )
+
+
 def cell_pool(core, cell: str, targets, surface: SurfacePreference) -> dict | None:
-    origin_node = _nearest_node(core, cell_centre(cell))
+    origin_node = cell_origin(core, cell)
+    if origin_node is None:
+        return None
     data = core.nodes[origin_node]
     origin = Coordinate(float(data["y"]), float(data["x"]))
     candidates = {}
