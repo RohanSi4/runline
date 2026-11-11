@@ -185,9 +185,11 @@ returned three closed in-band pool routes, with matching GPX, at
 5.104/4.931/5.061 miles. This verifies Krish's newly deployed DC pilot; its
 artifacts were not downloaded or rebuilt in this session.
 
-The original Oracle service was not modified. Its deployed legacy metro
-layout differs from main's native indexed-run layout; the handoff records
-migration and shadow verification before a future server update.
+The Oracle service was not modified in this session. The team subsequently
+recorded its successful move to main and the indexed DC run layout in
+`handoff.md`. That update is preserved alongside this release. The team also
+reports batch `b1` (New York and Los Angeles) running on the UVA CS cluster;
+full top-50 coverage remains incomplete.
 
 
 Final checks include the ordinary repository graph (187 passing checks), the

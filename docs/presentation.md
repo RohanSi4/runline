@@ -110,6 +110,6 @@ The complete and sample packages are attached to the capstone draft release.
 The latest complete snapshot matches the final presentation application;
 earlier snapshots are retained as backups. Keep the exact graph and SQLite
 file together. DC is now verified live on the original app. Its artifacts
-and Oracle SSH access remain unavailable locally. No Rivanna allocation was verified and no cluster
-jobs were started. The top-50 precompute is a multi-day run, not a completed
-part of the demo.
+and Oracle SSH access remain unavailable locally. No Rivanna allocation was verified or jobs submitted in this session. The
+team reports batch `b1` (New York and Los Angeles) running on the UVA CS
+cluster. Full top-50 coverage remains incomplete and is not part of the demo.

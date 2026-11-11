@@ -75,8 +75,9 @@ score) and `preview.html` (a map to compare them) into `output/rotunda-5/`.
 .venv/bin/python -m pytest -q
 ```
 
-**Coverage when you run it yourself.** The deployed app only serves
-Charlottesville and answers other starts with an error. A local copy can also
+**Coverage when you run it yourself.** The capstone deployment serves
+Charlottesville; the original app also serves the DC pilot. Other starts
+receive a coverage error. A local copy can also
 download OpenStreetMap data for a start elsewhere, which takes from seconds to
 minutes, and caches it under `cache/`. Set `RUNLINE_ALLOW_OSM_DOWNLOAD=0` to
 turn that off.
@@ -216,10 +217,10 @@ metros after the shipped areas.
   returned 30 closed in-band routes with matching GPX exports.
 - **Washington, DC:** Krish's Oracle deployment now serves the pilot
   (72,237 cells, 2.3 GB of pools, 230 tile graphs). A live five-mile request
-  returned three closed in-band pool routes with matching GPX. Its legacy
-  storage layout needs migration before updating that server from main
-  (see `docs/handoff.md`).
-- **Top 50 metro areas:** not run yet.
+  returned three closed in-band pool routes with matching GPX. Its
+  storage now uses main's indexed run layout (see `docs/handoff.md`).
+- **Top 50 metro areas:** batch `b1` (New York and Los Angeles) is running on
+  the UVA CS cluster; the other batches have not started.
 
 `docs/handoff.md` lists the remaining work, and `slurm/README.md` is the
 cluster runbook.

@@ -10,8 +10,8 @@ The rebuilt graph and complete 11,417-pool, 605,206-loop dataset are audited
 and deployed to the capstone URL. All 96 shards finished without failures;
 the complete package and audit are attached to the capstone draft release.
 A separate public presentation deployment is available at
-https://runline-capstone.vercel.app, with a hosted recorded fallback. The original Oracle
-backend has not been updated in this session because SSH access is missing.
+https://runline-capstone.vercel.app, with a hosted recorded fallback. The Oracle service was not modified in this session. The team subsequently
+recorded its migration to main and the indexed DC layout below.
 
 ## Recovery status
 
@@ -22,12 +22,12 @@ on Oracle. This recovery has not changed the deployed backend.
 
 | Work | Current state |
 |---|---|
-| Current hosting | The capstone project serves the rebuilt complete Charlottesville dataset directly on Vercel. The original Vercel/Oracle app now serves Charlottesville and DC; both were verified through its public API. |
+| Current hosting | The capstone project serves rebuilt Charlottesville directly on Vercel. The original Vercel/Oracle app serves Charlottesville and DC from `main` (task 4); both were verified through its public API. |
 | Optional hosting tools | Provisioning, systemd, Caddy, area-pool upload, backup and smoke scripts integrated as a portable VM recipe. No Azure VM is needed for the existing deployment. |
-| Metro serving | Main's indexed run layout is tested. Krish's deployed `serve-metro-pools` branch uses a different legacy layout; DC is verified live there. Actual DC files are unavailable locally. Migrate a copy before an Oracle code update. |
+| Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Serving the DC pilot on the VM; measurements in task 4. |
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
-| Rivanna | Cluster configuration, dry-run and smoke support integrated. No jobs submitted. |
+| Cluster precompute | Per the November 11 team update, batch `b1` (New York and Los Angeles) is running on the UVA CS cluster. Rivanna allocation has not been verified in this session. |
 | Graphs and pools | Repository graph remains unchanged for compatibility. The rebuilt graph and complete 95 MB pool file are deployed on the separate capstone project; the original Oracle assets remain in place. |
 
 See [validation.md](validation.md) for the before/after routing checks and
@@ -49,7 +49,8 @@ usable only if they belong to that same tile graph. Missing or corrupt pools
 fall back to live routing; missing tile graphs produce a coverage error.
 
 `RUNLINE_TILE_GRAPHS_CACHE` defaults to two graphs per worker. The VM service
-uses `/srv/runline/pools`, `/srv/runline/metros`, and `/var/cache/runline`.
+recipe uses `/srv/runline/pools`, `/srv/runline/metros`, and `/var/cache/runline`;
+the existing Oracle service paths are recorded in task 4.
 Measure the actual metro graphs before sizing a VM; Charlottesville memory
 measurements do not establish DC's memory needs.
 
@@ -71,7 +72,8 @@ Krish shared a Drive folder separately; the complete files are not in this
 checkout. Keep the exact matching graphs and `plan.json.gz` with each pool.
 The originals on the CS cluster's `/bigtemp` are volatile.
 
-The old DC merge needs its index added using its exact plan:
+The deployed DC file has been indexed (task 4). For an unindexed archive,
+add the index using its exact plan:
 
 ```bash
 .venv/bin/python scripts/merge_pools.py --plan plan.json.gz --add-index pools.sqlite
@@ -90,7 +92,7 @@ Copernicus elevation). Confirm the elevation bake is complete before
 publishing. Recompute pools on those exact graphs using the pool-generation
 fixes in this branch, which exclude unusable loops and choose origins inside
 routable cells. Charlottesville's rebuild is complete on the capstone project. DC and the
-top-50 rebuilds have not run.
+top-50 coverage remains incomplete; the team reports batch `b1` is running.
 
 ### 4. Update the existing hosted backend
 
@@ -100,27 +102,42 @@ page and proxies `/api/*` to an Oracle VM at
 request confirmed the deployed API works during this recovery. The proxy in
 `vercel.json` is preserved.
 
-The recorded server setup is Ubuntu 24.04 on `VM.Standard.A1.Flex` (ARM),
-4 OCPUs, 24 GB RAM and 190 GB disk, in Krish's Oracle account. The existing
-`runline.service` runs uvicorn on `127.0.0.1:8765` with downloads disabled,
-behind Caddy. Only Charlottesville's pool file is hosted.
+The server is Ubuntu 24.04 on `VM.Standard.A1.Flex` (ARM), 4 OCPUs, 24 GB
+RAM and 190 GB disk, in Krish's Oracle account. Since November 11 it serves
+Charlottesville and the DC pilot from `main`:
 
-Krish subsequently deployed DC on branch `serve-metro-pools` (`c0be4b7`).
-The public original app now lists both regions; a five-mile DC landmark
-request returned three closed in-band pool routes with matching GPX tracks.
-Its reported legacy layout is `pools/washington-dc.sqlite` plus
-`pools/tile-graphs/`, using `RUNLINE_TILE_GRAPHS_DIR` and `RUNLINE_TILE_CACHE`.
-Main instead discovers versioned `metros/<run>/pools.sqlite` runs and uses
-`RUNLINE_TILE_GRAPHS_CACHE`.
+| Path | What |
+|---|---|
+| `~/runline-main` | Checkout of `main` that `runline.service` runs (uvicorn `app:app` on `127.0.0.1:8765`, behind Caddy). Its `.venv` links to `~/runline/.venv` |
+| `~/runline/pools/charlottesville-va.sqlite` | Area pool (`RUNLINE_POOLS_DIR=~/runline/pools`) |
+| `~/metros/washington-dc/pools.sqlite` | DC pilot pools, indexed with `merge_pools.py --add-index` (`RUNLINE_METROS_DIR=~/metros`) |
+| `~/metros/washington-dc/tile-graphs` | Symlink to `~/runline/pools/tile-graphs`: the pilot's 230 tile graphs, 4.2 GB |
 
-Before updating that Oracle checkout from main, confirm its actual revision
-and layout. Do not blindly pull/restart across these different readers.
-Index a **copy** of its pool with main's `merge_pools.py --add-index` and its
-matching plan, then arrange the run-folder layout (tile graphs may be
-symlinked). Verify a shadow API against both cities before switching the
-service. Preserve the working legacy files until cutover. No Oracle files or
-service settings were changed in this session. A future graph rebuild still
-requires its matching pool file.
+The service also sets `RUNLINE_ALLOW_OSM_DOWNLOAD=0`,
+`RUNLINE_TILE_GRAPHS_CACHE=16` and `RUNLINE_CACHE_DIR=~/.cache/runline`.
+`/etc/systemd/system/runline.service.pr7-backup` is the previous unit, which
+ran the closed PR #7 branch from `~/runline` (kept for rollback only).
+
+To update after a merge: `git -C ~/runline-main fetch origin main && git -C
+~/runline-main checkout --detach origin/main`, then `sudo systemctl restart
+runline`. Confirm the commit and a request's `source` afterwards. A graph
+rebuild also requires its matching pool file; an old pool will be ignored.
+
+DC pilot on the VM (measured November 11):
+
+- The pilot's `plan.json.gz` was lost from `/bigtemp`. It was rebuilt with
+  `plan_tile_pools.py --metro washington-dc` from the unchanged
+  `config/metros.json` (93,183 cells on 230 tiles), and `--add-index` accepted
+  it: every pooled cell is in it and all 230 tile graph hashes match. The pool
+  file passed `PRAGMA quick_check` (72,237 cells, 216,711 pools).
+- A tile graph has 49k–124k nodes, loads in 2–4 s and holds about 650 MB once
+  serving has used it, so 16 cached tiles are about 10.5 GB.
+- Through runline-nine.vercel.app: 2–8 mile requests at six DC-area starts
+  came from pools; the first request in a tile takes 6–9 s, later ones
+  0.2–0.9 s. 15 miles planned live in about 31 s with the limited-coverage
+  warning. Charlottesville 3 and 5 miles also came from pools.
+- These are the old pilot's pools and graphs, which match each other. The
+  signal-preserving rebuild (task 5, `b6`) will replace them.
 
 The optional [deploy/README.md](../deploy/README.md) describes a separate
 portable VM recipe. Its paths (`/opt/runline/app` and `/srv/runline`) and
@@ -134,12 +151,6 @@ changes the hostname in `vercel.json`. Its Ubuntu image had an iptables
 obtain A1 capacity and configured a $1 monthly budget email. Check current
 resource eligibility and subscription limits before any infrastructure
 change; these are deployment records, not a fresh billing audit.
-
-Before serving DC, measure its actual tile graphs:
-
-```bash
-.venv/bin/python scripts/measure_tile_graphs.py metros/washington-dc/tile-graphs --together 2
-```
 
 Vercel's existing rewrite keeps browser requests on one origin, so no CORS
 change is needed for this deployment.
