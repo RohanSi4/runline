@@ -35,7 +35,7 @@ on Oracle. This recovery has not changed the deployed backend.
 | Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Serving the DC pilot on the VM; measurements in task 4. |
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
-| Cluster precompute | Per the November 11 team update, batch `b1` (New York and Los Angeles) is running on the UVA CS cluster. Rivanna allocation has not been verified in this session. |
+| Cluster precompute | Batch `b1` (New York and Los Angeles) finished on the UVA CS cluster on November 11 and is served from the Oracle VM (task 4). Other batches have not started. Rivanna allocation has not been verified. |
 | Graphs and pools | Repository graph remains unchanged for compatibility. The rebuilt graph and complete 95 MB pool file are deployed on the separate capstone project; the original Oracle assets remain in place. |
 
 See [validation.md](validation.md) for the before/after routing checks and
@@ -100,7 +100,7 @@ Copernicus elevation). Confirm the elevation bake is complete before
 publishing. Recompute pools on those exact graphs using the pool-generation
 fixes in this branch, which exclude unusable loops and choose origins inside
 routable cells. Charlottesville's rebuild is complete on the capstone project. DC and the
-top-50 coverage remains incomplete; the team reports batch `b1` is running.
+top-50 coverage remains incomplete; batch `b1` (New York and Los Angeles) is served from the Oracle VM.
 
 ### 4. Update the existing hosted backend
 
@@ -120,6 +120,8 @@ Charlottesville and the DC pilot from `main`:
 | `~/runline/pools/charlottesville-va.sqlite` | Area pool (`RUNLINE_POOLS_DIR=~/runline/pools`) |
 | `~/metros/washington-dc/pools.sqlite` | DC pilot pools, indexed with `merge_pools.py --add-index` (`RUNLINE_METROS_DIR=~/metros`) |
 | `~/metros/washington-dc/tile-graphs` | Symlink to `~/runline/pools/tile-graphs`: the pilot's 230 tile graphs, 4.2 GB |
+| `~/metros/b1/pools.sqlite`, `plan.json.gz` | Batch `b1` (New York and Los Angeles), indexed with `--add-index` |
+| `~/metros/b1/tile-graphs` | Symlink to the same shared folder, which also holds `b1`'s 906 tile graphs (18 GB in total with DC's) |
 
 The service also sets `RUNLINE_ALLOW_OSM_DOWNLOAD=0`,
 `RUNLINE_TILE_GRAPHS_CACHE=16` and `RUNLINE_CACHE_DIR=~/.cache/runline`.
@@ -146,6 +148,16 @@ DC pilot on the VM (measured November 11):
   warning. Charlottesville 3 and 5 miles also came from pools.
 - These are the old pilot's pools and graphs, which match each other. The
   signal-preserving rebuild (task 5, `b6`) will replace them.
+
+Batch `b1` on the VM (November 11): the merged file passed `PRAGMA
+quick_check` (278,729 cells, 836,185 pools, 9.7 GB). `--add-index` with its own
+plan indexed 372,064 cells on 906 tiles in about 6 minutes, and all 906 tile
+graph hashes match. Through runline-nine.vercel.app, 3–8 mile requests at
+Central Park, Prospect Park, Griffith Park, Santa Monica and Long Beach came
+from pools (first request in a tile 2–11 s, then about 0.5 s); a Jersey City
+road request planned live. With tiles from four regions loaded the process
+used about 4.9 GB. A backup of `b1`'s pools and plan is in the portal home
+directory under `~/pools/b1`, since `/bigtemp` is volatile.
 
 The optional [deploy/README.md](../deploy/README.md) describes a separate
 portable VM recipe. Its paths (`/opt/runline/app` and `/srv/runline`) and

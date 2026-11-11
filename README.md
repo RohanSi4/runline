@@ -6,11 +6,11 @@ trails and hills. It suggests up to three routes, favoring fewer traffic
 lights, major-road crossings and repeated sections. Download a route as a
 GPX file, the route format compatible watches and navigation apps import.
 
-**Current coverage:** Charlottesville, Virginia, and the Washington, DC pilot
-are available through one app. The rebuilt Charlottesville graph and pools
-are served directly; DC uses the existing Oracle regional backend. Both use
-saved routes with live planning when none fit. The top 50 US metro areas
-remain the goal.
+**Current coverage:** Charlottesville, Virginia, the Washington, DC pilot,
+New York and Los Angeles are available through one app. The rebuilt
+Charlottesville graph and pools are served directly; the metros use the
+existing Oracle regional backend. All use saved routes with live planning
+when none fit. The top 50 US metro areas remain the goal.
 
 **Try it:** [runline-nine.vercel.app](https://runline-nine.vercel.app)
 — rebuilt Charlottesville data and DC in one app.
@@ -226,8 +226,9 @@ metros after the shipped areas.
   (72,237 cells, 2.3 GB of pools, 230 tile graphs). A live five-mile request
   returned three closed in-band pool routes with matching GPX. Its
   storage now uses main's indexed run layout (see `docs/handoff.md`).
-- **Top 50 metro areas:** batch `b1` (New York and Los Angeles) is running on
-  the UVA CS cluster; the other batches have not started.
+- **New York and Los Angeles:** batch `b1` finished (278,729 cells with pools,
+  9.7 GB, 906 tile graphs) and is served from the Oracle backend.
+- **Top 50 metro areas:** the other batches have not started.
 
 `docs/handoff.md` lists the remaining work, and `slurm/README.md` is the
 cluster runbook.
