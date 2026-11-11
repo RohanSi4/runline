@@ -8,7 +8,7 @@
 - Presentation source: https://github.com/RohanSi4/runline/pull/6
 
 The presentation deployment is pinned to application commit
-`77f6c3e14fb1816338dd71477fc8069ffa14b6d2`, graph hash prefix
+`e27b2849452a465074dfb6a3d64baee636d21caf`, graph hash prefix
 `66b524897627167e`, and the complete 11,417-pool dataset. Its public alias is independent
 of the original app's Oracle proxy.
 
@@ -26,6 +26,11 @@ of the original app's Oracle proxy.
    If no saved loops qualify, the request plans live on the same graph.
 5. If time permits, show **Better starts → 1 mi**. It compares additional
    starts and takes longer than a saved-pool request.
+
+6. Optional DC example: open the original app, enter the Washington Monument
+   with Washington, DC in the address, and request five mixed-surface miles.
+   A live rehearsal returned three closed in-band pool routes with matching
+   GPX tracks. This is Krish's Oracle deployment of the earlier DC pilot.
 
 If the network or API fails, open the standalone HTML fallback. It embeds
 actual captured routes, streets and GPX tracks and makes no network requests.
@@ -101,9 +106,10 @@ Twenty hits returned two qualifying routes. Other requests fell back to live
 planning. Local median pooled latency was 64 ms; public warm pooled requests
 in the rehearsal took about 0.4–0.9 s, with a 2.7 s first request.
 
-The complete and sample packages are attached to the capstone draft release;
-its source application remains pinned to commit `77f6c3e`. Keep the exact
-graph and SQLite file together. DC's artifacts and Oracle SSH access remain
-unavailable in this session. No Rivanna allocation was verified and no cluster
+The complete and sample packages are attached to the capstone draft release.
+The latest complete snapshot matches the final presentation application;
+earlier snapshots are retained as backups. Keep the exact graph and SQLite
+file together. DC is now verified live on the original app. Its artifacts
+and Oracle SSH access remain unavailable locally. No Rivanna allocation was verified and no cluster
 jobs were started. The top-50 precompute is a multi-day run, not a completed
 part of the demo.

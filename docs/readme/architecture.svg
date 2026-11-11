@@ -33,9 +33,9 @@
   <text class="tech" x="452" y="158">src/runline/ · FastAPI on Oracle</text>
 
   <text class="name" x="854" y="90">Saved map data</text>
-  <text class="what" x="854" y="116">Charlottesville streets,</text>
+  <text class="what" x="854" y="116">Cville + DC map tiles,</text>
   <text class="what" x="854" y="135">paths and elevation</text>
-  <text class="tech" x="854" y="158">graphs/ · from OpenStreetMap</text>
+  <text class="tech" x="854" y="158">Graphs · from OpenStreetMap</text>
 
   <g fill="none" stroke="#62655d" stroke-width="1.6">
     <path d="M308 98 H426" marker-end="url(#arrow)"/>

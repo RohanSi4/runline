@@ -5,7 +5,7 @@ artifacts, release verification, an offline saved example, locally served
 Leaflet, and support for returning two qualifying pool routes on the default
 up-to-three request. Other result counts retain their existing behavior.
 
-The full suite passes **186 tests** on the rebuilt graph with its matching
+The full suite passes **187 tests** on the rebuilt graph with its matching
 crossing fixture. The new two-route cases confirm that one qualifying loop
 still falls back to live planning, and two qualifying loops return a clear
 notice without relaxing distance, repetition or diversity checks.
@@ -159,3 +159,38 @@ Twenty hits returned two qualifying routes. Median pooled time was 64 ms,
 p95 129 ms; the other 52 requests require live planning. This check skipped
 live timing and should not be combined with the historical paired study as
 if they were the same experiment.
+
+
+## Final UI snapshot and DC verification
+
+The final presentation application is pinned to
+`e27b2849452a465074dfb6a3d64baee636d21caf`, deployment
+`dpl_HQpjQaho6s2F8XLgto256ywE2Vkh`. The data hashes and complete-area pool
+counts above are unchanged. Its client script was fetched from the candidate
+and matched the tested source byte-for-byte before promotion.
+
+Address results now move the map's start pin to the resolved origin while
+preserving the typed label. A late response cannot overwrite a newer start
+selection. Three controller regressions cover resolved pins, normal replies
+and late replies; the full Python suite now passes 187 checks, including the
+client-state check. Browser rendering remained unavailable, so these are
+controller/API checks rather than a claimed visual browser test.
+
+The final unauthenticated ten-scenario public rehearsal again returned 30
+closed in-band routes with matching GPX, with nine pooled cases and one live
+nearby-start case. An additional full-address lookup returned three closed
+in-band pool routes. Separately, the original app's coverage endpoint now
+lists Charlottesville and Washington, DC. A public DC landmark request
+returned three closed in-band pool routes, with matching GPX, at
+5.104/4.931/5.061 miles. This verifies Krish's newly deployed DC pilot; its
+artifacts were not downloaded or rebuilt in this session.
+
+The original Oracle service was not modified. Its deployed legacy metro
+layout differs from main's native indexed-run layout; the handoff records
+migration and shadow verification before a future server update.
+
+
+Final checks include the ordinary repository graph (187 passing checks), the
+rebuilt graph with its own crossing fixture (187 passing checks), and three
+client-controller regression cases. No application code changed after the
+final `e27b284` snapshot; remaining edits are tests, notes and packaging.

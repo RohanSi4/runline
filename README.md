@@ -6,14 +6,15 @@ trails and hills. It suggests up to three routes, favoring fewer traffic
 lights, major-road crossings and repeated sections. Download a route as a
 GPX file, the route format compatible watches and navigation apps import.
 
-**Current coverage:** Charlottesville, Virginia, answered from saved routes on
-the deployed app, falling back to live planning when none fit. The top 50 US
-metro areas are the goal.
+**Current coverage:** the capstone build serves Charlottesville, Virginia.
+The original Oracle-backed deployment also serves Washington, DC. Both use
+saved routes with live planning when none fit. The top 50 US metro areas
+remain the goal.
 
 **Capstone build:** [runline-capstone.vercel.app](https://runline-capstone.vercel.app)
 — rebuilt Charlottesville graph and all 11,417 pools.
 
-**Original deployment:** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
+**Original deployment (also DC):** [runline-nine.vercel.app](https://runline-nine.vercel.app) · CS 4971
 capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 
 <img src="docs/readme/app.webp" alt="The RunLine app after a 5 mile request from the Rotunda: the form on the left, three route cards of 5.10, 4.95 and 5.08 miles with no traffic signals, and the selected route drawn on the map with a GPX download button" width="100%">
@@ -143,13 +144,17 @@ sliver. Two options that share over 70% of their length count as one.
 
 ## Architecture
 
+The diagram describes the original Oracle-backed deployment. The separate
+capstone build runs the same API directly on Vercel with the rebuilt
+Charlottesville graph and complete 95 MB pool file.
+
 <img src="docs/readme/architecture.svg" alt="The Vercel page proxies API requests to FastAPI on Oracle, which ranks saved loops first and plans live when no pool fits. Pools and their exact graph files live on the VM." width="100%">
 
 | Part | What it does | Where |
 |---|---|---|
 | Browser | Map, form, route comparison, GPX download (HTML/JS + Leaflet) | `web/` |
 | Route planner | Finds, measures and ranks loops (Python, FastAPI on Oracle) | `src/runline/` |
-| Saved map data | Charlottesville walk graph with elevation, built ahead of time | `graphs/`, `scripts/build_graphs.py` |
+| Saved map data | Charlottesville graph and metro tile graphs, built ahead of time | `graphs/`, metro run directories |
 | Precompute | Generates saved routes on the UVA CS cluster | `scripts/precompute_pools.py`, `slurm/` |
 | Serving | Answers from saved routes, or hands back to the planner | `src/runline/serving.py` |
 
@@ -209,9 +214,11 @@ metros after the shipped areas.
 - **Capstone deployment:** the rebuilt graph and complete 95 MB pool file are
   hosted directly on Vercel at the capstone URL. Its ten-scenario rehearsal
   returned 30 closed in-band routes with matching GPX exports.
-- **Washington, DC:** the pilot finished, with 72,237 cells and 2.3 GB of pools.
-  Serving metro tiles works in tests; serving DC needs its tile graphs and
-  plan copied from the cluster (see `docs/handoff.md`, task 2).
+- **Washington, DC:** Krish's Oracle deployment now serves the pilot
+  (72,237 cells, 2.3 GB of pools, 230 tile graphs). A live five-mile request
+  returned three closed in-band pool routes with matching GPX. Its legacy
+  storage layout needs migration before updating that server from main
+  (see `docs/handoff.md`).
 - **Top 50 metro areas:** not run yet.
 
 `docs/handoff.md` lists the remaining work, and `slurm/README.md` is the

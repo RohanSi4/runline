@@ -2,7 +2,7 @@
 
 ## Presentation preparation
 
-Integration PR #5 is merged. Active presentation work is on
+Integration PR #5 is merged. Presentation work is on
 `codex/presentation-ready` in the `runline-presentation` checkout, tracked by
 PR #6. See [presentation.md](presentation.md) for the demo sequence and
 [presentation-release.md](presentation-release.md) for its measured results.
@@ -22,9 +22,9 @@ on Oracle. This recovery has not changed the deployed backend.
 
 | Work | Current state |
 |---|---|
-| Current hosting | Charlottesville pools are already on Krish's Oracle VM; Vercel proxies `/api`. A live five-mile pool request was checked during recovery. |
+| Current hosting | The capstone project serves the rebuilt complete Charlottesville dataset directly on Vercel. The original Vercel/Oracle app now serves Charlottesville and DC; both were verified through its public API. |
 | Optional hosting tools | Provisioning, systemd, Caddy, area-pool upload, backup and smoke scripts integrated as a portable VM recipe. No Azure VM is needed for the existing deployment. |
-| Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Tested with cropped Charlottesville tile graphs; actual DC artifacts are unavailable locally. |
+| Metro serving | Main's indexed run layout is tested. Krish's deployed `serve-metro-pools` branch uses a different legacy layout; DC is verified live there. Actual DC files are unavailable locally. Migrate a copy before an Oracle code update. |
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
 | Rivanna | Cluster configuration, dry-run and smoke support integrated. No jobs submitted. |
@@ -55,14 +55,14 @@ measurements do not establish DC's memory needs.
 
 ## Remaining work, in order
 
-### 1. Integration merged; finish the presentation release
+### 1. Source integration
 
 PR #5 is merged. The recovery branch brought together `host-pools-vm`, `serve-metro-tiles`,
 `pool-hit-rate`, `signal-tags-and-metrics`, and the already combined
 `rivanna-slurm-on-metro`. Validation results belong with its PR. Do not push
 to `main` directly.
 
-### 2. Recover and archive the existing artifacts
+### 2. Preserve the DC deployment and archive the existing artifacts
 
 Krish's Charlottesville file has 13,092 pools, about 110 MB. The DC pilot
 has 72,237 cells with pools, about 20.25 million loops, and a 2.3 GB SQLite
@@ -105,10 +105,22 @@ The recorded server setup is Ubuntu 24.04 on `VM.Standard.A1.Flex` (ARM),
 `runline.service` runs uvicorn on `127.0.0.1:8765` with downloads disabled,
 behind Caddy. Only Charlottesville's pool file is hosted.
 
-After a code merge, the recorded update procedure is to SSH into the VM,
-run `git pull` in `~/runline`, then `sudo systemctl restart runline`.
-Confirm the new commit and a request's `source` afterwards. A graph rebuild
-also requires its matching pool file; an old pool will be ignored.
+Krish subsequently deployed DC on branch `serve-metro-pools` (`c0be4b7`).
+The public original app now lists both regions; a five-mile DC landmark
+request returned three closed in-band pool routes with matching GPX tracks.
+Its reported legacy layout is `pools/washington-dc.sqlite` plus
+`pools/tile-graphs/`, using `RUNLINE_TILE_GRAPHS_DIR` and `RUNLINE_TILE_CACHE`.
+Main instead discovers versioned `metros/<run>/pools.sqlite` runs and uses
+`RUNLINE_TILE_GRAPHS_CACHE`.
+
+Before updating that Oracle checkout from main, confirm its actual revision
+and layout. Do not blindly pull/restart across these different readers.
+Index a **copy** of its pool with main's `merge_pools.py --add-index` and its
+matching plan, then arrange the run-folder layout (tile graphs may be
+symlinked). Verify a shadow API against both cities before switching the
+service. Preserve the working legacy files until cutover. No Oracle files or
+service settings were changed in this session. A future graph rebuild still
+requires its matching pool file.
 
 The optional [deploy/README.md](../deploy/README.md) describes a separate
 portable VM recipe. Its paths (`/opt/runline/app` and `/srv/runline`) and
