@@ -140,6 +140,10 @@ replace the CS cluster, but nothing has been run or tested there:
   at once, and the scratch space's size and purge rules.
 - Rebuild pools on one cluster only unless you copy the graphs, since a pool only
   matches the exact graph it was built from.
+- `slurm/clusters/rivanna.env` now holds Rivanna's settings, and
+  `slurm/README.md` has a Rivanna runbook (smoke tests first) and a pre-flight
+  checklist: allocation SUs, where the 260–540 GB archive goes, whom to tell,
+  and the branches the run must wait for. Still untested on the cluster.
 
 Run it in batches with `slurm/run_batch.sh` (see `slurm/README.md`): a test
 batch of three metros, then eight batches of 360,000–420,000 cells. Each
