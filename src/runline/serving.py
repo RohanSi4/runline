@@ -45,10 +45,11 @@ from pathlib import Path
 
 import networkx as nx
 
+from .array_tiles import ArrayTile
 from .compact import file_sha256, graph_file, graph_fingerprint  # noqa: F401 (re-exported)
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id, neighbouring_cells
-from .metros import tile_for, tile_graph_file
+from .metros import load_tile_arrays, tile_for, tile_graph_file
 from .models import METERS_PER_MILE, Coordinate, RouteCandidate, RouteMetrics, RoutePreferences, StartCandidate
 from .osm import (
     _distinct_by_length,
@@ -243,8 +244,10 @@ class _Reach:
     back_paths: dict[int, list[int]]
 
 
-def _reach(graph: nx.MultiDiGraph, start_node: int, connector_meters: float | None = None) -> _Reach:
+def _reach(graph, start_node: int, connector_meters: float | None = None) -> _Reach:
     cutoff = MAX_CONNECTOR_METERS if connector_meters is None else connector_meters
+    if isinstance(graph, ArrayTile):
+        return _Reach(*graph.reach(start_node, cutoff))
     out_meters, out_paths = nx.single_source_dijkstra(graph, start_node, cutoff=cutoff, weight="length")
     # Searched backwards, so each path runs from the start; reversed on use.
     back_meters, back_paths = nx.single_source_dijkstra(
@@ -281,15 +284,20 @@ def _anchored(loop: list[int], reach: _Reach) -> tuple[tuple[int, ...], float] |
 MAJOR_AT_KEY = "_runline_major_at"
 
 
-def _route_graph(graph: nx.MultiDiGraph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
+def _route_graph(graph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
     """The edges these routes use, each the cheapest parallel edge for the
     runner, plus every major-road edge at a node they pass.
 
     The same choice collapse_graph makes for the whole area, which takes
     seconds; this takes milliseconds. The major roads let measure_route count
-    crossings of roads the route does not walk along.
+    crossings of roads the route does not walk along. A compact tile's
+    arrays (runline.array_tiles) build the same graph without networkx.
     """
 
+    if isinstance(graph, ArrayTile):
+        return graph.route_graph(
+            routes, lambda data, destination, source: _edge_preference_cost(data, destination, preferences, source)
+        )
     small = nx.DiGraph()
 
     def add(u: int, v: int) -> None:
@@ -471,7 +479,8 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
     near = neighbouring_cells(cell)
     pools = load_pools(pool_source, near, surface)
 
-    graph = load_area_graph(area)
+    # A compact metro tile answers from its arrays; anything else from its graph.
+    graph = load_tile_arrays(area) or load_area_graph(area)
     start_node = _nearest_node(graph, origin)
     ranked, reason, small, retry = [], "no pool for the cell", None, ""
     try:

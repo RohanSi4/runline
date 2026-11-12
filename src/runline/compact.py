@@ -38,6 +38,7 @@ import os
 import pickle
 import zipfile
 import zlib
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -483,23 +484,30 @@ def read_pickle(path: Path | str) -> nx.MultiDiGraph:
         return pickle.load(handle)
 
 
-def read_graph(path: Path | str) -> nx.MultiDiGraph:
-    """Load a graph file of either kind; a damaged compact file raises CompactGraphError.
+@contextmanager
+def gc_paused():
+    """The cyclic garbage collector off while a graph is built.
 
-    Building a graph makes millions of small dicts, and the cyclic garbage
-    collector keeps scanning them although none is garbage. Pausing it cut the
-    load of a 263k-node pickled tile from 6.7 s to 3.8 s. Only the thread that
-    turned it off turns it back on, so overlapping loads leave it enabled
-    afterwards.
+    Building a graph makes millions of small dicts, and the collector keeps
+    scanning them although none is garbage. Pausing it cut the load of a
+    263k-node pickled tile from 6.7 s to 3.8 s. Only the thread that turned it
+    off turns it back on, so overlapping loads leave it enabled afterwards.
     """
 
     paused = gc.isenabled()
     gc.disable()
     try:
-        return read_compact(path) if is_compact(path) else read_pickle(path)
+        yield
     finally:
         if paused:
             gc.enable()
+
+
+def read_graph(path: Path | str) -> nx.MultiDiGraph:
+    """Load a graph file of either kind; a damaged compact file raises CompactGraphError."""
+
+    with gc_paused():
+        return read_compact(path) if is_compact(path) else read_pickle(path)
 
 
 # --- choosing and fingerprinting ---------------------------------------------
