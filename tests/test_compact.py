@@ -115,6 +115,9 @@ def test_the_shipped_graph_round_trips_exactly(compact_area) -> None:
     assert list(original.succ[node]) == list(restored.succ[node])
     assert all(list(original.pred[n]) == list(restored.pred[n]) for n in original)
     assert restored.graph["elevation_baked"] is True
+    # OSM's seven decimals are stored as exact fixed point.
+    header = compact.read_compact_header(compact_area["compact"] / "charlottesville-va.npz")
+    assert set(header["encodings"].values()) == {"delta-fixed"}
 
 
 def test_the_compact_file_is_smaller_than_the_pickle(compact_area) -> None:
@@ -139,17 +142,17 @@ def _awkward_graph() -> nx.MultiDiGraph:
 
     graph = nx.MultiDiGraph(crs="epsg:4326", elevation_baked=False, created_with="test")
     graph.add_node(30, y=1 / 3, x=-2 / 3, highway="traffic_signals", elevation=12.5)
-    graph.add_node(10, y=38.1, x=-78.4, crossing="marked;uncontrolled")
-    graph.add_node(20, y=38.2, x=-78.5, **{"crossing:signals": "yes"}, street_count=3)
-    graph.add_node(40, y=38.3, x=-78.6)
+    graph.add_node(10, y=1.25, x=2.5, crossing="marked;uncontrolled")
+    graph.add_node(20, y=1.5, x=2.75, **{"crossing:signals": "yes"}, street_count=3)
+    graph.add_node(40, y=1.75, x=3.0)
     graph.add_edge(20, 10, key=0, length=5.0, highway=["footway", "path"], name=["A", "B"])
     graph.add_edge(10, 20, key=0, length=5.0, highway="footway", osmid=[1, 2],
-                   geometry=LineString([(-78.4, 38.1), (-78.45, 38.15), (-78.5, 38.2)]))
+                   geometry=LineString([(2.5, 1.25), (2.625, 1.375), (2.75, 1.5)]))
     graph.add_edge(10, 20, key=1, length=7.25, highway="primary", ref="US 1", bridge="yes")
     graph.add_edge(20, 30, key=0, length=1.0, highway="service",
-                   geometry=LineString([(-78.5, 38.2), (-2 / 3, 1 / 3)]))
+                   geometry=LineString([(2.75, 1.5), (-2 / 3, 1 / 3)]))
     graph.add_edge(30, 20, key=3, length=1.0, highway="service", tunnel="culvert",
-                   geometry=LineString([(-2 / 3, 1 / 3), (-78.5, 38.2)]))
+                   geometry=LineString([(-2 / 3, 1 / 3), (2.75, 1.5)]))
     graph.add_edge(30, 30, key=0, length=0.5, highway="path", surface="dirt")
     graph.add_edge(10, 30, key=0, highway="path")
     return graph
@@ -168,9 +171,10 @@ def test_awkward_graphs_round_trip_with_their_order(tmp_path) -> None:
     assert restored.edges[20, 10, 0]["highway"] == ["footway", "path"]
     assert "length" not in restored.edges[10, 30, 0] and "elevation" not in restored.nodes[10]
     # Off-grid coordinates are kept as float64, not rounded to OSM's grid.
+    assert compact.read_compact_header(path)["encodings"]["node_y"] == "float64"
     assert restored.nodes[30]["y"] == 1 / 3
-    assert list(restored.edges[20, 30, 0]["geometry"].coords) == [(-78.5, 38.2), (-2 / 3, 1 / 3)]
-    assert list(restored.edges[30, 20, 3]["geometry"].coords) == [(-2 / 3, 1 / 3), (-78.5, 38.2)]
+    assert list(restored.edges[20, 30, 0]["geometry"].coords) == [(2.75, 1.5), (-2 / 3, 1 / 3)]
+    assert list(restored.edges[30, 20, 3]["geometry"].coords) == [(-2 / 3, 1 / 3), (2.75, 1.5)]
     # The same key dict on both sides, as networkx builds it.
     assert restored._pred[20][10] is restored._succ[10][20]
     assert restored.graph == {"crs": "epsg:4326", "elevation_baked": False, "created_with": "test"}
