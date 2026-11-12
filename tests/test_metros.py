@@ -9,6 +9,7 @@ through its metro tile.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import gzip
 import json
 import logging
@@ -399,4 +400,140 @@ def test_tile_graphs_load_lazily_and_stay_within_the_cache(served, monkeypatch) 
     assert (metros.TILE_GRAPHS.held(), metros.TILE_GRAPHS.loads) == (1, 2)
     load_area_graph(coverage.containing_area(cell_centre(first)))
     assert metros.TILE_GRAPHS.loads == 3
+    metros.TILE_GRAPHS.clear()
+
+
+@pytest.fixture(scope="module")
+def compacted(run, tmp_path_factory) -> Path:
+    """The run with its tile graphs converted in place, as on the VM."""
+
+    from scripts import compact_graphs
+
+    directory = tmp_path_factory.mktemp("compacted") / "run"
+    shutil.copytree(run["directory"], directory)
+    assert compact_graphs.main([str(directory / "tile-graphs"), "--verify"]) == 0
+    return directory
+
+
+def _compact_run(compacted: Path, tmp_path: Path, monkeypatch, *, keep_pickles: bool = False) -> Path:
+    directory = tmp_path / "metros" / "compact"
+    shutil.copytree(compacted, directory)
+    monkeypatch.setenv("RUNLINE_METROS_DIR", str(directory.parent))
+    graphs = directory / "tile-graphs"
+    if not keep_pickles:
+        for path in graphs.glob("*.pkl.gz"):
+            path.unlink()
+    metros.TILE_GRAPHS.clear()
+    metros.TILE_ARRAYS.clear()
+    serving._tile_graph_matches.cache_clear()
+    return directory
+
+
+def _served_routes(origin: Coordinate, miles: float, count: int = 1) -> list:
+    preferences = RoutePreferences(miles, surface=SurfacePreference.MIXED, result_count=count)
+    routes_found = serving.serve_from_pool(origin, preferences)
+    return routes_found and [dataclasses.asdict(route) for route in routes_found]
+
+
+@pytest.mark.parametrize("arrays", [True, False])
+@pytest.mark.parametrize("keep_pickles", [False, True])
+def test_pools_built_on_pickles_serve_identically_from_compact_tiles(
+    served, compacted, tmp_path, monkeypatch, keep_pickles, arrays
+) -> None:
+    from runline.compact import COMPACT_SUFFIX
+
+    cell, origin, miles = _best_request(served)
+    metros.TILE_GRAPHS.clear()
+    from_pickles = _served_routes(origin, miles)
+    assert from_pickles
+
+    monkeypatch.setenv("RUNLINE_ARRAY_SERVING", "1" if arrays else "0")
+    directory = _compact_run(compacted, tmp_path, monkeypatch, keep_pickles=keep_pickles)
+    from_compact = _served_routes(origin, miles)
+
+    assert from_compact == from_pickles
+    # A hit on a compact tile holds its arrays, not a networkx graph.
+    held = metros.TILE_ARRAYS._graphs if arrays else metros.TILE_GRAPHS._graphs
+    assert held and all(path.endswith(COMPACT_SUFFIX) for path, _ in held)
+    assert (metros.TILE_GRAPHS.held(), metros.TILE_ARRAYS.held()) == ((0, 1) if arrays else (1, 0))
+    payload = asyncio.run(routes(RouteRequest(
+        latitude=origin.latitude, longitude=origin.longitude, distance_miles=miles, surface="mixed", result_count=1,
+    )))
+    assert payload["source"] == "pool"
+    assert (directory / "tile-graphs" / f"{served['owner'][cell]}.pkl.gz").exists() == keep_pickles
+    metros.TILE_GRAPHS.clear()
+    metros.TILE_ARRAYS.clear()
+
+
+def test_every_pooled_request_serves_the_same_from_arrays_and_graphs(served, compacted, tmp_path, monkeypatch) -> None:
+    _compact_run(compacted, tmp_path, monkeypatch)
+    requests = [
+        (Coordinate(*pool["origin"]), round(loop["metrics"]["distance_miles"], 1), count)
+        for pool in served["pools"].values()
+        for loop in pool["loops"]
+        for count in (1, 3)
+    ]
+    answers = {}
+    for arrays in ("1", "0"):
+        monkeypatch.setenv("RUNLINE_ARRAY_SERVING", arrays)
+        answers[arrays] = [
+            _served_routes(origin, miles, count) for origin, miles, count in requests
+        ]
+    assert any(answers["1"])
+    assert answers["1"] == answers["0"]
+    metros.TILE_GRAPHS.clear()
+    metros.TILE_ARRAYS.clear()
+
+
+def test_a_live_request_on_a_compact_tile_builds_its_graph_from_the_arrays(served, compacted, tmp_path, monkeypatch) -> None:
+    from runline import osm
+
+    cell = next(cell for cell in sorted(served["owner"]) if cell not in served["pools"])
+    preferences = RoutePreferences(1.5, surface=SurfacePreference.MIXED, result_count=1)
+    osm._PREPARED_CACHE.clear()
+    expected = plan_routes(cell_centre(cell), preferences, cache_directory=tmp_path, elevation_source="none")
+    _compact_run(compacted, tmp_path, monkeypatch)
+    osm._PREPARED_CACHE.clear()
+    path = metros.graph_file(coverage.containing_area(cell_centre(cell)).filename)
+    tile = metros.TILE_ARRAYS.get(path)
+
+    result = plan_routes(cell_centre(cell), preferences, cache_directory=tmp_path, elevation_source="none")
+
+    assert result.source == "live" and result.candidates
+    assert metros.TILE_GRAPHS.held() == 1 and metros.TILE_ARRAYS.peek(path) is tile
+    assert [dataclasses.asdict(c) for c in result.candidates] == [dataclasses.asdict(c) for c in expected.candidates]
+    osm._PREPARED_CACHE.clear()
+    metros.TILE_GRAPHS.clear()
+    metros.TILE_ARRAYS.clear()
+
+
+def test_a_tampered_compact_tile_is_refused(served, compacted, tmp_path, monkeypatch, caplog) -> None:
+    cell, origin, miles = _best_request(served)
+    directory = _compact_run(compacted, tmp_path, monkeypatch)
+    path = directory / "tile-graphs" / f"{served['owner'][cell]}.npz"
+    with np.load(path, allow_pickle=False) as archive:
+        arrays = {name: archive[name] for name in archive.files}
+    arrays["edge_length"] = arrays["edge_length"] * 1.0001
+    with path.open("wb") as handle:
+        np.savez_compressed(handle, **arrays)
+
+    with caplog.at_level(logging.WARNING):
+        assert _served_routes(origin, miles) is None
+    assert "built from graph" in caplog.text
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(routes(RouteRequest(latitude=origin.latitude, longitude=origin.longitude, distance_miles=miles)))
+    assert error.value.status_code == 422 and "damaged" in error.value.detail
+    metros.TILE_GRAPHS.clear()
+
+
+def test_a_compact_tile_of_another_graph_is_refused(served, compacted, tmp_path, monkeypatch, caplog) -> None:
+    cell, origin, miles = _best_request(served)
+    directory = _compact_run(compacted, tmp_path, monkeypatch)
+    tile = served["owner"][cell]
+    other = next(slug for slug in served["plan"]["tiles"] if slug != tile)
+    shutil.copy(directory / "tile-graphs" / f"{other}.npz", directory / "tile-graphs" / f"{tile}.npz")
+
+    with caplog.at_level(logging.WARNING, logger="runline.serving"):
+        assert _served_routes(origin, miles) is None
+    assert "built from graph" in caplog.text
     metros.TILE_GRAPHS.clear()

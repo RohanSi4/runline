@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import dataclasses
 import functools
-import hashlib
 import json
 import logging
 import os
@@ -37,9 +36,11 @@ from pathlib import Path
 
 import networkx as nx
 
+from .array_tiles import ArrayTile
+from .compact import graph_file, graph_fingerprint
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id, neighbouring_cells
-from .metros import tile_for
+from .metros import load_tile_arrays, tile_for
 from .models import METERS_PER_MILE, Coordinate, RouteCandidate, RouteMetrics, RoutePreferences, StartCandidate
 from .osm import (
     _distinct_by_length,
@@ -104,18 +105,18 @@ def _current_meta(path: str) -> dict | None:
 
 
 def _fingerprint(path: Path) -> str:
-    """The graph hash scripts/precompute_pools.py records, read in chunks."""
+    """The graph hash scripts/precompute_pools.py records.
 
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()[:16]
+    A pickle's sha256; for a compact file (runline.compact), the recorded
+    hash of the pickle it was made from, once its own content checks out.
+    """
+
+    return graph_fingerprint(path)
 
 
 @functools.lru_cache(maxsize=8)
-def _checked_pool_file(path: str, graph_path: str, modified: float) -> PoolFile | None:
-    """The pool file if it matches this code and this graph; cached per mtime."""
+def _checked_pool_file(path: str, graph_path: str, modified: float, graph_modified: float) -> PoolFile | None:
+    """The pool file if it matches this code and this graph; cached per mtime of both."""
 
     meta = _current_meta(path)
     if meta is None:
@@ -151,7 +152,8 @@ def _tile_pool_file(area: Area) -> PoolFile | None:
     """The metro file for a tile Area, if its pools fit this code and the tile's graph."""
 
     tile = tile_for(area)
-    graph_path = Path(area.filename)
+    # The compact twin when there is one (runline.compact), as loading picks.
+    graph_path = graph_file(area.filename)
     if tile is None or tile.graph is None or not graph_path.exists():
         return None
     pools = _checked_metro_file(area.metro_pools, Path(area.metro_pools).stat().st_mtime)
@@ -169,7 +171,10 @@ def pool_file(area: Area) -> PoolFile | None:
     path = pools_root() / f"{area.slug}.sqlite"
     if not path.exists():
         return None
-    return _checked_pool_file(str(path), str(graphs_root() / area.filename), path.stat().st_mtime)
+    graph_path = graph_file(graphs_root() / area.filename)
+    if not graph_path.exists():
+        return None
+    return _checked_pool_file(str(path), str(graph_path), path.stat().st_mtime, graph_path.stat().st_mtime)
 
 
 def load_pool(pool: PoolFile, cell: str, surface: str) -> dict | None:
@@ -218,7 +223,9 @@ class _Reach:
     back_paths: dict[int, list[int]]
 
 
-def _reach(graph: nx.MultiDiGraph, start_node: int) -> _Reach:
+def _reach(graph, start_node: int) -> _Reach:
+    if isinstance(graph, ArrayTile):
+        return _Reach(*graph.reach(start_node, MAX_CONNECTOR_METERS))
     out_meters, out_paths = nx.single_source_dijkstra(
         graph, start_node, cutoff=MAX_CONNECTOR_METERS, weight="length"
     )
@@ -257,15 +264,20 @@ def _anchored(loop: list[int], reach: _Reach) -> tuple[tuple[int, ...], float] |
 MAJOR_AT_KEY = "_runline_major_at"
 
 
-def _route_graph(graph: nx.MultiDiGraph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
+def _route_graph(graph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
     """The edges these routes use, each the cheapest parallel edge for the
     runner, plus every major-road edge at a node they pass.
 
     The same choice collapse_graph makes for the whole area, which takes
     seconds; this takes milliseconds. The major roads let measure_route count
-    crossings of roads the route does not walk along.
+    crossings of roads the route does not walk along. A compact tile's
+    arrays (runline.array_tiles) build the same graph without networkx.
     """
 
+    if isinstance(graph, ArrayTile):
+        return graph.route_graph(
+            routes, lambda data, destination, source: _edge_preference_cost(data, destination, preferences, source)
+        )
     small = nx.DiGraph()
 
     def add(u: int, v: int) -> None:
@@ -378,7 +390,8 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
     if not pools:
         return None
 
-    graph = load_area_graph(area)
+    # A compact metro tile answers from its arrays; anything else from its graph.
+    graph = load_tile_arrays(area) or load_area_graph(area)
     reach = _reach(graph, _nearest_node(graph, origin))
     candidates = _candidates(pools, reach, preferences)
     if not candidates:

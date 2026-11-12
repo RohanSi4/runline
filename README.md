@@ -212,7 +212,9 @@ The API's `source` field then says `pool` or `live`.
 from its cell, loads that tile's graph on first use, and keeps at most
 `RUNLINE_TILE_GRAPHS_CACHE` (default 2) graphs in memory. A start with no
 usable pool plans live on the same tile graph. `/api/areas` lists the served
-metros after the shipped areas.
+metros after the shipped areas. Tile graphs converted with
+`scripts/compact_graphs.py` load from flat arrays instead, and answer pool
+hits without building the graph; see [compact tiles](docs/compact-tiles.md).
 
 **Status:**
 
