@@ -1,0 +1,30 @@
+{
+  "description": "Pinned data for runline-capstone.vercel.app: the rebuilt Charlottesville graph and its complete pool. Verified by scripts/release_capstone.py before staging.",
+  "area": "charlottesville-va",
+  "remote_api": "https://129-153-47-234.sslip.io",
+  "expected_areas": [
+    "Charlottesville, VA",
+    "Washington, DC"
+  ],
+  "release": {
+    "repo": "RohanSi4/runline",
+    "tag": "capstone-2026-11-11",
+    "asset": "runline-complete-e27b284.tar.gz",
+    "sha256": "4b0a552eaab55f2f699d47752bf64ec7636c35b5a9e9205b8d2ca01a11c7e2f7"
+  },
+  "vercel": {
+    "project": "runline-capstone",
+    "orgId": "team_w2RVCYwHEaQFqkRSKogpNcpr",
+    "projectId": "prj_JNsmPNR3BY74TaoLwUNRutGbwrAO",
+    "production_url": "https://runline-capstone.vercel.app"
+  },
+  "graph_manifest_canonical_sha256": "2be4a2682a914a01c817f28662fb5f038bfe777123906649281e9f50e5c8c480",
+  "files": {
+    "graphs/charlottesville-va.pkl.gz": "66b524897627167e85bcfdf7b7dab996bc92e1e622343988584fd5b83cf573e9",
+    "graphs/charlottesville-va-drive.pkl.gz": "45b30ffbe2fa64e6717ca34289a95d6076cc98b55e93911bf7f56c02c2286683",
+    "graphs/charlottesville-va-starts.json": "d07feb551e2e8cd246a76652ce07784f5a4024a77a08b3c9085c680bba02098f",
+    "graphs/charlottesville-va-places.json": "6389f86f3c8c9dfcce7ee3ad5970fb5edfb0900236b2eaa9218064b538eb136b",
+    "pools/charlottesville-va.sqlite": "c18a02a032cc1e4e825bea010cddc840863ec9a386f1ae4342de14801024f03c",
+    "saved-demo.html": "07b51c0c88151f507b4974dddd169e5c497b13439a8761f443200a43d72e87ae"
+  }
+}
