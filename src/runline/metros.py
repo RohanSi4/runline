@@ -26,7 +26,10 @@ asks this module after the manifest's areas, which keep priority.
 
 A tile's graph is named ``<tile>.pkl.gz`` throughout; runline.compact.graph_file
 swaps in the compact ``<tile>.npz`` when it exists, for loading and for the
-pool hash check alike.
+pool hash check alike. A pool hit on a compact tile needs only its arrays
+(runline.array_tiles), of which RUNLINE_TILE_ARRAYS_CACHE (default 32) stay
+in memory; the networkx graph is built from them only when a request there
+plans live, and RUNLINE_TILE_GRAPHS_CACHE then bounds those.
 """
 
 from __future__ import annotations
@@ -40,10 +43,11 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Any, Callable
 
 import networkx as nx
 
-from .compact import CompactGraphError, graph_file, read_graph
+from .compact import CompactGraphError, graph_file, graph_from_arrays, is_compact, read_graph
 from .coverage import Area, CoverageError
 from .geo import destination
 from .grid import cell_id
@@ -56,6 +60,9 @@ TILE_GRAPHS_NAME = "tile-graphs"
 # The cells/tiles layout this code reads, written by scripts/merge_pools.py.
 METRO_INDEX_VERSION = 1
 DEFAULT_TILE_GRAPHS_CACHE = 2
+# Compact tiles held as arrays for pool hits: about 16 MB each for a
+# Charlottesville-sized tile (docs/compact-tiles.md).
+DEFAULT_TILE_ARRAYS_CACHE = 32
 
 
 def metros_root() -> Path:
@@ -70,6 +77,13 @@ def tile_graphs_cache_size() -> int:
         return max(1, int(os.environ.get("RUNLINE_TILE_GRAPHS_CACHE", DEFAULT_TILE_GRAPHS_CACHE)))
     except ValueError:
         return DEFAULT_TILE_GRAPHS_CACHE
+
+
+def tile_arrays_cache_size() -> int:
+    try:
+        return max(1, int(os.environ.get("RUNLINE_TILE_ARRAYS_CACHE", DEFAULT_TILE_ARRAYS_CACHE)))
+    except ValueError:
+        return DEFAULT_TILE_ARRAYS_CACHE
 
 
 @dataclass(frozen=True)
@@ -206,27 +220,37 @@ def tile_for(area: Area) -> Tile | None:
 
 
 def read_graph_file(path: Path) -> nx.MultiDiGraph:
-    """Load a tile graph, pickled or compact (runline.compact.read_graph)."""
+    """Load a tile graph, pickled or compact (runline.compact.read_graph).
 
+    A compact tile whose arrays are already held for pool hits is built from
+    them, without reading the file again.
+    """
+
+    if is_compact(path):
+        tile = TILE_ARRAYS.peek(path)
+        if tile is not None:
+            return graph_from_arrays(tile.header, tile.arrays)
     return read_graph(path)
 
 
-class _TileGraphs:
-    """Tile graphs by path, least recently used first, at most ``size`` held.
+class _TileCache:
+    """Tiles by path, least recently used first, at most ``size()`` held.
 
-    A graph is loaded once even when several requests want it at the same
+    A tile is loaded once even when several requests want it at the same
     time, so memory never holds two copies; requests for other tiles do not
-    wait on it. A graph evicted while a request still uses it lives until
+    wait on it. A tile evicted while a request still uses it lives until
     that request ends, so the bound is the cache size plus in-flight loads.
     """
 
-    def __init__(self) -> None:
-        self._graphs: OrderedDict[tuple[str, float], nx.MultiDiGraph] = OrderedDict()
+    def __init__(self, load: Callable[[Path], Any], size: Callable[[], int]) -> None:
+        self._load = load
+        self._size = size
+        self._graphs: OrderedDict[tuple[str, float], Any] = OrderedDict()
         self._lock = threading.Lock()
         self._loading: dict[tuple[str, float], threading.Lock] = {}
         self.loads = 0
 
-    def get(self, path: Path) -> nx.MultiDiGraph:
+    def get(self, path: Path) -> Any:
         key = (str(path), path.stat().st_mtime)
         with self._lock:
             graph = self._graphs.get(key)
@@ -240,14 +264,27 @@ class _TileGraphs:
                 if graph is not None:
                     self._graphs.move_to_end(key)
                     return graph
-            graph = read_graph_file(path)
+            try:
+                graph = self._load(path)
+            finally:
+                with self._lock:
+                    self._loading.pop(key, None)
             with self._lock:
                 self.loads += 1
                 self._graphs[key] = graph
-                self._loading.pop(key, None)
-                while len(self._graphs) > tile_graphs_cache_size():
+                while len(self._graphs) > self._size():
                     self._graphs.popitem(last=False)
             return graph
+
+    def peek(self, path: Path) -> Any:
+        """The held tile for this file version, if any, without loading or reordering."""
+
+        try:
+            key = (str(path), path.stat().st_mtime)
+        except OSError:
+            return None
+        with self._lock:
+            return self._graphs.get(key)
 
     def held(self) -> int:
         return len(self._graphs)
@@ -258,7 +295,42 @@ class _TileGraphs:
             self.loads = 0
 
 
-TILE_GRAPHS = _TileGraphs()
+def _read_array_tile(path: Path):
+    from .array_tiles import ArrayTile
+
+    return ArrayTile.read(path)
+
+
+# Full networkx graphs, for live planning (and every request on a pickle).
+TILE_GRAPHS = _TileCache(lambda path: read_graph_file(path), tile_graphs_cache_size)
+# Compact tiles' arrays, which answer pool hits (runline.array_tiles); about
+# a twentieth of a graph's memory, so many more stay hot.
+TILE_ARRAYS = _TileCache(_read_array_tile, tile_arrays_cache_size)
+
+
+def array_serving() -> bool:
+    """Pool hits on compact tiles use their arrays unless RUNLINE_ARRAY_SERVING=0."""
+
+    return os.environ.get("RUNLINE_ARRAY_SERVING", "1").strip().lower() not in {"0", "false", "no"}
+
+
+def load_tile_arrays(area: Area):
+    """The tile's ArrayTile when its served file is compact; None for a pickle.
+
+    Serving checks the tile's graph hash first, so a damaged compact file has
+    already been refused by then; one that fails here is logged and None.
+    """
+
+    if not area.metro_pools or not array_serving():
+        return None
+    path = graph_file(area.filename)
+    if not is_compact(path) or not path.exists():
+        return None
+    try:
+        return TILE_ARRAYS.get(path)
+    except CompactGraphError as error:
+        LOGGER.error("cannot load %s: %s", path, error)
+        return None
 
 
 def load_tile_graph(area: Area) -> nx.MultiDiGraph:

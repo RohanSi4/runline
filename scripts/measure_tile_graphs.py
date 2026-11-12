@@ -3,6 +3,10 @@
     python scripts/measure_tile_graphs.py metros/washington-dc/tile-graphs
     python scripts/measure_tile_graphs.py <dir> --largest 8 --together 3
     python scripts/measure_tile_graphs.py graphs/charlottesville-va.pkl.gz
+    python scripts/measure_tile_graphs.py <dir> --compact    # the .npz twins
+
+Pickled (.pkl.gz) and compact (.npz, scripts/compact_graphs.py) graphs both
+load; a directory is read for one kind, pickles unless ``--compact``.
 
 Each graph loads in a fresh process, the way runline.metros loads it on a
 request's first use of a tile, and reports:
@@ -11,7 +15,9 @@ request's first use of a tile, and reports:
 - load: unpickling it, and the resident memory it adds;
 - index: the nearest-node arrays the first request on the tile builds;
 - live: cropping and collapsing a 5 mile request around the tile's middle,
-  what a pool miss pays before searching (runline.osm.prepare_core).
+  what a pool miss pays before searching (runline.osm.prepare_core);
+- for a compact file, also what its arrays hold when they answer pool hits
+  without the networkx graph (runline.array_tiles).
 
 ``--together K`` then loads the K largest into one process through the
 serving cache, which shows whether memory adds up per tile. A server needs
@@ -109,6 +115,30 @@ def measure_one(path: Path) -> dict:
     }
 
 
+def measure_arrays(path: Path) -> dict:
+    """What a compact tile holds for pool hits (runline.array_tiles), in a fresh process."""
+
+    from runline.array_tiles import ArrayTile
+    from runline.serving import MAX_CONNECTOR_METERS
+
+    gc.collect()
+    baseline = resident_mb()
+    started = time.perf_counter()
+    tile = ArrayTile.read(path)
+    loaded = time.perf_counter() - started
+    gc.collect()
+    held = resident_mb() - baseline
+    middle = int(tile.ids[tile.ids.size // 2])
+    started = time.perf_counter()
+    tile.reach(middle, MAX_CONNECTOR_METERS)
+    return {
+        "arrays_mb": round(held),
+        "arrays_nbytes_mb": round(tile.nbytes() / MEGABYTE, 1),
+        "arrays_load_s": round(loaded, 3),
+        "reach_ms": round((time.perf_counter() - started) * 1000, 2),
+    }
+
+
 def measure_together(paths: list[Path]) -> dict:
     os.environ["RUNLINE_TILE_GRAPHS_CACHE"] = str(len(paths))
     from runline.metros import TILE_GRAPHS
@@ -130,7 +160,7 @@ def measure_together(paths: list[Path]) -> dict:
 
 
 def nodes_from_stats(path: Path) -> int | None:
-    stats = path.with_name(path.name.removesuffix(".pkl.gz") + ".json")
+    stats = path.with_name(path.name.removesuffix(".pkl.gz").removesuffix(".npz") + ".json")
     if not stats.exists():
         return None
     return json.loads(stats.read_text()).get("nodes")
@@ -139,7 +169,8 @@ def nodes_from_stats(path: Path) -> int | None:
 def chosen(arguments) -> list[Path]:
     paths = []
     for target in arguments.paths:
-        paths.extend(sorted(target.glob("*.pkl.gz")) if target.is_dir() else [target])
+        pattern = "*.npz" if arguments.compact else "*.pkl.gz"
+        paths.extend(sorted(target.glob(pattern)) if target.is_dir() else [target])
     if len(paths) <= arguments.largest + 1:
         return paths
     ranked = sorted(paths, key=lambda path: nodes_from_stats(path) or path.stat().st_size, reverse=True)
@@ -156,14 +187,19 @@ def child(*extra: str) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="measure_tile_graphs")
-    parser.add_argument("paths", type=Path, nargs="*", help="tile graph directories or .pkl.gz files")
+    parser.add_argument("paths", type=Path, nargs="*", help="tile graph directories, or .pkl.gz or .npz files")
     parser.add_argument("--largest", type=int, default=5, help="from a directory, measure this many largest tiles")
     parser.add_argument("--together", type=int, default=0, help="also load the K largest into one process")
+    parser.add_argument("--compact", action="store_true", help="from a directory, measure the .npz graphs")
     parser.add_argument("--one", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--all", type=Path, nargs="+", help=argparse.SUPPRESS)
+    parser.add_argument("--arrays", type=Path, help=argparse.SUPPRESS)
     arguments = parser.parse_args(argv)
     if arguments.one:
         print(json.dumps(measure_one(arguments.one)))
+        return 0
+    if arguments.arrays:
+        print(json.dumps(measure_arrays(arguments.arrays)))
         return 0
     if arguments.all:
         print(json.dumps(measure_together(arguments.all)))
@@ -173,7 +209,7 @@ def main(argv=None) -> int:
 
     paths = chosen(arguments)
     if not paths:
-        print("no .pkl.gz graphs found")
+        print("no graphs found")
         return 1
     print(f"{'tile':<34}{'file MB':>8}{'nodes':>10}{'hash s':>8}{'load s':>8}{'graph MB':>10}"
           f"{'index s':>9}{'live s':>8}{'+live MB':>9}{'peak MB':>9}")
@@ -181,13 +217,21 @@ def main(argv=None) -> int:
     for path in paths:
         row = child("--one", str(path))
         rows.append(row)
-        print(f"{Path(row['file']).name.removesuffix('.pkl.gz'):<34}{row['file_mb']:>8}{row['nodes']:>10,}"
+        print(f"{Path(row['file']).name:<34}{row['file_mb']:>8}{row['nodes']:>10,}"
               f"{row['hash_s']:>8}{row['load_s']:>8}{row['graph_mb']:>10}{row['index_s']:>9}"
               f"{row['live_s']:>8}{row['with_live_mb'] - row['graph_mb']:>9}{row['peak_mb']:>9}", flush=True)
     largest = max(rows, key=lambda row: row["graph_mb"])
     per_node = sum(row["graph_mb"] for row in rows) / max(1, sum(row["nodes"] for row in rows)) * 1000
     print(f"process baseline {rows[0]['baseline_mb']} MB; {per_node:.2f} MB per 1,000 nodes; "
           f"largest tile {largest['graph_mb']} MB loaded in {largest['load_s']} s")
+    compact = [path for path in paths if path.name.endswith(".npz")]
+    if compact:
+        print(f"\nPool hits on compact tiles hold only their arrays (runline.array_tiles):")
+        print(f"{'tile':<34}{'arrays MB':>10}{'nbytes MB':>10}{'load s':>8}{'reach ms':>9}")
+        for path in compact:
+            row = child("--arrays", str(path))
+            print(f"{path.name:<34}{row['arrays_mb']:>10}{row['arrays_nbytes_mb']:>10}"
+                  f"{row['arrays_load_s']:>8}{row['reach_ms']:>9}", flush=True)
     if arguments.together:
         group = sorted(paths, key=lambda path: nodes_from_stats(path) or path.stat().st_size, reverse=True)
         result = child("--all", *map(str, group[: arguments.together]))

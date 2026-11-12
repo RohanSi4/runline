@@ -378,3 +378,101 @@ def test_the_converter_can_write_elsewhere(small, tmp_path) -> None:
     assert compact_graphs.main([str(small), "--output", str(output), "--verify"]) == 0
     assert graph_fingerprint(output / "small.npz") == _sha16(small)
     assert not compact_path(small).exists()
+
+
+# --- pool hits on the arrays (runline.array_tiles) ------------------------------
+
+
+@pytest.fixture(scope="module")
+def tile_and_graph(compact_area):
+    from runline.array_tiles import ArrayTile
+
+    return (
+        ArrayTile.read(compact_area["compact"] / "charlottesville-va.npz"),
+        compact.read_pickle(graphs_root() / _area().filename),
+        read_compact(compact_area["compact"] / "charlottesville-va.npz"),
+    )
+
+
+def _drawn(graph: nx.DiGraph) -> tuple:
+    def plain(data: dict) -> dict:
+        return {key: list(value.coords) if key == "geometry" else value for key, value in data.items()}
+
+    return (
+        [(node, plain(data)) for node, data in graph.nodes(data=True)],
+        [(u, v, plain(data)) for u, v, data in graph.edges(data=True)],
+    )
+
+
+def test_the_arrays_find_the_same_nearest_node(tile_and_graph) -> None:
+    from runline.osm import _nearest_node
+
+    tile, graph, _ = tile_and_graph
+    centre = _area().center
+    for bearing in range(0, 360, 15):
+        for meters in (0, 400, 2_500, 9_000):
+            point = destination(centre, bearing, meters)
+            assert _nearest_node(tile, point) == _nearest_node(graph, point)
+
+
+def test_the_arrays_search_connectors_like_networkx(tile_and_graph) -> None:
+    tile, graph, _ = tile_and_graph
+    nodes = list(graph)
+    for node in nodes[:: len(nodes) // 300]:
+        expected = serving._reach(graph, node)
+        found = serving._reach(tile, node)
+        assert found == expected
+        # Same finishing order, so the same path wins every tie.
+        assert list(found.out_meters) == list(expected.out_meters)
+        assert list(found.back_paths) == list(expected.back_paths)
+
+
+def _walks(graph, count: int, steps: int) -> list[tuple[int, ...]]:
+    import random
+
+    generator = random.Random(4)
+    nodes = list(graph)
+    walks = []
+    while len(walks) < count:
+        walk = [generator.choice(nodes)]
+        for _ in range(steps):
+            successors = list(graph.successors(walk[-1]))
+            if not successors:
+                break
+            walk.append(generator.choice(successors))
+        if len(walk) > 3:
+            walks.append(tuple(walk))
+    return walks
+
+
+@pytest.mark.parametrize("surface", list(SurfacePreference))
+def test_the_arrays_build_the_same_route_graph(tile_and_graph, surface) -> None:
+    """The same graph as from the compact networkx graph, and the same
+    measurements as from the pickle, which also carries dropped attributes."""
+
+    tile, pickled, rebuilt = tile_and_graph
+    preferences = RoutePreferences(5, surface=surface)
+    for start in range(0, 120, 20):
+        routes = _walks(pickled, 120, 60)[start : start + 20]
+        found = serving._route_graph(tile, routes, preferences)
+        assert _drawn(found) == _drawn(serving._route_graph(rebuilt, routes, preferences))
+        expected = serving._route_graph(pickled, routes, preferences)
+        assert list(found.edges) == list(expected.edges)
+        assert [serving.measure_route(found, list(route)) for route in routes] == [
+            serving.measure_route(expected, list(route)) for route in routes
+        ]
+
+
+def test_an_unknown_node_is_a_key_error_on_the_arrays(tile_and_graph) -> None:
+    tile, graph, _ = tile_and_graph
+    route = _walks(graph, 1, 5)[0]
+    with pytest.raises(KeyError):
+        serving._route_graph(tile, [(*route, -1)], RoutePreferences(5))
+    with pytest.raises(KeyError):
+        serving._route_graph(graph, [(*route, -1)], RoutePreferences(5))
+
+
+def test_the_arrays_take_a_fraction_of_the_graphs_memory(tile_and_graph) -> None:
+    tile, graph, _ = tile_and_graph
+    # Arrays, decoded coordinates and search arrays together, for 40k nodes.
+    assert tile.nbytes() < 25_000_000

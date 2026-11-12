@@ -36,10 +36,11 @@ from pathlib import Path
 
 import networkx as nx
 
+from .array_tiles import ArrayTile
 from .compact import graph_file, graph_fingerprint
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id, neighbouring_cells
-from .metros import tile_for
+from .metros import load_tile_arrays, tile_for
 from .models import METERS_PER_MILE, Coordinate, RouteCandidate, RouteMetrics, RoutePreferences, StartCandidate
 from .osm import (
     _distinct_by_length,
@@ -222,7 +223,9 @@ class _Reach:
     back_paths: dict[int, list[int]]
 
 
-def _reach(graph: nx.MultiDiGraph, start_node: int) -> _Reach:
+def _reach(graph, start_node: int) -> _Reach:
+    if isinstance(graph, ArrayTile):
+        return _Reach(*graph.reach(start_node, MAX_CONNECTOR_METERS))
     out_meters, out_paths = nx.single_source_dijkstra(
         graph, start_node, cutoff=MAX_CONNECTOR_METERS, weight="length"
     )
@@ -261,15 +264,20 @@ def _anchored(loop: list[int], reach: _Reach) -> tuple[tuple[int, ...], float] |
 MAJOR_AT_KEY = "_runline_major_at"
 
 
-def _route_graph(graph: nx.MultiDiGraph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
+def _route_graph(graph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
     """The edges these routes use, each the cheapest parallel edge for the
     runner, plus every major-road edge at a node they pass.
 
     The same choice collapse_graph makes for the whole area, which takes
     seconds; this takes milliseconds. The major roads let measure_route count
-    crossings of roads the route does not walk along.
+    crossings of roads the route does not walk along. A compact tile's
+    arrays (runline.array_tiles) build the same graph without networkx.
     """
 
+    if isinstance(graph, ArrayTile):
+        return graph.route_graph(
+            routes, lambda data, destination, source: _edge_preference_cost(data, destination, preferences, source)
+        )
     small = nx.DiGraph()
 
     def add(u: int, v: int) -> None:
@@ -382,7 +390,8 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
     if not pools:
         return None
 
-    graph = load_area_graph(area)
+    # A compact metro tile answers from its arrays; anything else from its graph.
+    graph = load_tile_arrays(area) or load_area_graph(area)
     reach = _reach(graph, _nearest_node(graph, origin))
     candidates = _candidates(pools, reach, preferences)
     if not candidates:
