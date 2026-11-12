@@ -149,7 +149,7 @@ sliver. Two options that share over 70% of their length count as one.
 
 ## Architecture
 
-<img src="docs/readme/architecture.svg" alt="The browser loads runline-nine.vercel.app, whose /api rewrite reaches FastAPI on runline-capstone.vercel.app with the rebuilt Charlottesville graph and complete pool. On a coverage miss it forwards the request through RUNLINE_REMOTE_API to the Oracle VM, which serves Washington, DC from its tile graphs and pools." width="100%">
+<img src="docs/readme/architecture.svg" alt="The browser loads runline-nine.vercel.app, whose /api rewrite reaches FastAPI on runline-capstone.vercel.app with the rebuilt Charlottesville graph and complete pool. On a coverage miss it forwards the request through RUNLINE_REMOTE_API to the Oracle VM, which serves Washington, DC, New York and Los Angeles from their tile graphs and pools." width="100%">
 
 The capstone backend is released from a committed SHA with
 `scripts/release_capstone.py`, which verifies its data against
@@ -158,7 +158,7 @@ The capstone backend is released from a committed SHA with
 | Part | What it does | Where |
 |---|---|---|
 | Browser | Map, form, route comparison, GPX download (HTML/JS + Leaflet) | `web/` |
-| Route planner | Finds, measures and ranks loops (FastAPI on Vercel, regional DC API on Oracle) | `src/runline/` |
+| Route planner | Finds, measures and ranks loops (FastAPI on Vercel, regional metro API on Oracle) | `src/runline/` |
 | Saved map data | Charlottesville graph and metro tile graphs, built ahead of time | `graphs/`, metro run directories |
 | Precompute | Generates saved routes on the UVA CS cluster | `scripts/precompute_pools.py`, `slurm/` |
 | Serving | Answers from saved routes, or hands back to the planner | `src/runline/serving.py` |

@@ -400,7 +400,7 @@ ARCHITECTURE_TITLE = (
     "The browser loads runline-nine.vercel.app, whose /api rewrite reaches FastAPI on "
     "runline-capstone.vercel.app with the rebuilt Charlottesville graph and complete pool. "
     "On a coverage miss it forwards the request through RUNLINE_REMOTE_API to the Oracle VM, "
-    "which serves Washington, DC from its tile graphs and pools."
+    "which serves Washington, DC, New York and Los Angeles from their tile graphs and pools."
 )
 
 
@@ -453,8 +453,8 @@ def architecture_figure() -> str:
                  edge(left + 46, 94, out_label), edge(left + 46, 182, back_label)]
 
     lower = top + row_h + 64
-    body += card(columns[2], lower, 140, "Oracle VM regional API", ["FastAPI on main: Washington, DC",
-                                                                   "230 tile graphs + 2.3 GB pools"],
+    body += card(columns[2], lower, 140, "Oracle VM regional API", ["FastAPI on main: DC, NYC, LA",
+                                                                   "1,136 tile graphs + 12 GB pools"],
                  "Direct HTTPS URL · no forwarding")
     x_down, x_up = columns[2] + 80, columns[2] + 170
     body += [arrow(f"M{x_down} {top + row_h} V{lower - 4}"), arrow(f"M{x_up} {lower} V{top + row_h + 4}"),
