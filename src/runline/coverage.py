@@ -144,7 +144,7 @@ def _load_graph_file(path: str) -> nx.MultiDiGraph:
 
 
 def _load_checked(path: Path, label: str) -> nx.MultiDiGraph:
-    """A graph file, with a damaged compact file reported as missing map data."""
+    """A graph file; a damaged compact file is a coverage error naming the area."""
 
     try:
         return _load_graph_file(str(path))
