@@ -217,7 +217,9 @@ usable pool plans live on the same tile graph. `/api/areas` lists the served
 metros after the shipped areas. Optionally, `RUNLINE_TILE_GRAPHS_URL` fetches
 missing tile graphs from object storage on first use, hash-checked, into a
 disk cache bounded by `RUNLINE_TILE_DISK_CACHE_GB`; see the
-[handoff](docs/handoff.md#how-the-app-fits-together).
+[handoff](docs/handoff.md#how-the-app-fits-together). Tile graphs converted
+with `scripts/compact_graphs.py` load from flat arrays instead, and answer
+pool hits without building the graph; see [compact tiles](docs/compact-tiles.md).
 
 **Status:**
 
