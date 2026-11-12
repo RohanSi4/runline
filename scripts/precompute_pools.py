@@ -22,11 +22,9 @@ from __future__ import annotations
 import argparse
 import base64
 import gzip
-import hashlib
 import json
 import math
 import os
-import pickle
 import subprocess
 import sys
 import time
@@ -37,6 +35,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 os.environ.setdefault("RUNLINE_ALLOW_OSM_DOWNLOAD", "0")
 
+from runline.compact import graph_file, read_graph
+from runline.compact import graph_fingerprint as graph_hash
 from runline.coverage import areas, load_area_graph
 from runline.geo import distance_meters
 # Re-exported: the grid moved to the package so tiling and serving share it.
@@ -112,8 +112,9 @@ def build_version() -> dict:
 
 
 def graph_fingerprint(area) -> str:
-    path = Path(os.environ.get("RUNLINE_GRAPHS_DIR", ROOT / "graphs")) / area.filename
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    """The hash serving checks pools against: the pickle's, or a compact twin's recorded one."""
+
+    return graph_hash(graph_file(Path(os.environ.get("RUNLINE_GRAPHS_DIR", ROOT / "graphs")) / area.filename))
 
 
 def drop_near_duplicates(core, candidates) -> list:
@@ -341,7 +342,7 @@ def run_plan(arguments) -> int:
             print(f"{output.name} already written, skipping")
             continue
         if loaded is None or loaded[0] != unit["tile"]:
-            path = arguments.tile_graphs / f"{unit['tile']}.pkl.gz"
+            path = graph_file(arguments.tile_graphs / f"{unit['tile']}.pkl.gz")
             if not path.exists():
                 # build_tile_graphs writes no graph for an empty (all-water) tile.
                 if (arguments.tile_graphs / f"{unit['tile']}.json").exists():
@@ -350,14 +351,13 @@ def run_plan(arguments) -> int:
                     continue
                 print(f"{unit['id']}: no graph at {path}")
                 return 1
-            payload = path.read_bytes()
-            graph = pickle.loads(gzip.decompress(payload))
+            graph = read_graph(path)
             if not graph.graph.get("elevation_baked"):
                 print(f"warning: {unit['tile']} has no baked elevation")
             loaded = (
                 unit["tile"],
                 graph,
-                hashlib.sha256(payload).hexdigest()[:16],
+                graph_hash(path),
                 cells_with_nodes(graph, plan["grid_meters"]),
             )
         tile, graph, fingerprint, walkable = loaded

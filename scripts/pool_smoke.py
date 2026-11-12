@@ -32,6 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from runline.compact import graph_file  # noqa: E402
 from runline.coverage import areas, graphs_root  # noqa: E402
 from runline.pools import decode_pool  # noqa: E402
 from runline.serving import _checked_pool_file  # noqa: E402
@@ -46,7 +47,11 @@ def check_file(path: Path) -> bool:
         print(f"{path.name}: no area {slug!r} in {graphs_root() / 'manifest.json'}; serving looks pools up by area slug")
         return False
     # The same check serving makes, so a pass here means serving will read it.
-    checked = _checked_pool_file(str(path), str(graphs_root() / area.filename), path.stat().st_mtime)
+    graph = graph_file(graphs_root() / area.filename)
+    if not graph.exists():
+        print(f"{path.name}: no graph at {graph}")
+        return False
+    checked = _checked_pool_file(str(path), str(graph), path.stat().st_mtime, graph.stat().st_mtime)
     if checked is None:
         print(f"{path.name}: serving would ignore this file (see the warning above)")
         return False
@@ -56,7 +61,7 @@ def check_file(path: Path) -> bool:
     finally:
         database.close()
     print(f"{path.name}: ok, {pools} pools, {loops} loops, {path.stat().st_size / 1048576:.1f}MB, "
-          f"matches {area.filename}")
+          f"matches {graph.name}")
     return True
 
 

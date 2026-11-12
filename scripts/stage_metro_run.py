@@ -124,8 +124,9 @@ def check_run(run: Path, manifest: dict) -> tuple[dict, list[str]]:
             problems.append(f"{run.name}: missing tile graph {tile}")
             continue
         digest = file_sha256(graph)
-        if graph_fingerprint(digest) != expected:
-            problems.append(f"{run.name}: tile graph {tile} has fingerprint {graph_fingerprint(digest)}, pools need {expected}")
+        found = graph_fingerprint(graph, sha256=digest)
+        if found != expected:
+            problems.append(f"{run.name}: tile graph {tile} has fingerprint {found}, pools need {expected}")
         if digest != sha.get(f"{TILE_GRAPHS_NAME}/{tile}.pkl.gz"):
             problems.append(f"{run.name}: tile graph {tile} is not the archived file")
     return facts, problems

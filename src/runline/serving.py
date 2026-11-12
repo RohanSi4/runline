@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import dataclasses
 import functools
-import hashlib
 import json
 import logging
 import math
@@ -46,6 +45,7 @@ from pathlib import Path
 
 import networkx as nx
 
+from .compact import file_sha256, graph_file, graph_fingerprint  # noqa: F401 (re-exported)
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id, neighbouring_cells
 from .metros import tile_for, tile_graph_file
@@ -121,35 +121,19 @@ def _current_meta(path: str) -> dict | None:
     return meta
 
 
-def file_sha256(path: Path) -> str:
-    """A file's full sha256, read in chunks."""
+def _fingerprint(path: Path) -> str:
+    """The graph hash scripts/precompute_pools.py records (runline.compact.graph_fingerprint).
 
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def graph_fingerprint(sha256: str) -> str:
-    """The graph hash scripts/precompute_pools.py records, from the file's full sha256.
-
-    scripts/batch_manifest.py hashes every archived file once and takes tile
-    graph hashes from those digests through this.
+    A pickle's sha256 prefix; for a compact file, the recorded hash of the
+    pickle it was made from, once its own content checks out.
     """
 
-    return sha256[:16]
-
-
-def _fingerprint(path: Path) -> str:
-    """The graph hash scripts/precompute_pools.py records."""
-
-    return graph_fingerprint(file_sha256(path))
+    return graph_fingerprint(path)
 
 
 @functools.lru_cache(maxsize=8)
-def _checked_pool_file(path: str, graph_path: str, modified: float) -> PoolFile | None:
-    """The pool file if it matches this code and this graph; cached per mtime."""
+def _checked_pool_file(path: str, graph_path: str, modified: float, graph_modified: float) -> PoolFile | None:
+    """The pool file if it matches this code and this graph; cached per mtime of both."""
 
     meta = _current_meta(path)
     if meta is None:
@@ -187,7 +171,8 @@ def _tile_pool_file(area: Area) -> PoolFile | None:
     tile = tile_for(area)
     if tile is None or tile.graph is None:
         return None
-    # Fetched first if the run lacks it and RUNLINE_TILE_GRAPHS_URL is set.
+    # The run's compact file, else its pickle, else (if the run lacks both and
+    # RUNLINE_TILE_GRAPHS_URL is set) a fetched pickle: what loading picks.
     with tile_graph_file(area) as graph_path:
         if not graph_path.exists():
             return None
@@ -206,7 +191,10 @@ def pool_file(area: Area) -> PoolFile | None:
     path = pools_root() / f"{area.slug}.sqlite"
     if not path.exists():
         return None
-    return _checked_pool_file(str(path), str(graphs_root() / area.filename), path.stat().st_mtime)
+    graph_path = graph_file(graphs_root() / area.filename)
+    if not graph_path.exists():
+        return None
+    return _checked_pool_file(str(path), str(graph_path), path.stat().st_mtime, graph_path.stat().st_mtime)
 
 
 def load_pool(pool: PoolFile, cell: str, surface: str) -> dict | None:

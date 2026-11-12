@@ -5,7 +5,8 @@ merge_pools.py --plan) ships as one directory under RUNLINE_METROS_DIR
 (default ``metros/`` in the repo):
 
     <run>/pools.sqlite     the merged pools, with the cell index
-    <run>/tile-graphs/     <tile>.pkl.gz from build_tile_graphs.py
+    <run>/tile-graphs/     <tile>.pkl.gz from build_tile_graphs.py, and/or its
+                           compact <tile>.npz (scripts/compact_graphs.py)
 
 ``tile-graphs`` may be a symlink, so batches can share one directory of tile
 graphs. A run can hold several metros (a batch) and a metro's tiles can sit
@@ -26,16 +27,18 @@ asks this module after the manifest's areas, which keep priority.
 With RUNLINE_TILE_GRAPHS_URL set, a tile graph missing from ``tile-graphs/``
 is fetched into a bounded disk cache on first use (runline.tile_fetch).
 Unset, only the run's own files are read.
+
+A tile's graph is named ``<tile>.pkl.gz`` throughout; runline.compact.graph_file
+swaps in the compact ``<tile>.npz`` when it exists, for loading and for the
+pool hash check alike. The order is: a local compact file, then the local
+pickle, then (with fetching on) a fetched pickle.
 """
 
 from __future__ import annotations
 
-import gc
-import gzip
 import json
 import logging
 import os
-import pickle
 import sqlite3
 import threading
 from collections import OrderedDict
@@ -47,6 +50,7 @@ from pathlib import Path
 
 import networkx as nx
 
+from .compact import COMPACT_SUFFIX, CompactGraphError, compact_path, graph_file, read_graph
 from .coverage import Area, CoverageError
 from .geo import destination, distance_meters
 from .grid import cell_id
@@ -284,7 +288,8 @@ def direct_metro_labels() -> tuple[str, ...]:
         for tile in run.tiles.values():
             if tile.graph is None:
                 continue
-            here = f"{tile.slug}.pkl.gz" in present
+            # Either kind of graph file serves (runline.compact.graph_file).
+            here = f"{tile.slug}.pkl.gz" in present or f"{tile.slug}{COMPACT_SUFFIX}" in present
             complete[tile.label] = complete.get(tile.label, True) and here
     return tuple(label for label, ok in complete.items() if ok)
 
@@ -302,22 +307,10 @@ def tile_for(area: Area) -> Tile | None:
 
 
 def read_graph_file(path: Path) -> nx.MultiDiGraph:
-    """Unpickle a graph, streaming so the compressed bytes are never all in memory.
+    """Load a tile graph, pickled or compact (runline.compact.read_graph, which
+    pauses the cyclic garbage collector while it builds the graph)."""
 
-    Unpickling builds millions of small dicts, and the cyclic garbage
-    collector keeps scanning them although none is garbage. Pausing it cut the
-    load of a 263k-node tile from 6.7 s to 3.8 s. Only the thread that turned
-    it off turns it back on, so overlapping loads leave it enabled afterwards.
-    """
-
-    paused = gc.isenabled()
-    gc.disable()
-    try:
-        with gzip.open(path, "rb") as handle:
-            return pickle.load(handle)
-    finally:
-        if paused:
-            gc.enable()
+    return read_graph(path)
 
 
 class _TileGraphs:
@@ -377,16 +370,26 @@ TILE_GRAPHS = _TileGraphs()
 FETCHER = TileGraphFetcher()
 
 
+def _local_files(area: Area) -> tuple[Path, Path]:
+    """The run's own graph files for a tile: its pickle and its compact twin."""
+
+    return Path(area.filename), compact_path(area.filename)
+
+
 @contextmanager
 def tile_graph_file(area: Area) -> Iterator[Path]:
-    """The tile's graph file: the run's own, else a fetched copy when fetching is on.
+    """The tile's graph file: the run's own (compact first), else a fetched copy when fetching is on.
+
+    Fetching downloads the ``.pkl.gz`` for now; a compact file is only ever
+    the run's own.
 
     The path may not exist, as when the run lacks it and fetching is off. A
     fetched copy is kept on disk until the block ends. Raises
     MapDataUnavailable if fetching is on and the download fails.
     """
 
-    path = Path(area.filename)
+    # A local compact file, else the local pickle (runline.compact.graph_file).
+    path = graph_file(area.filename)
     tile = None if path.exists() or not configured_url() else tile_for(area)
     if tile is None or tile.graph is None:
         yield path
@@ -401,8 +404,12 @@ def load_tile_graph(area: Area) -> nx.MultiDiGraph:
         if not path.exists():
             raise CoverageError(f"Map data for {area.label} is missing from this deployment.")
         loads = TILE_GRAPHS.loads
-        graph = TILE_GRAPHS.get(path)
-        fetched = path != Path(area.filename)
+        try:
+            graph = TILE_GRAPHS.get(path)
+        except CompactGraphError as error:
+            LOGGER.error("cannot load %s: %s", path, error)
+            raise CoverageError(f"Map data for {area.label} is damaged on this deployment.") from None
+        fetched = path not in _local_files(area)
     if fetched and TILE_GRAPHS.loads != loads:
         # A cold load can push another fetched graph out of memory, which
         # frees its file for the disk cache to evict.
