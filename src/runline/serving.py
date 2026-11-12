@@ -39,7 +39,7 @@ import networkx as nx
 
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id, neighbouring_cells
-from .metros import tile_for
+from .metros import tile_for, tile_graph_file
 from .models import METERS_PER_MILE, Coordinate, RouteCandidate, RouteMetrics, RoutePreferences, StartCandidate
 from .osm import (
     _distinct_by_length,
@@ -151,15 +151,18 @@ def _tile_pool_file(area: Area) -> PoolFile | None:
     """The metro file for a tile Area, if its pools fit this code and the tile's graph."""
 
     tile = tile_for(area)
-    graph_path = Path(area.filename)
-    if tile is None or tile.graph is None or not graph_path.exists():
+    if tile is None or tile.graph is None:
         return None
-    pools = _checked_metro_file(area.metro_pools, Path(area.metro_pools).stat().st_mtime)
-    if pools is None:
-        return None
-    # Each tile has its own graph; the merge recorded the hash of each.
-    if not _tile_graph_matches(area.metro_pools, tile.slug, tile.graph, str(graph_path), graph_path.stat().st_mtime):
-        return None
+    # Fetched first if the run lacks it and RUNLINE_TILE_GRAPHS_URL is set.
+    with tile_graph_file(area) as graph_path:
+        if not graph_path.exists():
+            return None
+        pools = _checked_metro_file(area.metro_pools, Path(area.metro_pools).stat().st_mtime)
+        if pools is None:
+            return None
+        # Each tile has its own graph; the merge recorded the hash of each.
+        if not _tile_graph_matches(area.metro_pools, tile.slug, tile.graph, str(graph_path), graph_path.stat().st_mtime):
+            return None
     return dataclasses.replace(pools, tile=tile.slug)
 
 

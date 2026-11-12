@@ -10,12 +10,18 @@ from __future__ import annotations
 
 import asyncio
 import gzip
+import http.server
 import json
 import logging
 import math
+import os
 import pickle
 import shutil
 import sqlite3
+import threading
+import time
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -24,7 +30,7 @@ from fastapi import HTTPException
 from shapely import affinity
 from shapely.geometry import Point, mapping
 
-from runline import coverage, metros, serving
+from runline import coverage, metros, serving, tile_fetch
 from runline.api import RouteRequest, routes, supported_areas
 from runline.coverage import areas, load_area_graph
 from runline.geo import destination
@@ -400,3 +406,216 @@ def test_tile_graphs_load_lazily_and_stay_within_the_cache(served, monkeypatch) 
     load_area_graph(coverage.containing_area(cell_centre(first)))
     assert metros.TILE_GRAPHS.loads == 3
     metros.TILE_GRAPHS.clear()
+
+
+# On-demand tile graph fetching (runline.tile_fetch): the run ships without
+# its tile graphs and a local HTTP server stands in for object storage.
+
+
+class _Bucket:
+    """A loopback HTTP server over a directory, counting requests per path."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.requests: Counter[str] = Counter()
+        self.delay = 0.0
+        self.status = 200
+        bucket = self
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self) -> None:  # noqa: N802 (http.server's name)
+                bucket.requests[self.path] += 1
+                time.sleep(bucket.delay)
+                path = bucket.root / self.path.lstrip("/")
+                if bucket.status != 200 or not path.is_file():
+                    self.send_error(bucket.status if bucket.status != 200 else 404)
+                    return
+                body = path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args) -> None:
+                pass
+
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def close(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+
+
+@pytest.fixture
+def remote(served, tmp_path, monkeypatch):
+    """A copy of the run whose tile graphs live only in the bucket."""
+
+    directory = _copy_run(served, tmp_path, monkeypatch)
+    bucket_root = tmp_path / "bucket"
+    (bucket_root / directory.name).mkdir(parents=True)
+    shutil.move(directory / "tile-graphs", bucket_root / directory.name / "tile-graphs")
+    bucket = _Bucket(bucket_root)
+    monkeypatch.setenv("RUNLINE_TILE_GRAPHS_URL", bucket.url)
+    monkeypatch.setenv("RUNLINE_TILE_DISK_CACHE_DIR", str(tmp_path / "tile-cache"))
+    monkeypatch.setenv("RUNLINE_TILE_FETCH_TIMEOUT", "5")
+    monkeypatch.setattr(metros, "FETCHER", tile_fetch.TileGraphFetcher())
+    metros.TILE_GRAPHS.clear()
+    yield {**served, "directory": directory, "bucket": bucket, "cache": tmp_path / "tile-cache"}
+    bucket.close()
+    metros.TILE_GRAPHS.clear()
+
+
+def _tile_cells(run) -> list[str]:
+    """One cell in each tile, in tile order."""
+
+    return [next(cell for cell, tile in sorted(run["owner"].items()) if tile == slug) for slug in sorted(set(run["owner"].values()))]
+
+
+def _cached(remote) -> list[str]:
+    return sorted(path.name for path in remote["cache"].glob("*.pkl.gz"))
+
+
+def test_a_missing_tile_graph_is_fetched_verified_and_served_from_its_pool(remote) -> None:
+    cell, origin, miles = _best_request(remote)
+    request = RouteRequest(
+        latitude=origin.latitude, longitude=origin.longitude, distance_miles=miles, surface="mixed", result_count=1,
+    )
+
+    assert asyncio.run(routes(request))["source"] == "pool"
+    assert asyncio.run(routes(request))["source"] == "pool"
+
+    tile = remote["owner"][cell]
+    expected = metros.tile_for(coverage.containing_area(origin)).graph
+    assert _cached(remote) == [f"{tile}-{expected}.pkl.gz"]
+    assert metros.FETCHER.downloads == 1
+    assert remote["bucket"].requests == {f"/copy/tile-graphs/{tile}.pkl.gz": 1}
+    assert not (remote["directory"] / "tile-graphs").exists()
+
+
+def test_a_fetched_graph_that_is_not_the_pools_graph_is_never_loaded(remote, monkeypatch) -> None:
+    cell, origin, miles = _best_request(remote)
+    tile = remote["owner"][cell]
+    other = next(slug for slug in remote["plan"]["tiles"] if slug != tile)
+    graphs = remote["bucket"].root / "copy" / "tile-graphs"
+    shutil.copy(graphs / f"{other}.pkl.gz", graphs / f"{tile}.pkl.gz")
+    monkeypatch.setattr(metros, "read_graph_file", lambda path: pytest.fail(f"loaded unverified {path}"))
+
+    for _ in range(2):
+        with pytest.raises(HTTPException) as error:
+            asyncio.run(routes(RouteRequest(latitude=origin.latitude, longitude=origin.longitude, distance_miles=miles)))
+        assert error.value.status_code == 503
+        assert "temporarily unavailable" in error.value.detail
+
+    assert _cached(remote) == [] and not list(remote["cache"].glob("*.part"))
+    # The failure is remembered briefly instead of refetched by each request.
+    assert sum(remote["bucket"].requests.values()) == 1
+
+
+def test_a_corrupted_cached_graph_is_fetched_again(remote) -> None:
+    cell = _tile_cells(remote)[0]
+    area = coverage.containing_area(cell_centre(cell))
+    load_area_graph(area)
+    metros.TILE_GRAPHS.clear()
+    (cached,) = remote["cache"].glob("*.pkl.gz")
+    cached.write_bytes(b"not a graph")
+
+    load_area_graph(area)
+
+    assert metros.FETCHER.downloads == 2
+
+
+@pytest.mark.parametrize("failure", ["missing", "server error", "timeout"])
+def test_a_failed_fetch_is_a_503_not_a_500(remote, monkeypatch, failure) -> None:
+    _, origin, miles = _best_request(remote)
+    if failure == "missing":
+        shutil.rmtree(remote["bucket"].root / "copy")
+    elif failure == "server error":
+        remote["bucket"].status = 500
+    else:
+        monkeypatch.setenv("RUNLINE_TILE_FETCH_TIMEOUT", "0.2")
+        remote["bucket"].delay = 1.0
+
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(routes(RouteRequest(latitude=origin.latitude, longitude=origin.longitude, distance_miles=miles)))
+
+    assert error.value.status_code == 503
+    assert "temporarily unavailable" in error.value.detail
+    assert _cached(remote) == []
+
+
+def test_concurrent_requests_for_a_cold_tile_download_it_once(remote) -> None:
+    remote["bucket"].delay = 0.3
+    area = coverage.containing_area(cell_centre(_tile_cells(remote)[0]))
+    barrier = threading.Barrier(4)
+
+    def load(_):
+        barrier.wait()
+        return load_area_graph(area)
+
+    with ThreadPoolExecutor(4) as pool:
+        graphs = list(pool.map(load, range(4)))
+
+    assert all(graph is graphs[0] for graph in graphs)
+    assert metros.FETCHER.downloads == 1 and sum(remote["bucket"].requests.values()) == 1
+    assert metros.TILE_GRAPHS.loads == 1
+
+
+def test_the_disk_cache_evicts_graphs_no_longer_in_memory(remote, monkeypatch) -> None:
+    first, second = (coverage.containing_area(cell_centre(cell)) for cell in _tile_cells(remote)[:2])
+    sizes = [path.stat().st_size for path in (remote["bucket"].root / "copy" / "tile-graphs").iterdir()]
+    # Room for one graph, not two.
+    monkeypatch.setenv("RUNLINE_TILE_DISK_CACHE_GB", str(max(sizes) * 1.5 / 1e9))
+    name = lambda area: f"{area.slug}-{metros.tile_for(area).graph}.pkl.gz"  # noqa: E731
+
+    monkeypatch.setenv("RUNLINE_TILE_GRAPHS_CACHE", "2")
+    load_area_graph(first)
+    load_area_graph(second)
+    # Both graphs are in memory, so the cache stays over its budget.
+    assert _cached(remote) == sorted([name(first), name(second)])
+
+    shutil.rmtree(remote["cache"])
+    metros.TILE_GRAPHS.clear()
+    monkeypatch.setenv("RUNLINE_TILE_GRAPHS_CACHE", "1")
+    load_area_graph(first)
+    # Loading the second pushes the first out of memory, then off the disk.
+    load_area_graph(second)
+
+    assert _cached(remote) == [name(second)]
+    assert metros.FETCHER.downloads == 4
+
+
+def test_eviction_takes_the_least_recently_used_unprotected_files(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("RUNLINE_TILE_DISK_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("RUNLINE_TILE_DISK_CACHE_GB", str(2_500 / 1e9))
+    for age, name in enumerate(["newest", "middle", "oldest", "held"]):
+        path = tmp_path / f"{name}-{'0' * 16}.pkl.gz"
+        path.write_bytes(b"x" * 1_000)
+        used = time.time_ns() - (age + 1) * 10**9
+        os.utime(path, ns=(used, used))
+    (tmp_path / ".stale.pkl.gz.part").write_bytes(b"x")
+    os.utime(tmp_path / ".stale.pkl.gz.part", (0, 0))
+
+    tile_fetch.TileGraphFetcher().evict({str(tmp_path / f"held-{'0' * 16}.pkl.gz")})
+
+    assert sorted(path.name.split("-")[0] for path in tmp_path.iterdir()) == ["held", "newest"]
+
+
+def test_tile_urls_need_https_and_follow_the_run_layout(tmp_path, monkeypatch) -> None:
+    assert tile_fetch.tile_url("https://bucket.example/runs/", "b1", "nyc-0001", "ab" * 8) == (
+        "https://bucket.example/runs/b1/tile-graphs/nyc-0001.pkl.gz"
+    )
+    assert tile_fetch.tile_url("https://cdn.example/{graph}/{tile}.gz", "b1", "t", "ab" * 8) == (
+        f"https://cdn.example/{'ab' * 8}/t.gz"
+    )
+    monkeypatch.setenv("RUNLINE_TILE_GRAPHS_URL", "http://bucket.example")
+    monkeypatch.setenv("RUNLINE_TILE_DISK_CACHE_DIR", str(tmp_path))
+    opened = []
+    fetcher = tile_fetch.TileGraphFetcher(opener=lambda *args, **kwargs: opened.append(args))
+
+    with pytest.raises(coverage.MapDataUnavailable):
+        with fetcher.use("b1", "t", "ab" * 8, "Toy"):
+            pass
+
+    assert opened == [] and list(tmp_path.glob("*.pkl.gz")) == []
