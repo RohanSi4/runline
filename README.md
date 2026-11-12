@@ -30,7 +30,8 @@ capstone (Adithya Balasubramaniam, Krish Patel, Rohan Singh)
 4. **Generate routes**, compare the cards, and download the one you like as
    **GPX**.
 
-You can also choose **Start → finish** for a direct Charlottesville route, or
+You can also choose **Start → finish** for a direct route where the map is
+held locally (Charlottesville, and metros with tile graphs on the server), or
 select **Run this route** to record a foreground GPS session on your phone.
 See [phone Run mode](docs/run-mode.md) for controls, coverage and limits.
 

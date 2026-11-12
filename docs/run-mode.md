@@ -31,14 +31,36 @@ buttons to set each endpoint. Surface preference applies; the route goes
 directly between the endpoints using running-specific weighted path search.
 Distance-target, hill and drive controls belong to loop mode and are hidden.
 
-The initial direct-route coverage is **Charlottesville**. Both endpoints must
-fit the same supported map and be within 300 m of a mapped walkable node.
-Pins move to the actual mapped endpoints; meaningful snapping is reported.
-Identical, unreachable or unsupported endpoints return an explained error.
+Direct routes run wherever this server holds the map locally: the shipped
+**Charlottesville** graph, and any metro whose tile graphs are present under
+`RUNLINE_METROS_DIR/<run>/tile-graphs`. Both endpoints must fit one map and
+be within 300 m of a mapped walkable node. Pins move to the actual mapped
+endpoints; meaningful snapping is reported. Identical, unreachable or
+unsupported endpoints return an explained error.
 
-DC loop generation continues through the existing Oracle service. New direct
-requests never fall back to that older API, which could ignore destination
-fields and return a loop. `/api/capabilities` reports separate mode coverage.
+On a metro, the start's cell names its owning tile, as for loops. If that
+tile's disc also holds the finish, the path is searched on its graph. If not,
+other tiles whose discs hold both endpoints are tried (tiles overlap, and the
+pool index records each tile's centre and radius), deepest inside first. A
+request loads at most two tile graphs through the same bounded tile cache
+loops use. Paths are not stitched across tiles: endpoints with no common tile
+get an explained error asking for a closer finish. A shipped area holding
+both endpoints keeps priority over metro tiles.
+
+`/api/capabilities` reports separate mode coverage. `point_to_point` lists
+the shipped areas and only those metros whose every tile graph with streets
+is present on this server; a metro with pools but missing tile graphs is
+listed for loops only.
+
+Loop requests outside local coverage continue through the regional Oracle
+service. A direct request is forwarded there only if that backend's own
+`/api/capabilities` lists `point_to_point` coverage. The check uses a 2 s
+connect and 3 s read timeout and is cached for five minutes (a failed check
+for 30 s). An older backend without that report could ignore destination
+fields and return a loop, so it never receives direct requests, and a
+forwarded answer that is not an open start to finish path is rejected with
+a 503. The regional backend's direct areas are added to the combined
+`/api/capabilities` report.
 
 ## Verification
 

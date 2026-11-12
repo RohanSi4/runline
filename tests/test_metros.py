@@ -24,11 +24,14 @@ from fastapi import HTTPException
 from shapely import affinity
 from shapely.geometry import Point, mapping
 
+import networkx as nx
+
 from runline import coverage, metros, serving
-from runline.api import RouteRequest, routes, supported_areas
-from runline.coverage import areas, load_area_graph
-from runline.geo import destination
-from runline.grid import cell_centre
+from runline import point_to_point as direct
+from runline.api import RouteRequest, capabilities, routes, supported_areas
+from runline.coverage import CoverageError, areas, load_area_graph
+from runline.geo import destination, distance_meters
+from runline.grid import cell_centre, cell_id
 from runline.models import Coordinate, RoutePreferences, SurfacePreference
 from runline.osm import crop_to_radius
 from runline.planner import plan_routes
@@ -400,3 +403,196 @@ def test_tile_graphs_load_lazily_and_stay_within_the_cache(served, monkeypatch) 
     load_area_graph(coverage.containing_area(cell_centre(first)))
     assert metros.TILE_GRAPHS.loads == 3
     metros.TILE_GRAPHS.clear()
+
+
+# Start -> finish on tile graphs. The toy tiles are 3.8 km discs whose centres
+# sit 1.3-1.7 km apart on one line, so most points lie in several discs.
+
+
+def _discs(run) -> dict[str, tuple[Coordinate, float]]:
+    return {
+        slug: (Coordinate(tile["latitude"], tile["longitude"]), tile["radius_meters"])
+        for slug, tile in run["plan"]["tiles"].items()
+    }
+
+
+def _holding(run, *points: Coordinate) -> set[str]:
+    return {
+        slug for slug, (centre, radius) in _discs(run).items()
+        if all(distance_meters(centre, point) <= radius for point in points)
+    }
+
+
+def _tile_graph(run, slug: str) -> nx.MultiDiGraph:
+    return metros.read_graph_file(run["directory"] / "tile-graphs" / f"{slug}.pkl.gz")
+
+
+def _where(graph, node) -> Coordinate:
+    return Coordinate(graph.nodes[node]["y"], graph.nodes[node]["x"])
+
+
+def _owned_nodes(run, slug: str) -> list[int]:
+    """Nodes of a tile's graph inside cells that tile owns, so a start there resolves to it."""
+
+    graph = _tile_graph(run, slug)
+    grid = run["plan"]["grid_meters"]
+    return [
+        node for node in sorted(graph.nodes)
+        if run["owner"].get(cell_id(graph.nodes[node]["y"], graph.nodes[node]["x"], grid)) == slug
+    ]
+
+
+def _reachable_finish(graph, start, accept) -> int:
+    reachable = nx.descendants(graph, start)
+    return next(node for node in sorted(reachable) if accept(_where(graph, node)))
+
+
+@pytest.fixture
+def used_tiles(served, monkeypatch) -> list[str]:
+    """The tile slugs direct planning loaded a graph for, in order."""
+
+    used = []
+
+    def load(area):
+        used.append(area.slug)
+        return load_area_graph(area)
+
+    monkeypatch.setattr(direct, "load_area_graph", load)
+    metros.TILE_GRAPHS.clear()
+    yield used
+    metros.TILE_GRAPHS.clear()
+
+
+def _direct(start: Coordinate, finish: Coordinate) -> dict:
+    return asyncio.run(routes(RouteRequest(
+        mode="point_to_point", latitude=start.latitude, longitude=start.longitude,
+        destination={"latitude": finish.latitude, "longitude": finish.longitude},
+    )))
+
+
+def test_a_direct_route_runs_on_the_starts_own_tile(served, used_tiles) -> None:
+    tile = "west-toy-001"
+    graph = _tile_graph(served, tile)
+    start_node = _owned_nodes(served, tile)[0]
+    start = _where(graph, start_node)
+    finish_node = _reachable_finish(graph, start_node, lambda point: 800 <= distance_meters(start, point) <= 1_500)
+    finish = _where(graph, finish_node)
+    # Both endpoints sit in the overlap of several tiles; the owning one wins.
+    assert tile in _holding(served, start, finish) and len(_holding(served, start, finish)) >= 2
+
+    payload = _direct(start, finish)
+
+    assert used_tiles == [tile] and metros.TILE_GRAPHS.loads == 1
+    assert payload["mode"] == "point_to_point" and payload["source"] == "live"
+    assert payload["origin"] == {"latitude": start.latitude, "longitude": start.longitude}
+    assert payload["destination"] == {"latitude": finish.latitude, "longitude": finish.longitude}
+    line = payload["routes"][0]["feature"]["geometry"]["coordinates"]
+    assert line[0] != line[-1]
+    assert payload["routes"][0]["gpx"].count("<trkpt") == len(line)
+
+
+def test_a_finish_beyond_the_owning_tile_uses_an_overlapping_tile_holding_both(served, used_tiles) -> None:
+    owner, other = "west-toy-001", "west-toy-000"
+    start_node = _owned_nodes(served, owner)[0]
+    start = _where(_tile_graph(served, owner), start_node)
+    centre, radius = _discs(served)[owner]
+    graph = _tile_graph(served, other)
+    other_centre, other_radius = _discs(served)[other]
+    finish = _where(graph, _reachable_finish(
+        graph, start_node,
+        lambda point: distance_meters(centre, point) > radius + 100
+        and distance_meters(other_centre, point) < other_radius - 100,
+    ))
+    assert owner not in _holding(served, start, finish) and other in _holding(served, start, finish)
+
+    result = direct.plan_point_to_point(start, finish, RoutePreferences(1), cache_directory=Path("unused"))
+
+    assert used_tiles == [other]
+    assert result.candidates[0].coordinates[0] == start
+    assert result.candidates[0].coordinates[-1] == finish
+    assert all(node in graph for node in result.candidates[0].node_ids)
+
+
+def test_endpoints_with_no_common_tile_are_an_explained_422(served, used_tiles) -> None:
+    graph = _tile_graph(served, "west-toy-000")
+    start = min((_where(graph, node) for node in _owned_nodes(served, "west-toy-000")), key=lambda point: point.longitude)
+    holding_start = _holding(served, start)
+    east = _tile_graph(served, "east-toy-001")
+    east_centre, east_radius = _discs(served)["east-toy-001"]
+    finish = next(
+        _where(east, node) for node in sorted(east.nodes)
+        if distance_meters(east_centre, _where(east, node)) < east_radius - 100
+        and all(distance_meters(_discs(served)[slug][0], _where(east, node)) > _discs(served)[slug][1]
+                for slug in holding_start)
+    )
+    assert not _holding(served, start, finish) and _holding(served, finish)
+
+    with pytest.raises(HTTPException) as error:
+        _direct(start, finish)
+
+    assert error.value.status_code == 422
+    assert "same supported area" in error.value.detail and "one map tile" in error.value.detail
+    assert used_tiles == []
+
+
+def test_a_direct_request_outside_every_metro_is_an_explained_422(served, used_tiles, monkeypatch) -> None:
+    monkeypatch.delenv("RUNLINE_REMOTE_API", raising=False)
+    origin = Coordinate(*served["pools"][next(iter(served["pools"]))]["origin"])
+    far, farther = destination(origin, 0, 20_000), destination(origin, 0, 21_000)
+
+    with pytest.raises(HTTPException) as error:
+        _direct(far, farther)
+
+    assert error.value.status_code == 422
+    assert "same supported area" in error.value.detail
+    assert "Available direct-route coverage:" in error.value.detail and "West Toy, VA" in error.value.detail
+    assert "one map tile" not in error.value.detail and used_tiles == []
+
+
+def test_direct_planning_keeps_within_the_tile_graph_cache(served, used_tiles, monkeypatch) -> None:
+    monkeypatch.setenv("RUNLINE_TILE_GRAPHS_CACHE", "1")
+    for tile in ("west-toy-001", "east-toy-001"):
+        graph = _tile_graph(served, tile)
+        start_node = _owned_nodes(served, tile)[0]
+        start = _where(graph, start_node)
+        finish = _where(graph, _reachable_finish(graph, start_node, lambda point: distance_meters(start, point) >= 500))
+        direct.plan_point_to_point(start, finish, RoutePreferences(1), cache_directory=Path("unused"))
+        assert metros.TILE_GRAPHS.held() == 1
+    assert used_tiles == ["west-toy-001", "east-toy-001"]
+
+
+def test_capabilities_report_direct_metros_only_with_their_tile_graphs_here(served, tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("RUNLINE_REMOTE_API", raising=False)
+    modes = asyncio.run(capabilities())["modes"]
+    assert sorted(modes["point_to_point"]["areas"]) == ["East Toy, VA", "West Toy, VA"]
+
+    directory = _copy_run(served, tmp_path, monkeypatch)
+    (directory / "tile-graphs" / "west-toy-000.pkl.gz").unlink()
+    modes = asyncio.run(capabilities())["modes"]
+    assert modes["point_to_point"]["areas"] == ["East Toy, VA"]
+    # Loops still list both: their coverage is the pools' index.
+    assert sorted(modes["loop"]["areas"]) == ["East Toy, VA", "West Toy, VA"]
+
+    for path in (directory / "tile-graphs").iterdir():
+        path.unlink()
+    assert asyncio.run(capabilities())["modes"]["point_to_point"]["areas"] == []
+    start = cell_centre(next(iter(served["owner"])))
+    with pytest.raises(CoverageError, match="missing from this deployment"):
+        direct.plan_point_to_point(start, destination(start, 90, 500), RoutePreferences(1), cache_directory=tmp_path)
+
+
+def test_a_shipped_area_keeps_priority_for_direct_routes(run, monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("RUNLINE_METROS_DIR", str(run["directory"].parent))
+    coverage._read_manifest.cache_clear()
+    used = []
+    monkeypatch.setattr(direct, "load_area_graph", lambda area: used.append(area.slug) or load_area_graph(area))
+    tile = "east-toy-000"
+    graph = _tile_graph(run, tile)
+    start_node = _owned_nodes(run, tile)[0]
+    start = _where(graph, start_node)
+    finish = _where(graph, _reachable_finish(graph, start_node, lambda point: distance_meters(start, point) >= 500))
+
+    direct.plan_point_to_point(start, finish, RoutePreferences(1), cache_directory=tmp_path)
+
+    assert used == ["charlottesville-va"]
+    assert sorted(direct.direct_area_labels()) == ["Charlottesville, VA", "East Toy, VA", "West Toy, VA"]

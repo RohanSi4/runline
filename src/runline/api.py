@@ -4,6 +4,8 @@ import logging
 import os
 from pathlib import Path
 import tempfile
+import threading
+import time
 from typing import Literal
 
 import requests
@@ -23,7 +25,7 @@ from .models import (
     SurfacePreference,
 )
 from .planner import geocode_address, plan_routes
-from .point_to_point import plan_point_to_point
+from .point_to_point import direct_area_labels, plan_point_to_point
 
 
 LOGGER = logging.getLogger("runline.api")
@@ -37,11 +39,61 @@ def remote_api() -> str:
     return os.environ.get("RUNLINE_REMOTE_API", "").strip().rstrip("/")
 
 
-def remote_routes(request: "RouteRequest", origin: Coordinate) -> dict:
+# How long a regional backend's direct-route coverage is trusted, and how
+# long a failed check is remembered before asking again.
+REMOTE_CAPABILITIES_TTL_SECONDS = 300.0
+REMOTE_CAPABILITIES_RETRY_SECONDS = 30.0
+_remote_direct: dict[str, tuple[float, tuple[str, ...]]] = {}
+_remote_direct_lock = threading.Lock()
+
+
+def remote_direct_areas() -> tuple[str, ...]:
+    """Areas the regional backend reports for start -> finish, or () if it reports none.
+
+    Only a backend that lists point_to_point coverage in its /api/capabilities
+    understands the destination field; an older one would ignore it and plan a
+    loop. Missing, slow or malformed answers count as no support. Cached so a
+    request pays for the check at most once per TTL.
+    """
+
+    base = remote_api()
+    if not base:
+        return ()
+    now = time.monotonic()
+    with _remote_direct_lock:
+        cached = _remote_direct.get(base)
+    if cached is not None and cached[0] > now:
+        return cached[1]
+    try:
+        response = requests.get(base + "/api/capabilities", timeout=(2, 3))
+        response.raise_for_status()
+        labels = response.json()["modes"]["point_to_point"]["areas"]
+        if not isinstance(labels, list) or not all(isinstance(label, str) for label in labels):
+            raise ValueError("invalid regional capabilities response")
+        result, ttl = tuple(dict.fromkeys(labels)), REMOTE_CAPABILITIES_TTL_SECONDS
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        LOGGER.warning("regional direct-route capabilities are unavailable", exc_info=True)
+        result, ttl = (), REMOTE_CAPABILITIES_RETRY_SECONDS
+    with _remote_direct_lock:
+        _remote_direct[base] = (now + ttl, result)
+    return result
+
+
+def _is_direct_response(payload: dict) -> bool:
+    finish = payload.get("destination")
+    return (payload.get("mode") == "point_to_point" and isinstance(finish, dict)
+            and all(isinstance(finish.get(key), (int, float)) for key in ("latitude", "longitude")))
+
+
+def remote_routes(request: "RouteRequest", origin: Coordinate, finish: Coordinate | None = None) -> dict:
     # Resolve an address once, then let the regional service use its own exact
     # graph/pools. Never forward to this site's public proxy (which would loop).
     body = request.model_dump(exclude={"address", "mode", "destination"})
     body.update(latitude=origin.latitude, longitude=origin.longitude)
+    direct = request.mode == "point_to_point"
+    if direct:
+        # Only sent to a backend that reported direct support (remote_direct_areas).
+        body.update(mode="point_to_point", destination={"latitude": finish.latitude, "longitude": finish.longitude})
     try:
         response = requests.post(remote_api() + "/api/routes", json=body, timeout=(5, 75))
         payload = response.json()
@@ -52,7 +104,8 @@ def remote_routes(request: "RouteRequest", origin: Coordinate) -> dict:
                 or payload.get("source") not in ("pool", "live")
                 or not isinstance(payload.get("routes"), list) or not payload["routes"]
                 or any(not isinstance(route, dict) or not {"feature", "gpx"} <= route.keys()
-                       for route in payload["routes"])):
+                       for route in payload["routes"])
+                or (direct and not _is_direct_response(payload))):
             raise ValueError("invalid regional route response")
         return payload
     except HTTPException:
@@ -160,6 +213,7 @@ async def version() -> dict[str, str]:
 
 @app.post("/api/routes")
 async def routes(request: RouteRequest) -> dict:
+    destination = None
     try:
         if request.address and request.address.strip():
             try:
@@ -203,9 +257,10 @@ async def routes(request: RouteRequest) -> dict:
         raise
     except CoverageError as error:
         # The legacy regional service ignores unknown fields. Forwarding a
-        # destination there could silently return a loop instead of a path.
-        if request.mode == "loop" and remote_api():
-            return await run_in_threadpool(remote_routes, request, origin)
+        # destination there could silently return a loop instead of a path,
+        # so direct requests go only to a backend reporting direct support.
+        if remote_api() and (request.mode == "loop" or await run_in_threadpool(remote_direct_areas)):
+            return await run_in_threadpool(remote_routes, request, origin, destination)
         # Expected outcome for an unsupported location, not a fault.
         raise HTTPException(status_code=422, detail=str(error)) from error
     except ValueError as error:
@@ -257,10 +312,16 @@ async def supported_areas() -> dict:
     return {"areas": await run_in_threadpool(combined_area_labels)}
 
 
+def combined_direct_labels() -> list[str]:
+    """Local direct coverage (shipped areas, metros with tile graphs here), then the regional backend's."""
+
+    return list(dict.fromkeys((*direct_area_labels(), *remote_direct_areas())))
+
+
 @app.get("/api/capabilities")
 async def capabilities() -> dict:
     return {"modes": {"loop": {"areas": await run_in_threadpool(combined_area_labels)},
-                       "point_to_point": {"areas": [area.label for area in areas()]}}}
+                       "point_to_point": {"areas": await run_in_threadpool(combined_direct_labels)}}}
 
 
 @app.get("/api/places")
