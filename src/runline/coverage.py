@@ -11,6 +11,8 @@ Graphs are stored as gzipped pickles rather than GraphML: for a 40k-node graph
 that is a 0.9s load with a 145MB peak, against 6.3s and 737MB for GraphML.
 The pickles are build artifacts committed alongside the code, so they are
 trusted input; never point RUNLINE_GRAPHS_DIR at a directory you do not own.
+A compact twin (``<name>.npz``, runline.compact) beside a pickle is loaded in
+its place, and stands in for it when the pickle is gone.
 
 Metros precomputed on tiles (runline.metros) are covered too: after the
 manifest's areas, a start inside a metro gets its owning tile as an Area.
@@ -19,21 +21,22 @@ The same trust applies to RUNLINE_METROS_DIR.
 
 from __future__ import annotations
 
-import gzip
 import importlib.util
 import json
+import logging
 import os
-import pickle
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
 import networkx as nx
 
+from .compact import CompactGraphError, graph_file, read_graph
 from .geo import distance_meters
 from .models import Coordinate
 
 MANIFEST_NAME = "manifest.json"
+LOGGER = logging.getLogger("runline.coverage")
 
 
 class CoverageError(RuntimeError):
@@ -137,8 +140,17 @@ def find_area(origin: Coordinate, radius_meters: float) -> Area | None:
 # evict each other on every request that discovers starts.
 @lru_cache(maxsize=2)
 def _load_graph_file(path: str) -> nx.MultiDiGraph:
-    with gzip.open(path, "rb") as handle:
-        return pickle.load(handle)
+    return read_graph(path)
+
+
+def _load_checked(path: Path, label: str) -> nx.MultiDiGraph:
+    """A graph file, with a damaged compact file reported as missing map data."""
+
+    try:
+        return _load_graph_file(str(path))
+    except CompactGraphError as error:
+        LOGGER.error("cannot load %s: %s", path, error)
+        raise CoverageError(f"Map data for {label} is damaged on this deployment.") from None
 
 
 def load_area_graph(area: Area) -> nx.MultiDiGraph:
@@ -152,12 +164,12 @@ def load_area_graph(area: Area) -> nx.MultiDiGraph:
         from .metros import load_tile_graph
 
         return load_tile_graph(area)
-    path = graphs_root() / area.filename
+    path = graph_file(graphs_root() / area.filename)
     if not path.exists():
         raise CoverageError(
             f"Map data for {area.label} is missing from this deployment."
         )
-    return _load_graph_file(str(path))
+    return _load_checked(path, area.label)
 
 
 def containing_area(origin: Coordinate) -> Area | None:
@@ -207,10 +219,10 @@ def load_area_drive_graph(area: Area) -> nx.MultiDiGraph | None:
 
     if not area.drive_filename:
         return None
-    path = graphs_root() / area.drive_filename
+    path = graph_file(graphs_root() / area.drive_filename)
     if not path.exists():
         return None
-    return _load_graph_file(str(path))
+    return _load_checked(path, area.label)
 
 
 def unsupported_message(origin: Coordinate, radius_meters: float) -> str:

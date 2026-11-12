@@ -5,7 +5,8 @@ merge_pools.py --plan) ships as one directory under RUNLINE_METROS_DIR
 (default ``metros/`` in the repo):
 
     <run>/pools.sqlite     the merged pools, with the cell index
-    <run>/tile-graphs/     <tile>.pkl.gz from build_tile_graphs.py
+    <run>/tile-graphs/     <tile>.pkl.gz from build_tile_graphs.py, and/or its
+                           compact <tile>.npz (scripts/compact_graphs.py)
 
 ``tile-graphs`` may be a symlink, so batches can share one directory of tile
 graphs. A run can hold several metros (a batch) and a metro's tiles can sit
@@ -22,15 +23,17 @@ measure_tile_graphs.py measures what one costs, to size the server.
 A tile is handed to the rest of the code as an ``Area`` whose disc is the
 tile's, so live planning treats it like a shipped area: runline.coverage
 asks this module after the manifest's areas, which keep priority.
+
+A tile's graph is named ``<tile>.pkl.gz`` throughout; runline.compact.graph_file
+swaps in the compact ``<tile>.npz`` when it exists, for loading and for the
+pool hash check alike.
 """
 
 from __future__ import annotations
 
-import gzip
 import json
 import logging
 import os
-import pickle
 import sqlite3
 import threading
 from collections import OrderedDict
@@ -40,6 +43,7 @@ from pathlib import Path
 
 import networkx as nx
 
+from .compact import CompactGraphError, graph_file, read_graph
 from .coverage import Area, CoverageError
 from .geo import destination
 from .grid import cell_id
@@ -202,10 +206,9 @@ def tile_for(area: Area) -> Tile | None:
 
 
 def read_graph_file(path: Path) -> nx.MultiDiGraph:
-    """Unpickle a tile graph, streaming so the compressed bytes are never all in memory."""
+    """Load a tile graph, pickled or compact (runline.compact.read_graph)."""
 
-    with gzip.open(path, "rb") as handle:
-        return pickle.load(handle)
+    return read_graph(path)
 
 
 class _TileGraphs:
@@ -259,7 +262,11 @@ TILE_GRAPHS = _TileGraphs()
 
 
 def load_tile_graph(area: Area) -> nx.MultiDiGraph:
-    path = Path(area.filename)
+    path = graph_file(area.filename)
     if not path.exists():
         raise CoverageError(f"Map data for {area.label} is missing from this deployment.")
-    return TILE_GRAPHS.get(path)
+    try:
+        return TILE_GRAPHS.get(path)
+    except CompactGraphError as error:
+        LOGGER.error("cannot load %s: %s", path, error)
+        raise CoverageError(f"Map data for {area.label} is damaged on this deployment.") from None

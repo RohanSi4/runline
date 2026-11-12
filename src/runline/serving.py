@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import dataclasses
 import functools
-import hashlib
 import json
 import logging
 import os
@@ -37,6 +36,7 @@ from pathlib import Path
 
 import networkx as nx
 
+from .compact import graph_file, graph_fingerprint
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id, neighbouring_cells
 from .metros import tile_for
@@ -104,18 +104,18 @@ def _current_meta(path: str) -> dict | None:
 
 
 def _fingerprint(path: Path) -> str:
-    """The graph hash scripts/precompute_pools.py records, read in chunks."""
+    """The graph hash scripts/precompute_pools.py records.
 
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()[:16]
+    A pickle's sha256; for a compact file (runline.compact), the recorded
+    hash of the pickle it was made from, once its own content checks out.
+    """
+
+    return graph_fingerprint(path)
 
 
 @functools.lru_cache(maxsize=8)
-def _checked_pool_file(path: str, graph_path: str, modified: float) -> PoolFile | None:
-    """The pool file if it matches this code and this graph; cached per mtime."""
+def _checked_pool_file(path: str, graph_path: str, modified: float, graph_modified: float) -> PoolFile | None:
+    """The pool file if it matches this code and this graph; cached per mtime of both."""
 
     meta = _current_meta(path)
     if meta is None:
@@ -151,7 +151,8 @@ def _tile_pool_file(area: Area) -> PoolFile | None:
     """The metro file for a tile Area, if its pools fit this code and the tile's graph."""
 
     tile = tile_for(area)
-    graph_path = Path(area.filename)
+    # The compact twin when there is one (runline.compact), as loading picks.
+    graph_path = graph_file(area.filename)
     if tile is None or tile.graph is None or not graph_path.exists():
         return None
     pools = _checked_metro_file(area.metro_pools, Path(area.metro_pools).stat().st_mtime)
@@ -169,7 +170,10 @@ def pool_file(area: Area) -> PoolFile | None:
     path = pools_root() / f"{area.slug}.sqlite"
     if not path.exists():
         return None
-    return _checked_pool_file(str(path), str(graphs_root() / area.filename), path.stat().st_mtime)
+    graph_path = graph_file(graphs_root() / area.filename)
+    if not graph_path.exists():
+        return None
+    return _checked_pool_file(str(path), str(graph_path), path.stat().st_mtime, graph_path.stat().st_mtime)
 
 
 def load_pool(pool: PoolFile, cell: str, surface: str) -> dict | None:

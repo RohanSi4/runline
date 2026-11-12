@@ -400,3 +400,91 @@ def test_tile_graphs_load_lazily_and_stay_within_the_cache(served, monkeypatch) 
     load_area_graph(coverage.containing_area(cell_centre(first)))
     assert metros.TILE_GRAPHS.loads == 3
     metros.TILE_GRAPHS.clear()
+
+
+@pytest.fixture(scope="module")
+def compacted(run, tmp_path_factory) -> Path:
+    """The run with its tile graphs converted in place, as on the VM."""
+
+    from scripts import compact_graphs
+
+    directory = tmp_path_factory.mktemp("compacted") / "run"
+    shutil.copytree(run["directory"], directory)
+    assert compact_graphs.main([str(directory / "tile-graphs"), "--verify"]) == 0
+    return directory
+
+
+def _compact_run(compacted: Path, tmp_path: Path, monkeypatch, *, keep_pickles: bool = False) -> Path:
+    directory = tmp_path / "metros" / "compact"
+    shutil.copytree(compacted, directory)
+    monkeypatch.setenv("RUNLINE_METROS_DIR", str(directory.parent))
+    graphs = directory / "tile-graphs"
+    if not keep_pickles:
+        for path in graphs.glob("*.pkl.gz"):
+            path.unlink()
+    metros.TILE_GRAPHS.clear()
+    serving._tile_graph_matches.cache_clear()
+    return directory
+
+
+def _served_routes(origin: Coordinate, miles: float) -> list:
+    import dataclasses
+
+    preferences = RoutePreferences(miles, surface=SurfacePreference.MIXED, result_count=1)
+    routes_found = serving.serve_from_pool(origin, preferences)
+    return routes_found and [dataclasses.asdict(route) for route in routes_found]
+
+
+@pytest.mark.parametrize("keep_pickles", [False, True])
+def test_pools_built_on_pickles_serve_identically_from_compact_tiles(served, compacted, tmp_path, monkeypatch, keep_pickles) -> None:
+    from runline.compact import COMPACT_SUFFIX
+
+    cell, origin, miles = _best_request(served)
+    metros.TILE_GRAPHS.clear()
+    from_pickles = _served_routes(origin, miles)
+    assert from_pickles
+
+    directory = _compact_run(compacted, tmp_path, monkeypatch, keep_pickles=keep_pickles)
+    from_compact = _served_routes(origin, miles)
+
+    assert from_compact == from_pickles
+    loaded = metros.TILE_GRAPHS._graphs
+    assert loaded and all(path.endswith(COMPACT_SUFFIX) for path, _ in loaded)
+    payload = asyncio.run(routes(RouteRequest(
+        latitude=origin.latitude, longitude=origin.longitude, distance_miles=miles, surface="mixed", result_count=1,
+    )))
+    assert payload["source"] == "pool"
+    assert (directory / "tile-graphs" / f"{served['owner'][cell]}.pkl.gz").exists() == keep_pickles
+    metros.TILE_GRAPHS.clear()
+
+
+def test_a_tampered_compact_tile_is_refused(served, compacted, tmp_path, monkeypatch, caplog) -> None:
+    cell, origin, miles = _best_request(served)
+    directory = _compact_run(compacted, tmp_path, monkeypatch)
+    path = directory / "tile-graphs" / f"{served['owner'][cell]}.npz"
+    with np.load(path, allow_pickle=False) as archive:
+        arrays = {name: archive[name] for name in archive.files}
+    arrays["edge_length"] = arrays["edge_length"] * 1.0001
+    with path.open("wb") as handle:
+        np.savez_compressed(handle, **arrays)
+
+    with caplog.at_level(logging.WARNING):
+        assert _served_routes(origin, miles) is None
+    assert "built from graph" in caplog.text
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(routes(RouteRequest(latitude=origin.latitude, longitude=origin.longitude, distance_miles=miles)))
+    assert error.value.status_code == 422 and "damaged" in error.value.detail
+    metros.TILE_GRAPHS.clear()
+
+
+def test_a_compact_tile_of_another_graph_is_refused(served, compacted, tmp_path, monkeypatch, caplog) -> None:
+    cell, origin, miles = _best_request(served)
+    directory = _compact_run(compacted, tmp_path, monkeypatch)
+    tile = served["owner"][cell]
+    other = next(slug for slug in served["plan"]["tiles"] if slug != tile)
+    shutil.copy(directory / "tile-graphs" / f"{other}.npz", directory / "tile-graphs" / f"{tile}.npz")
+
+    with caplog.at_level(logging.WARNING, logger="runline.serving"):
+        assert _served_routes(origin, miles) is None
+    assert "built from graph" in caplog.text
+    metros.TILE_GRAPHS.clear()
