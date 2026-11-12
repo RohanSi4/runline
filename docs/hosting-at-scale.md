@@ -12,6 +12,26 @@ about 33 DC-weight tiles in memory, and perhaps 16 of New York's. Add a block
 volume when the disk runs out, and plan a compact tile graph format as the
 fix that matters.
 
+## Update: `b1` measured (November 11)
+
+`b1` finished and is served from the Oracle VM ([handoff.md](handoff.md)
+task 4). Its recorded sizes land inside the projection, at or below the
+middle case:
+
+| `b1` | Projected (mid, range) | Recorded |
+|---|---:|---:|
+| Tile graphs | 16.6 GB (9.9-33.1) | about 13.8 GB (906 tiles, 18 GB shared folder less DC's 4.2 GB), about 15.2 MB a tile |
+| `pools.sqlite` | 9.2 GB (9.2-11.8) | 9.7 GB, about 26 KB per planned cell |
+| Total | 25.7 GB (19.1-45.0) | about 23.5 GB |
+
+New York's tiles are lighter on disk than DC's, not the 2x the high case
+allowed for. Rerunning with the recorded tile size
+(`--graph-mb-per-tile 15.2`) puts all 50 at about 215 GB mid (162-313 GB),
+still over the 190 GB disk. With tiles from four regions loaded, the
+service used about 4.9 GB, and the first request in a tile took 2 to 11 s.
+Per-tile RAM has not been measured yet (step 2 of "What to measure first"),
+so the RAM rows below still use DC's 650 MB.
+
 ## Inputs
 
 Measured on the Oracle VM (`VM.Standard.A1.Flex`, 4 OCPUs, 24 GB RAM,
