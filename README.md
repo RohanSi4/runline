@@ -7,7 +7,8 @@ lights, major-road crossings and repeated sections. Download a route as a
 GPX file, the route format compatible watches and navigation apps import.
 
 **Current coverage:** Charlottesville, Virginia, the Washington, DC pilot,
-New York and Los Angeles are available through one app. The rebuilt
+New York, Los Angeles, Atlanta, Boston and Phoenix are available through one
+app. The rebuilt
 Charlottesville graph and pools are served directly; the metros use the
 existing Oracle regional backend. All use saved routes with live planning
 when none fit. The top 50 US metro areas remain the goal.
@@ -228,6 +229,9 @@ metros after the shipped areas.
   storage now uses main's indexed run layout (see `docs/handoff.md`).
 - **New York and Los Angeles:** batch `b1` finished (278,729 cells with pools,
   9.7 GB, 906 tile graphs) and is served from the Oracle backend.
+- **Atlanta, Boston and Phoenix:** batch `b4` finished on the new
+  signal-preserving graphs (276,580 cells with pools, 7.5 GB, 963 tile graphs)
+  and is served from the Oracle backend.
 - **Top 50 metro areas:** the other batches have not started.
 
 `docs/handoff.md` lists the remaining work, and `slurm/README.md` is the
