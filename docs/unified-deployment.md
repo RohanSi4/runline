@@ -3,6 +3,11 @@
 The canonical site is https://runline-nine.vercel.app. Its Vercel API rewrite
 points to https://runline-capstone.vercel.app, which hosts the matching rebuilt
 Charlottesville graph and complete pool file. Both URLs expose the same API.
+One exception: `/api/warm`, which loads a start's map before its route
+request, goes straight to the Oracle backend, where the metro tile graphs
+live. A Charlottesville start therefore warms Oracle's copy, not the capstone
+API's; once the capstone API is redeployed from a `main` that has
+`/api/warm`, this rule can be dropped.
 
 The combined backend sets `RUNLINE_REMOTE_API=https://129-153-47-234.sslip.io`.
 Local planning runs first. Only a local coverage error forwards the resolved
