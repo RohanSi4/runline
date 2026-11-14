@@ -35,7 +35,7 @@ on Oracle. This recovery has not changed the deployed backend.
 | Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Serving the DC pilot on the VM; measurements in task 4. |
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
-| Cluster precompute | Batch `b1` (New York and Los Angeles) finished on the UVA CS cluster on November 11 and is served from the Oracle VM (task 4). Other batches have not started. Rivanna allocation has not been verified. |
+| Cluster precompute | Batch `b1` (New York and Los Angeles) finished on the UVA CS cluster on November 11; `b4` (Atlanta, Boston and Phoenix) finished on November 13 with the signal-preserving pipeline from `main`. Both are served from the Oracle VM (task 4). Other batches have not started. Rivanna allocation has not been verified. |
 | Graphs and pools | Repository graph remains unchanged for compatibility. The rebuilt graph and complete 95 MB pool file are deployed on the separate capstone project; the original Oracle assets remain in place. |
 
 See [validation.md](validation.md) for the before/after routing checks and
@@ -100,7 +100,7 @@ Copernicus elevation). Confirm the elevation bake is complete before
 publishing. Recompute pools on those exact graphs using the pool-generation
 fixes in this branch, which exclude unusable loops and choose origins inside
 routable cells. Charlottesville's rebuild is complete on the capstone project. DC and the
-top-50 coverage remains incomplete; batch `b1` (New York and Los Angeles) is served from the Oracle VM.
+top-50 coverage remains incomplete; batches `b1` (New York and Los Angeles) and `b4` (Atlanta, Boston and Phoenix) are served from the Oracle VM.
 
 ### 4. Update the existing hosted backend
 
@@ -122,6 +122,7 @@ Charlottesville and the DC pilot from `main`:
 | `~/metros/washington-dc/tile-graphs` | Symlink to `~/runline/pools/tile-graphs`: the pilot's 230 tile graphs, 4.2 GB |
 | `~/metros/b1/pools.sqlite`, `plan.json.gz` | Batch `b1` (New York and Los Angeles), indexed with `--add-index` |
 | `~/metros/b1/tile-graphs` | Symlink to the same shared folder, which also holds `b1`'s 906 tile graphs (18 GB in total with DC's) |
+| `~/metros/b4/pools.sqlite`, `plan.json.gz`, `tile-graphs/` | Batch `b4` (Atlanta, Boston and Phoenix). Its 963 rebuilt, signal-preserving tile graphs (13 GB) sit in their own folder, apart from the older shared graphs |
 
 The service also sets `RUNLINE_ALLOW_OSM_DOWNLOAD=0`,
 `RUNLINE_TILE_GRAPHS_CACHE=16` and `RUNLINE_CACHE_DIR=~/.cache/runline`.
@@ -158,6 +159,19 @@ from pools (first request in a tile 2–11 s, then about 0.5 s); a Jersey City
 road request planned live. With tiles from four regions loaded the process
 used about 4.9 GB. A backup of `b1`'s pools and plan is in the portal home
 directory under `~/pools/b1`, since `/bigtemp` is volatile.
+
+Batch `b4` (November 13) is the first batch built with `main`'s pipeline
+(`slurm/run_batch.sh` with `CLUSTER=cs`, work root `/bigtemp/vaq5gp/v2`) on
+signal-preserving graphs. The cluster must be set up with `BUILD=1 bash
+slurm/setup.sh`; without it the configs step fails importing `osmnx`. All 70
+extract, 800 tile-build and 4,000 pool tasks and the merge completed. The merged
+file already carries the cell index, so `--add-index` was not needed. On the
+VM it passed `PRAGMA quick_check` (397,203 indexed cells on 963 tiles; 276,580
+cells with 829,539 pools), and all 963 tile graph hashes match. Through
+runline-nine.vercel.app, 3–8 mile requests in Atlanta, Boston, Cambridge,
+Phoenix and Tempe came from pools (first request in a tile 5–11 s, then about
+1 s); the process used about 3.5 GB afterwards. Disk use is 56 of 184 GB. A
+backup of the pools and plan is in the portal home directory under `~/pools/b4`.
 
 The optional [deploy/README.md](../deploy/README.md) describes a separate
 portable VM recipe. Its paths (`/opt/runline/app` and `/srv/runline`) and
