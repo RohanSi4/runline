@@ -400,3 +400,45 @@ def test_tile_graphs_load_lazily_and_stay_within_the_cache(served, monkeypatch) 
     load_area_graph(coverage.containing_area(cell_centre(first)))
     assert metros.TILE_GRAPHS.loads == 3
     metros.TILE_GRAPHS.clear()
+
+
+def test_warming_a_start_loads_its_tile_graph_ahead_of_the_request(served) -> None:
+    cell, origin, _ = _best_request(served)
+    metros.TILE_GRAPHS.clear()
+
+    assert serving.warm(origin) in served["plan"]["labels"].values()
+    assert metros.TILE_GRAPHS.loads == 1
+    # The route request that follows reuses the warmed graph.
+    load_area_graph(coverage.containing_area(origin))
+    assert metros.TILE_GRAPHS.loads == 1
+
+
+def test_the_warm_endpoint_names_the_area_and_loads_after_responding(served) -> None:
+    from fastapi import BackgroundTasks
+
+    from runline.api import WarmRequest, warm_start
+
+    _, origin, _ = _best_request(served)
+    metros.TILE_GRAPHS.clear()
+    tasks = BackgroundTasks()
+    payload = asyncio.run(warm_start(WarmRequest(latitude=origin.latitude, longitude=origin.longitude), tasks))
+
+    assert payload["area"] in served["plan"]["labels"].values()
+    assert metros.TILE_GRAPHS.loads == 0  # nothing loads before the response
+    asyncio.run(tasks())
+    assert metros.TILE_GRAPHS.loads == 1
+
+
+def test_reading_a_graph_leaves_the_garbage_collector_as_it_was(run) -> None:
+    import gc
+
+    path = next((run["directory"] / metros.TILE_GRAPHS_NAME).glob("*.pkl.gz"))
+    assert gc.isenabled()
+    metros.read_graph_file(path)
+    assert gc.isenabled()
+    gc.disable()
+    try:
+        metros.read_graph_file(path)
+        assert not gc.isenabled()
+    finally:
+        gc.enable()

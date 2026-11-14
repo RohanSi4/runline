@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 import requests
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 
 import runline.api as api
 from runline.coverage import CoverageError
@@ -112,3 +112,29 @@ def test_standalone_backend_never_forwards(monkeypatch):
         asyncio.run(api.routes(api.RouteRequest(latitude=0, longitude=0, distance_miles=5)))
     assert error.value.status_code == 422
     assert error.value.detail == "local coverage only"
+
+
+def test_a_start_outside_local_coverage_is_warmed_regionally(regional, monkeypatch):
+    monkeypatch.setattr(api, "containing_area", lambda origin: None)
+    calls = []
+
+    def post(url, **kwargs):
+        calls.append((url, kwargs["json"]))
+        return Response({"area": "Regional"})
+
+    monkeypatch.setattr(api.requests, "post", post)
+    tasks = BackgroundTasks()
+    assert asyncio.run(api.warm_start(api.WarmRequest(latitude=1.5, longitude=2.5), tasks)) == {"area": "Regional"}
+    assert not tasks.tasks
+    assert calls == [("https://regional.example/api/warm", {"latitude": 1.5, "longitude": 2.5})]
+
+
+def test_a_regional_warm_up_failure_is_not_an_error(regional, monkeypatch):
+    monkeypatch.setattr(api, "containing_area", lambda origin: None)
+
+    def down(*args, **kwargs):
+        raise requests.ConnectionError("down")
+
+    monkeypatch.setattr(api.requests, "post", down)
+    tasks = BackgroundTasks()
+    assert asyncio.run(api.warm_start(api.WarmRequest(latitude=1.5, longitude=2.5), tasks)) == {"area": None}

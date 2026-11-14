@@ -7,13 +7,13 @@ import tempfile
 from typing import Literal
 
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
-from .coverage import CoverageError, area_labels, areas, load_area_places
+from .coverage import CoverageError, area_labels, areas, containing_area, load_area_places
 from .export import candidate_feature
 from .gpx import candidate_to_gpx
 from .models import (
@@ -24,6 +24,7 @@ from .models import (
 )
 from .planner import geocode_address, plan_routes
 from .point_to_point import plan_point_to_point
+from .serving import warm
 
 
 LOGGER = logging.getLogger("runline.api")
@@ -60,6 +61,20 @@ def remote_routes(request: "RouteRequest", origin: Coordinate) -> dict:
     except (requests.RequestException, ValueError, AttributeError):
         LOGGER.exception("regional route service is unavailable")
         raise HTTPException(status_code=503, detail="The regional route service is unavailable right now. Try again shortly.") from None
+
+
+def remote_warm(origin: Coordinate) -> str | None:
+    """Ask the regional service to warm a start; best effort, never raises."""
+
+    try:
+        response = requests.post(remote_api() + "/api/warm",
+                                 json={"latitude": origin.latitude, "longitude": origin.longitude}, timeout=(3, 5))
+        response.raise_for_status()
+        area = response.json().get("area")
+        return area if isinstance(area, str) else None
+    except (requests.RequestException, ValueError, AttributeError):
+        LOGGER.warning("regional warm-up is unavailable", exc_info=True)
+        return None
 
 
 def combined_area_labels() -> list[str]:
@@ -156,6 +171,38 @@ async def version() -> dict[str, str]:
         "version": app.version,
         "commit": os.environ.get("RUNLINE_BUILD_SHA") or os.environ.get("VERCEL_GIT_COMMIT_SHA") or "unknown",
     }
+
+
+class WarmRequest(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+def _warm_quietly(origin: Coordinate) -> None:
+    try:
+        warm(origin)
+    except Exception:
+        # A failed warm-up only means the route request does the work itself.
+        LOGGER.warning("warming %s failed", origin, exc_info=True)
+
+
+@app.post("/api/warm", status_code=202)
+async def warm_start(request: WarmRequest, background: BackgroundTasks) -> dict:
+    """Start loading a start's map before the route request, so the first one is fast.
+
+    The page calls this when a start is set. The graph loads after the
+    response; outside local coverage the regional service is asked instead.
+    The answer names the area, or null where no map covers the start.
+    """
+
+    origin = Coordinate(request.latitude, request.longitude)
+    area = await run_in_threadpool(containing_area, origin)
+    if area is not None:
+        background.add_task(_warm_quietly, origin)
+        return {"area": area.label}
+    if remote_api():
+        return {"area": await run_in_threadpool(remote_warm, origin)}
+    return {"area": None}
 
 
 @app.post("/api/routes")

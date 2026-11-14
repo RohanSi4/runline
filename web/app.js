@@ -135,9 +135,32 @@ async function loadPlaces() {
   }
 }
 
+// The first route in an area waits for its street map to load (several
+// seconds in a metro). Ask the server to load it as soon as a start is set,
+// while the runner is still choosing a distance. Best effort: a failure only
+// means the route request loads the map itself.
+let warmTimer = null;
+let lastWarmed = null;
+function warmStart(latitudeValue, longitudeValue) {
+  const point = [Number(latitudeValue), Number(longitudeValue)];
+  if (!point.every(Number.isFinite)) return;
+  clearTimeout(warmTimer);
+  warmTimer = setTimeout(() => {
+    // Tiles span kilometres, so a nearby repeat would load nothing new.
+    if (lastWarmed && map.distance(lastWarmed, point) < 300) return;
+    lastWarmed = point;
+    fetch("/api/warm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latitude: point[0], longitude: point[1] }),
+    }).catch(() => {});
+  }, 400);
+}
+
 function setStart(latitudeValue, longitudeValue, label = "Pinned location") {
   latitude.value = latitudeValue;
   longitude.value = longitudeValue;
+  warmStart(latitudeValue, longitudeValue);
   address.value = label;
   if (state.startMarker) state.startMarker.remove();
   state.startMarker = L.marker([latitudeValue, longitudeValue], {
