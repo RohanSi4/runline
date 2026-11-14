@@ -358,6 +358,23 @@ def _ranked(small: nx.DiGraph, measured: list[RouteCandidate], preferences: Rout
     return ranked, ""
 
 
+def warm(origin: Coordinate) -> str | None:
+    """Do the first-request work for a start ahead of time; the area's label, or None.
+
+    Loads the graph a request at the origin would use (the owning tile's, in a
+    metro), checks its pool file against it and builds its node index, so the
+    route request that follows starts with them in memory. Raises
+    CoverageError if that graph is missing.
+    """
+
+    area = containing_area(origin)
+    if area is None:
+        return None
+    pool_file(area)
+    _nearest_node(load_area_graph(area), origin)
+    return area.label
+
+
 def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[RouteCandidate] | None:
     """Ranked routes from the pools around the origin, or None if live planning should answer."""
 

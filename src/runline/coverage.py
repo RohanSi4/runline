@@ -19,11 +19,9 @@ The same trust applies to RUNLINE_METROS_DIR.
 
 from __future__ import annotations
 
-import gzip
 import importlib.util
 import json
 import os
-import pickle
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -137,8 +135,9 @@ def find_area(origin: Coordinate, radius_meters: float) -> Area | None:
 # evict each other on every request that discovers starts.
 @lru_cache(maxsize=2)
 def _load_graph_file(path: str) -> nx.MultiDiGraph:
-    with gzip.open(path, "rb") as handle:
-        return pickle.load(handle)
+    from .metros import read_graph_file
+
+    return read_graph_file(Path(path))
 
 
 def load_area_graph(area: Area) -> nx.MultiDiGraph:
