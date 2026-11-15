@@ -497,3 +497,31 @@ def test_measured_repeats_include_doubling_back_on_the_drawn_route(tmp_path, mon
 
     for route in result.candidates:
         assert route.metrics.repeated_fraction >= doubled_back_fraction(route.coordinates) - 0.005
+
+
+def test_rescaling_a_tiny_loop_keeps_waypoints_near_the_start(monkeypatch) -> None:
+    # A direction whose closest attempt was a few metres long used to be
+    # rescaled by target / measured, placing waypoints thousands of km away;
+    # in Phoenix that wrapped past longitude -180 and failed a b2 pool task.
+    from runline import osm
+
+    origin = Coordinate(33.45, -112.07)
+    corner = destination(origin, 0, 5)
+    points = [origin, corner, destination(corner, 90, 5), destination(origin, 90, 5)]
+    graph = nx.MultiDiGraph()
+    graph.graph["crs"] = "epsg:4326"
+    for node, point in enumerate(points, start=1):
+        graph.add_node(node, x=point.longitude, y=point.latitude)
+    for a, b in ((1, 2), (2, 3), (3, 4), (4, 1), (2, 4)):
+        graph.add_edge(a, b, length=5.0, highway="residential")
+        graph.add_edge(b, a, length=5.0, highway="residential")
+    preferences = RoutePreferences(20)
+    radii = []
+
+    def recording(start, bearing, meters):
+        radii.append(meters)
+        return destination(start, bearing, meters)
+
+    monkeypatch.setattr(osm, "destination", recording)
+    assert osm.generate_loops(graph, origin, preferences) == []
+    assert max(radii) <= preferences.target_distance_meters / 3 * osm.MAX_RESCALE + 1e-6

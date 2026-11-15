@@ -832,6 +832,11 @@ def _routable_core(graph: nx.DiGraph) -> nx.DiGraph:
 
 # Search bound in cost units (metres plus penalties) per metre of target.
 SEARCH_LIMIT_FACTOR = 2.0
+# The largest waypoint scale a rescale may ask for. Ordinary rescales stay
+# under 2; a direction whose closest attempt was a few metres long would
+# otherwise scale by target / measured into the thousands, placing waypoints
+# continents away (one wrapped past longitude -180 and failed a pool task).
+MAX_RESCALE = 4.0
 
 
 def generate_loops(
@@ -923,7 +928,7 @@ def generate_loops(
         # rescale each direction's closest attempt onto the target.
         for (heading, sweep), (scale, miles) in list(closest.items()):
             if abs(miles - target_miles) > preferences.distance_tolerance_miles:
-                sample(scale * target_miles / miles, heading, sweep)
+                sample(min(scale * target_miles / max(miles, 1e-9), MAX_RESCALE), heading, sweep)
         for scale, sweep in ((0.6, 60), (0.6, 90), (0.7, 60), (0.8, 60)):
             for heading in range(0, 360, 30):
                 sample(scale, heading, sweep)
