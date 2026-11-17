@@ -252,8 +252,11 @@ Pickle versus compact loading, same code:
   plus a point-to-point route on both, comparing every candidate field.
   `tests/test_metros.py` serves every pooled request of the toy metro run
   from pickles, from compact tiles through networkx, and from compact tiles
-  through arrays, and compares them; it also checks a live request on a
-  compact tile. The whole suite passes (251 tests) along with
+  through arrays, and compares them; it also serves every planned cell at
+  2 and 3 miles, misses included so the pool-miss retries run, through
+  networkx, through the arrays and through the arrays with the tie fallback
+  forced, and checks a live request and warming on a compact tile. On top
+  of `direct-routes-metros` the whole suite passes (308 tests) along with
   `node --test tests/web_flow.mjs tests/run_session.mjs` (35).
 - **`scripts/bench.py`** (`--repeat 1`, the 8 public Charlottesville origins
   times 3, 5, 8 and 12 miles) with `RUNLINE_GRAPHS_DIR` pointing at a
