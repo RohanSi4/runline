@@ -82,7 +82,7 @@ def label(origin_id: str) -> str:
 
 def median(values) -> float | None:
     values = list(values)
-    return statistics.median(values) if values else None
+    return float(statistics.median(values)) if values else None
 
 
 def percentile(values: list[float], fraction: float) -> float | None:
