@@ -83,6 +83,31 @@ class ArrayTile:
     def number_of_nodes(self) -> int:
         return int(self.ids.size)
 
+    def core_mask(self) -> np.ndarray | None:
+        """Per node, in node order, whether it is in the largest strongly connected component.
+
+        What serving._core_node takes from ``nx.strongly_connected_components``
+        when a stranded start is moved (docs/pool-misses.md). Components do
+        not depend on search order, so scipy finds the same ones. Which one
+        is "largest" would, if two tie for the most nodes: then this returns
+        None and the caller asks the networkx graph instead.
+        """
+
+        from scipy.sparse import csr_matrix
+        from scipy.sparse.csgraph import connected_components
+
+        nodes = int(self.ids.size)
+        if nodes == 0:
+            return np.zeros(0, dtype=bool)
+        adjacency = csr_matrix(
+            (np.ones(self._targets.size, dtype=np.int8), self._targets, self._succ_offsets), shape=(nodes, nodes)
+        )
+        _, labels = connected_components(adjacency, directed=True, connection="strong")
+        sizes = np.bincount(labels)
+        if int((sizes == sizes.max()).sum()) > 1:
+            return None
+        return labels == int(np.argmax(sizes))
+
     def nbytes(self) -> int:
         held = [*self.arrays.values(), self.x, self.y, self._order, self._sorted, self._geometry_row, self._major,
                 self._line_x, self._line_y, *self._forward, *self._backward, self._pair_edges, self._pair_major,

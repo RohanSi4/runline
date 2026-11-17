@@ -413,7 +413,11 @@ def warm(origin: Coordinate) -> str | None:
 CORE_KEY = "_runline_core"
 
 
-def _core_node(graph: nx.MultiDiGraph, node: int, origin: Coordinate) -> int | None:
+class _NeedsGraph(Exception):
+    """An ArrayTile cannot settle this question exactly; ask the networkx graph."""
+
+
+def _core_node(graph, node: int, origin: Coordinate) -> int | None:
     """The nearest node of the graph's largest strongly connected component
     to the origin, or None if ``node`` is already on it.
 
@@ -421,19 +425,28 @@ def _core_node(graph: nx.MultiDiGraph, node: int, origin: Coordinate) -> int | N
     loop) that cannot reach any pooled loop. Live planning starts from this
     component (osm._routable_core), so moving there matches what it would
     do. The component is found once per loaded graph, about 70 ms on
-    Charlottesville, and only when a request misses.
+    Charlottesville, and only when a request misses. A compact tile's arrays
+    (runline.array_tiles) find it with scipy; if two components tie for
+    largest, that raises _NeedsGraph and the caller uses the networkx graph.
     """
 
     import numpy as np
 
     cached = graph.graph.get(CORE_KEY)
     if cached is None or cached[0] != graph.number_of_nodes():
-        core = max(nx.strongly_connected_components(graph), key=len, default=set())
-        node_ids, _, _ = _node_index(graph)
-        mask = np.fromiter((int(n) in core for n in node_ids), dtype=bool, count=node_ids.size)
-        cached = graph.graph[CORE_KEY] = (graph.number_of_nodes(), core, mask)
+        if isinstance(graph, ArrayTile):
+            mask = graph.core_mask()
+            if mask is None:
+                raise _NeedsGraph
+            cached = graph.graph[CORE_KEY] = (graph.number_of_nodes(), None, mask)
+        else:
+            core = max(nx.strongly_connected_components(graph), key=len, default=set())
+            node_ids, _, _ = _node_index(graph)
+            mask = np.fromiter((int(n) in core for n in node_ids), dtype=bool, count=node_ids.size)
+            cached = graph.graph[CORE_KEY] = (graph.number_of_nodes(), core, mask)
     _, core, mask = cached
-    if node in core or not mask.any():
+    in_core = bool(mask[graph.index(node)]) if core is None else node in core
+    if in_core or not mask.any():
         return None
     node_ids, latitudes, longitudes = _node_index(graph)
     scale = math.cos(math.radians(origin.latitude))
@@ -443,7 +456,7 @@ def _core_node(graph: nx.MultiDiGraph, node: int, origin: Coordinate) -> int | N
 
 
 def _answer(
-    graph: nx.MultiDiGraph,
+    graph,
     pools: list[dict],
     start_node: int,
     preferences: RoutePreferences,
@@ -487,7 +500,11 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
         if pools:
             ranked, reason, small = _answer(graph, pools, start_node, preferences)
         if not ranked:
-            core_node = _core_node(graph, start_node, origin)
+            try:
+                core_node = _core_node(graph, start_node, origin)
+            except _NeedsGraph:
+                graph = load_area_graph(area)
+                core_node = _core_node(graph, start_node, origin)
             if core_node is not None:
                 start_node, retry = core_node, "connected start"
                 if pools:

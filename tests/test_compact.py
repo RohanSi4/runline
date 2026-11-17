@@ -31,7 +31,7 @@ from runline.compact import (
 )
 from runline.coverage import CoverageError, areas, graphs_root, load_area_graph
 from runline.geo import destination
-from runline.models import RoutePreferences, SurfacePreference
+from runline.models import Coordinate, RoutePreferences, SurfacePreference
 from runline.osm import crop_to_radius
 from runline.planner import plan_routes
 from runline.point_to_point import plan_point_to_point
@@ -480,3 +480,43 @@ def test_the_arrays_take_a_fraction_of_the_graphs_memory(tile_and_graph) -> None
     tile, graph, _ = tile_and_graph
     # Arrays, decoded coordinates and search arrays together, for 40k nodes.
     assert tile.nbytes() < 25_000_000
+
+
+def test_the_arrays_move_a_stranded_start_like_networkx(tile_and_graph) -> None:
+    """The pool-miss retry's connected start (docs/pool-misses.md), on the arrays."""
+
+    tile, graph, _ = tile_and_graph
+    core = max(nx.strongly_connected_components(graph), key=len)
+    stranded = [node for node in graph if node not in core][:150]
+    connected = list(core)[:: max(1, len(core) // 150)]
+    assert stranded
+    for node in stranded + connected:
+        origin = destination(Coordinate(graph.nodes[node]["y"], graph.nodes[node]["x"]), 45, 30)
+        assert serving._core_node(tile, node, origin) == serving._core_node(graph, node, origin)
+    assert all(serving._core_node(tile, node, _area().center) is None for node in connected[:20])
+
+
+def test_the_arrays_search_the_wider_retry_connector_like_networkx(tile_and_graph) -> None:
+    tile, graph, _ = tile_and_graph
+    nodes = list(graph)
+    for node in nodes[:: len(nodes) // 100]:
+        expected = serving._reach(graph, node, serving.FALLBACK_CONNECTOR_METERS)
+        found = serving._reach(tile, node, serving.FALLBACK_CONNECTOR_METERS)
+        assert found == expected and list(found.back_meters) == list(expected.back_meters)
+
+
+def test_tied_largest_components_defer_to_networkx(tmp_path) -> None:
+    from runline.array_tiles import ArrayTile
+
+    graph = nx.MultiDiGraph()
+    for first, second in ((1, 2), (3, 4)):
+        graph.add_edge(first, second, length=1.0)
+        graph.add_edge(second, first, length=1.0)
+    for node in graph:
+        graph.nodes[node].update(x=float(node) / 8, y=1.0)
+    write_compact(graph, tmp_path / "tie.npz", source_fingerprint="0" * 16)
+    tile = ArrayTile.read(tmp_path / "tie.npz")
+
+    assert tile.core_mask() is None
+    with pytest.raises(serving._NeedsGraph):
+        serving._core_node(tile, 3, _area().center)
