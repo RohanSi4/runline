@@ -147,12 +147,27 @@ without recomputation. The design:
    | compact only | the compact file (if damaged: pools refused, loading reports "Map data ... is damaged", a 422) |
    | both, compact intact and made from this pickle | the compact file |
    | both, compact damaged, or made from another pickle | the pickle, with a warning |
+   | neither, with `RUNLINE_TILE_GRAPHS_URL` set (metro tiles) | a fetched `.pkl.gz` (runline.tile_fetch) |
+
+   So a local compact file wins, then the local pickle, then a fetch
+   (`metros.tile_graph_file`). Fetching still downloads `.pkl.gz` files and
+   verifies them by their byte hash; fetching `.npz` files is a follow-up
+   (the recorded tile hash would then be checked through
+   `graph_fingerprint`, as for a local compact file). Start-to-finish
+   routes count a metro tile as present when either file is there.
 
    The "both" check hashes the pickle once per file version per process
    (about 0.1 s for an 18 MB tile), so a stale compact file left beside a
    rebuilt pickle cannot shadow it. Serving's per-file caches key on the
    chosen file and its mtime.
-5. **Loading verifies too.** `read_graph` checks the content hash before
+5. **One fingerprint function.** `runline.compact.graph_fingerprint(path,
+   *, sha256=None)` is the only definition of the hash pools record, and
+   `file_sha256(path)` the only file digest; `runline.serving` re-exports
+   both. Pools (`precompute_pools.py`), serving's checks, batch manifests
+   (`batch_manifest.py`, which passes the digests it already computed as
+   `sha256=`) and staging (`stage_metro_run.py`) all call it, so they agree
+   for pickles and compact files alike.
+6. **Loading verifies too.** `read_graph` checks the content hash before
    building anything, so a file damaged after the pool check still fails
    closed.
 
@@ -303,6 +318,14 @@ matrix over it, so it genuinely needs every node and edge near the start.
   from the held arrays without rereading the file.
   `RUNLINE_ARRAY_SERVING=0` sends hits back through the networkx graph.
   Shipped areas (Charlottesville) are unchanged: their live path dominates.
+- The pool-miss retries (docs/pool-misses.md) run on the arrays too: the
+  wider ring needs only pool rows, the 500 m connector is the same search
+  with a longer cutoff, and the connected-start move takes the largest
+  strongly connected component from scipy (`ArrayTile.core_mask`). If two
+  components tie for largest, networkx's choice would depend on its search
+  order, so that request finishes on the networkx graph instead.
+- `serving.warm(origin)` (`/api/warm`) loads what the first pool hit will
+  read: the arrays on a compact tile with array serving on, else the graph.
 
 Costs: a hit's `_route_graph` is about 5 ms slower cold and 15 to 20 ms
 slower warm than on a held networkx graph (the graph keeps per-node memos

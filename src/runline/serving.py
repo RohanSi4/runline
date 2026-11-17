@@ -398,16 +398,24 @@ def warm(origin: Coordinate) -> str | None:
 
     Loads the graph a request at the origin would use (the owning tile's, in a
     metro), checks its pool file against it and builds its node index, so the
-    route request that follows starts with them in memory. Raises
-    CoverageError if that graph is missing.
+    route request that follows starts with them in memory. On a compact tile
+    with array serving on, that is the tile's arrays (runline.array_tiles),
+    which is what the first pool hit reads. Raises CoverageError if the graph
+    is missing.
     """
 
     area = containing_area(origin)
     if area is None:
         return None
     pool_file(area)
-    _nearest_node(load_area_graph(area), origin)
+    _nearest_node(_serving_graph(area), origin)
     return area.label
+
+
+def _serving_graph(area: Area):
+    """What a pool hit reads: a compact metro tile's arrays, else the area's networkx graph."""
+
+    return load_tile_arrays(area) or load_area_graph(area)
 
 
 CORE_KEY = "_runline_core"
@@ -493,7 +501,7 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
     pools = load_pools(pool_source, near, surface)
 
     # A compact metro tile answers from its arrays; anything else from its graph.
-    graph = load_tile_arrays(area) or load_area_graph(area)
+    graph = _serving_graph(area)
     start_node = _nearest_node(graph, origin)
     ranked, reason, small, retry = [], "no pool for the cell", None, ""
     try:

@@ -997,3 +997,55 @@ def test_a_compact_tile_of_another_graph_is_refused(served, compacted, tmp_path,
         assert _served_routes(origin, miles) is None
     assert "built from graph" in caplog.text
     metros.TILE_GRAPHS.clear()
+
+
+@pytest.mark.parametrize("arrays", [True, False])
+def test_warming_a_compact_start_loads_what_its_first_pool_hit_reads(
+    served, compacted, tmp_path, monkeypatch, arrays
+) -> None:
+    monkeypatch.setenv("RUNLINE_ARRAY_SERVING", "1" if arrays else "0")
+    _compact_run(compacted, tmp_path, monkeypatch)
+    _, origin, miles = _best_request(served)
+    warmed, untouched = (metros.TILE_ARRAYS, metros.TILE_GRAPHS) if arrays else (metros.TILE_GRAPHS, metros.TILE_ARRAYS)
+
+    assert serving.warm(origin) in served["plan"]["labels"].values()
+    assert (warmed.loads, untouched.loads) == (1, 0)
+    # The pool hit that follows reuses what was warmed and loads nothing else.
+    assert _served_routes(origin, miles)
+    assert (warmed.loads, untouched.loads) == (1, 0)
+    metros.TILE_GRAPHS.clear()
+    metros.TILE_ARRAYS.clear()
+
+
+def test_every_planned_cell_serves_the_same_from_arrays_and_graphs_retries_included(
+    served, compacted, tmp_path, monkeypatch, caplog
+) -> None:
+    """Misses too, so the connected-start and wider-ring retries run on both."""
+
+    from runline.array_tiles import ArrayTile
+
+    _compact_run(compacted, tmp_path, monkeypatch)
+    starts = [cell_centre(cell) for cell in sorted(served["owner"])]
+    caplog.set_level("DEBUG", logger="runline.serving")
+
+    def answers() -> tuple[list, list]:
+        caplog.clear()
+        found = [_served_routes(origin, miles) for origin in starts for miles in (2.0, 3.0)]
+        return found, [record.pool_retry for record in caplog.records if hasattr(record, "pool_retry")]
+
+    monkeypatch.setenv("RUNLINE_ARRAY_SERVING", "0")
+    from_graphs, graph_retries = answers()
+    monkeypatch.setenv("RUNLINE_ARRAY_SERVING", "1")
+    metros.TILE_ARRAYS.clear()
+    from_arrays, array_retries = answers()
+    # A tie for the largest component sends the retry to the networkx graph.
+    metros.TILE_ARRAYS.clear()
+    monkeypatch.setattr(ArrayTile, "core_mask", lambda self: None)
+    from_fallback, fallback_retries = answers()
+
+    assert any(from_graphs) and not all(from_graphs)
+    assert graph_retries, "no request was answered on a retry"
+    assert from_arrays == from_graphs and array_retries == graph_retries
+    assert from_fallback == from_graphs and fallback_retries == graph_retries
+    metros.TILE_GRAPHS.clear()
+    metros.TILE_ARRAYS.clear()
