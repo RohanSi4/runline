@@ -374,3 +374,92 @@ test("Run uses the selected route and prevents planner edits while the session i
   assert.equal(ui.requests.length, 1);
   assert.equal(ui.state().routes.length, 2);
 });
+
+// US4 and US9 (Project Proposal & Plan): each candidate shows its distance
+// error and the scoring components used to rank it, and alternative starts
+// show their driving cost and score. These check presence, not only that the
+// numbers shown are right.
+function descendants(node) {
+  return node.children.flatMap(child => typeof child === "object" ? [child, ...descendants(child)] : []);
+}
+
+function byClass(node, name) {
+  return descendants(node).filter(child => child.classList.contains(name));
+}
+
+const components = { distance: 0.006, traffic_signals: 0, major_crossings: 1.6, surface: 0.13,
+  elevation: 1.07, repeated_segments: 0.11, shape: 0, driving: 0 };
+
+function scored(base, extra = {}) {
+  const score = Object.values(extra.score_components || components).reduce((sum, value) => sum + value, 0);
+  Object.assign(base.feature.properties, { score, score_components: components, drive_distance_miles: 0, ...extra });
+  return base;
+}
+
+test("each route card shows crossings, distance off target, repetition and score", async () => {
+  const ui = app(), pending = ui.submit();
+  ui.respond({ ...payload(), routes: [scored(route(5.01, 0, 100, 0.2)), scored(route(4.98, 2, 250, 0.8))] });
+  await pending;
+  const cards = ui.get("route-list").children;
+  for (const [index, card] of cards.entries()) {
+    const metrics = ui.state().routes[index].feature.properties;
+    const labels = byClass(card, "route-metric").map(metric => metric.children[1].textContent);
+    assert.deepEqual(labels, ["signals", "crossings", "climbing", "trail"]);
+    const crossings = byClass(card, "route-metric")[1].children[0].textContent;
+    assert.equal(Number(crossings), metrics.major_crossing_events);
+    const line = byClass(card, "route-tradeoffs")[0].textContent;
+    assert.match(line, /mi vs 5 mi/);
+    assert.match(line, /1% repeated/);
+    assert.match(line, new RegExp(`score ${metrics.score.toFixed(2)}`));
+  }
+  assert.match(byClass(cards[0], "route-tradeoffs")[0].textContent, /^\+0\.01 mi vs 5 mi/);
+  assert.match(byClass(cards[1], "route-tradeoffs")[0].textContent, /^−0\.02 mi vs 5 mi/);
+  assert.equal(ui.get("summary-crossings").textContent, "1");
+});
+
+test("the selected route lists every score component with the API's points, largest first", async () => {
+  const ui = app(), pending = ui.submit();
+  ui.respond({ ...payload(), routes: [scored(route(5.01, 0, 100, 0.2))] });
+  await pending;
+  assert.equal(ui.get("score-breakdown").hidden, false);
+  const rows = ui.get("score-parts").children;
+  assert.equal(rows.length, 8);
+  assert.deepEqual(rows.map(row => row.dataset.component).sort(), Object.keys(components).sort());
+  for (const row of rows) {
+    assert.equal(row.children[2].textContent, components[row.dataset.component].toFixed(2));
+  }
+  const points = rows.map(row => Number(row.children[2].textContent));
+  assert.deepEqual(points, [...points].sort((a, b) => b - a));
+  const crossingRow = rows.find(row => row.dataset.component === "major_crossings");
+  assert.equal(crossingRow.children[1].textContent, "1 crossing");
+  const distanceRow = rows.find(row => row.dataset.component === "distance");
+  assert.equal(distanceRow.children[1].textContent, "+0.01 mi vs 5 mi");
+  const total = Object.values(components).reduce((sum, value) => sum + value, 0);
+  assert.equal(ui.get("score-total").textContent, total.toFixed(2));
+});
+
+test("a route from a nearby start shows its drive and score on the card and in the breakdown", async () => {
+  const ui = app(), pending = ui.submit();
+  const drive = { ...components, driving: 1.4 };
+  const nearby = scored(route(5.02, 0, 120, 0.6), { drive_distance_miles: 1.4, score_components: drive,
+    start: { label: "Riverside trailhead", kind: "trailhead", drive_distance_miles: 1.4 } });
+  nearby.feature.properties.score_components = drive;
+  ui.respond({ ...payload(), discovered_starts: 3, routes: [nearby] });
+  await pending;
+  const line = byClass(ui.get("route-list").children[0], "route-tradeoffs")[0].textContent;
+  assert.match(line, /1\.4 mi drive/);
+  assert.match(line, /score \d+\.\d\d/);
+  assert.equal(ui.get("summary-drive").hidden, false);
+  assert.equal(ui.get("summary-drive").textContent, "Drive 1.4 mi to start");
+  const drivingRow = ui.get("score-parts").children.find(row => row.dataset.component === "driving");
+  assert.equal(drivingRow.children[1].textContent, "1.4 mi drive");
+  assert.equal(drivingRow.children[2].textContent, "1.40");
+});
+
+test("a response without score components still renders and hides the breakdown", async () => {
+  const ui = app(), pending = ui.submit(); ui.respond(); await pending;
+  assert.equal(ui.get("route-list").children.length, 2);
+  assert.equal(ui.get("score-breakdown").hidden, true);
+  assert.equal(ui.get("summary-drive").hidden, true);
+  assert.doesNotMatch(byClass(ui.get("route-list").children[0], "route-tradeoffs")[0].textContent, /score/);
+});

@@ -122,6 +122,9 @@ const textOf = node => typeof node !== "object" ? String(node) : [node.textConte
 
 // Every ranking component src/runline/scoring.py adds into a route's score.
 const SCORER_COMPONENTS = ["distance", "traffic_signals", "major_crossings", "surface", "elevation", "repeated_segments", "shape", "driving"];
+// The labels web/app.js gives each component in the "Why this rank" breakdown.
+const BREAKDOWN_LABELS = { distance: "Distance", traffic_signals: "Traffic signals", major_crossings: "Major-road crossings",
+  surface: "Surface", elevation: "Hills", repeated_segments: "Repeated distance", shape: "Shape", driving: "Driving to the start" };
 const display = { responses: 0, cards: 0, compared: 0, mismatches: [], fields: {} };
 const drive = { cases: 0, alt_cards: 0, start_label_ok: 0, context_ok: 0, drive_cost_hits: 0, score_hits: 0 };
 const allText = [];
@@ -171,7 +174,18 @@ async function render(capture, name) {
     const label = m.start?.label || "Starting here";
     check(where, "start label (card)", title, label, title === label);
     const aria = card.getAttribute("aria-label");
-    check(where, "aria-label", aria, m, aria === `Route ${index + 1}, ${m.distance_miles.toFixed(2)} miles, ${m.traffic_signal_events} signals, ${Math.round(m.trail_fraction * 100)} percent trail`);
+    check(where, "aria-label", aria, m, aria.startsWith(`Route ${index + 1}, ${m.distance_miles.toFixed(2)} miles, `) &&
+      aria.includes(`${m.major_crossing_events} major-road crossing`));
+    check(where, "crossings (card)", metricMap.crossings, m.major_crossing_events, Number(metricMap.crossings) === m.major_crossing_events);
+    // US4: distance off target, repetition and score on every card; US9: drive cost.
+    const tradeoffs = card.children[4]?.textContent ?? "";
+    const off = m.distance_miles - request.distance_miles;
+    const offText = Math.abs(off) < 0.005 ? "on target" : `${off > 0 ? "+" : "\u2212"}${Math.abs(off).toFixed(2)} mi vs ${request.distance_miles} mi`;
+    check(where, "distance off target (card)", tradeoffs, offText, tradeoffs.includes(offText));
+    check(where, "repeated % (card)", tradeoffs, m.repeated_fraction, tradeoffs.includes(`${Math.round(m.repeated_fraction * 100)}% repeated`));
+    if (Number.isFinite(m.score)) check(where, "score (card)", tradeoffs, m.score, tradeoffs.includes(`score ${m.score.toFixed(2)}`));
+    const driveMiles = Number(m.drive_distance_miles ?? m.start?.drive_distance_miles ?? 0) || 0;
+    if (driveMiles > 0) check(where, "drive (card)", tradeoffs, driveMiles, tradeoffs.includes(`${driveMiles.toFixed(1)} mi drive`));
     await card.fire("click");
     const summary = { distance: ui.get("summary-distance").textContent, gain: ui.get("summary-gain").textContent,
       signals: ui.get("summary-signals").textContent, start: ui.get("summary-start").textContent };
@@ -179,6 +193,19 @@ async function render(capture, name) {
     check(where, "elevation gain (panel)", summary.gain, m.elevation_gain_feet, summary.gain === (m.elevation_coverage >= 0.95 ? `${Math.round(m.elevation_gain_feet)} ft` : "—"));
     check(where, "signals (panel)", summary.signals, m.traffic_signal_events, Number(summary.signals) === m.traffic_signal_events);
     check(where, "start label (panel)", summary.start, m.start?.label || "Start here", summary.start === (m.start?.label || "Start here"));
+    const crossingsPanel = ui.get("summary-crossings").textContent;
+    check(where, "crossings (panel)", crossingsPanel, m.major_crossing_events, Number(crossingsPanel) === m.major_crossing_events);
+    if (m.score_components && Number.isFinite(m.score)) {
+      const rows = ui.get("score-parts").children;
+      const keys = Object.keys(m.score_components);
+      check(where, "breakdown rows", rows.length, keys.length, rows.length === keys.length && keys.every(key => rows.some(row => row.dataset.component === key)));
+      for (const row of rows) {
+        const expected = m.score_components[row.dataset.component];
+        check(where, `breakdown ${row.dataset.component}`, row.children[2].textContent, expected, row.children[2].textContent === expected.toFixed(2));
+      }
+      check(where, "score (panel)", ui.get("score-total").textContent, m.score, ui.get("score-total").textContent === m.score.toFixed(2));
+      allText.push(rows.map(row => row.children.map(cell => cell.textContent).join(" ")).join(" | "));
+    }
     const shown = [textOf(card), aria, ...Object.values(summary)].join(" | ");
     allText.push(shown);
     if (request.drive_radius_miles && m.start && m.start.kind !== "origin") {
@@ -205,7 +232,7 @@ const html = fs.existsSync(path.join(out, "index.html")) ? fs.readFileSync(path.
 const rendered = allText.join(" \n ");
 const searchable = `${rendered}\n${html.replace(/<[^>]+(title|aria-label)="([^"]*)"[^>]*>/g, " $2 ").replace(/<[^>]*>/g, " ")}`;
 const inventory = {
-  "distance error / off-target": /(off target|distance error|±|\+\/-|miles? (short|long|over|under))/i,
+  "distance error / off-target": /(off target|distance error|±|\+\/-|miles? (short|long|over|under)|mi vs \d)/i,
   "major-road crossings": /crossing/i,
   "repeated fraction": /repeat/i,
   "shape / compactness": /(shape|compact|\broundness\b)/i,
@@ -216,23 +243,17 @@ const notShown = Object.entries(inventory).filter(([, re]) => !re.test(searchabl
 const shownAnywhere = Object.entries(inventory).filter(([, re]) => re.test(searchable)).map(([k, re]) => `${k} (matched "${searchable.match(re)[0]}")`);
 const sourceUsesCode = Object.fromEntries(["major_crossing_events", "repeated_fraction", "compactness", "score", "score_components", "drive_distance_miles"]
   .map(key => [key, new RegExp(`metrics\\.${key}\\b|\\.${key}\\b`).test(source.replace(/validateRoutes[\s\S]*?\n}\n/, ""))]));
-display.shown = ["distance (2 dp, card + panel)", "traffic signals (card + panel)", "climbing ft (card + panel, hidden if elevation coverage < 95%)",
-  "trail % (card)", "start label (card + panel)", "target distance in header", "nearby starts checked (header)"];
+display.shown = ["distance (2 dp, card + panel)", "distance off target (card + breakdown)", "traffic signals (card + panel)",
+  "major-road crossings (card + panel)", "climbing ft (card + panel, hidden if elevation coverage < 95%)", "trail % (card)",
+  "repeated % (card)", "score (card + breakdown)", "drive distance (card + panel, nearby starts)", "every score component with its points (breakdown)",
+  "start label (card + panel)", "target distance in header", "nearby starts checked (header)"];
 display.not_shown = notShown;
 display.matched_in_page = shownAnywhere;
 display.metric_fields_read_outside_validation = sourceUsesCode;
 display.scorer_components = SCORER_COMPONENTS;
 display.score_parts_shown = !notShown.includes("route score or score breakdown");
-display.component_display = {
-  distance: "partly: actual distance and target are shown, the error itself is not",
-  traffic_signals: "shown as a count",
-  major_crossings: notShown.includes("major-road crossings") ? "not shown" : "shown",
-  surface: "partly: trail % on the card",
-  elevation: "partly: climbing ft",
-  repeated_segments: notShown.includes("repeated fraction") ? "not shown" : "shown",
-  shape: notShown.includes("shape / compactness") ? "not shown" : "shown",
-  driving: notShown.includes("drive distance / driving cost") ? "not shown (only the start label)" : "shown",
-};
+display.component_display = Object.fromEntries(SCORER_COMPONENTS.map(key => [key,
+  rendered.includes(BREAKDOWN_LABELS[key]) ? "shown with its points in the breakdown" : "not shown"]));
 
 // US8: autocomplete from the shipped catalog and map clicks, through app.js.
 const autocomplete = [];

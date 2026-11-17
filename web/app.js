@@ -294,6 +294,82 @@ function routeMetrics(route) {
   return route.feature.properties;
 }
 
+// The scorer's components (scoring.rank_candidates), in its order, with the
+// measurement each one charges for. Lower points rank higher.
+const scoreParts = [
+  ["distance", "Distance", (m, target) => target ? offTarget(m.distance_miles, target) : `${m.distance_miles.toFixed(2)} mi`],
+  ["traffic_signals", "Traffic signals", (m) => plural(m.traffic_signal_events, "signal")],
+  ["major_crossings", "Major-road crossings", (m) => plural(m.major_crossing_events, "crossing")],
+  ["surface", "Surface", (m) => `${Math.round(m.trail_fraction * 100)}% trail`],
+  ["elevation", "Hills", (m) => m.elevation_coverage >= 0.95 ? `${Math.round(m.elevation_gain_feet)} ft climb` : "no elevation data"],
+  ["repeated_segments", "Repeated distance", (m) => `${Math.round(m.repeated_fraction * 100)}% repeated`],
+  ["shape", "Shape", (m) => Number.isFinite(m.compactness) ? `roundness ${m.compactness.toFixed(2)}` : "not measured"],
+  ["driving", "Driving to the start", (m) => driveText(m)],
+];
+
+function plural(count, noun) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+function offTarget(distance, target) {
+  const difference = distance - target;
+  if (Math.abs(difference) < 0.005) return `on target (${target} mi)`;
+  return `${difference > 0 ? "+" : "−"}${Math.abs(difference).toFixed(2)} mi vs ${target} mi`;
+}
+
+function driveMiles(metrics) {
+  return Number(metrics.drive_distance_miles ?? metrics.start?.drive_distance_miles ?? 0) || 0;
+}
+
+function driveText(metrics) {
+  const miles = driveMiles(metrics);
+  return miles > 0 ? `${miles.toFixed(1)} mi drive` : "no drive";
+}
+
+function targetMiles() {
+  const target = Number(state.request?.distance_miles);
+  return state.request?.mode !== "point_to_point" && Number.isFinite(target) && target > 0 ? target : null;
+}
+
+function tradeoffLine(metrics) {
+  const parts = [];
+  const target = targetMiles();
+  if (target) parts.push(offTarget(metrics.distance_miles, target));
+  parts.push(`${Math.round(metrics.repeated_fraction * 100)}% repeated`);
+  if (driveMiles(metrics) > 0) parts.push(driveText(metrics));
+  if (Number.isFinite(metrics.score)) parts.push(`score ${metrics.score.toFixed(2)}`);
+  return parts.join(" · ");
+}
+
+function renderBreakdown(metrics) {
+  const list = document.getElementById("score-parts");
+  const components = metrics.score_components;
+  setOptionalHidden("score-breakdown", !list || !components || !Number.isFinite(metrics.score));
+  if (!list || !components || !Number.isFinite(metrics.score)) return;
+  optionalText("score-total", metrics.score.toFixed(2));
+  const target = targetMiles();
+  const rows = scoreParts
+    .filter(([key]) => Number.isFinite(components[key]))
+    .map(([key, label, measure]) => ({ key, label, measure: measure(metrics, target), points: components[key] }))
+    .sort((a, b) => b.points - a.points);
+  list.replaceChildren(...rows.map((row) => {
+    const item = document.createElement("li");
+    item.className = "score-part";
+    item.dataset.component = row.key;
+    const name = document.createElement("span");
+    name.className = "score-part-name";
+    name.textContent = row.label;
+    const measure = document.createElement("span");
+    measure.className = "score-part-measure";
+    measure.textContent = row.measure;
+    const points = document.createElement("strong");
+    points.className = "score-part-points";
+    points.textContent = row.points.toFixed(2);
+    item.append(name, measure, points);
+    return item;
+  }));
+}
+
 function requestSummary(request) {
   if (!request) return "Choose a route. Make it yours.";
   const surface = { road: "Road", mixed: "Mixed", trail: "Trail" }[request.surface] || "Mixed";
@@ -325,6 +401,10 @@ function selectRoute(index, fit = true) {
   optionalText("summary-start", metrics.start?.label || "Start here");
   optionalText("summary-gain", metrics.elevation_coverage >= 0.95 ? `${Math.round(metrics.elevation_gain_feet)} ft` : "—");
   optionalText("summary-signals", String(metrics.traffic_signal_events));
+  optionalText("summary-crossings", String(metrics.major_crossing_events));
+  optionalText("summary-drive", driveMiles(metrics) > 0 ? `Drive ${driveMiles(metrics).toFixed(1)} mi to start` : "");
+  setOptionalHidden("summary-drive", driveMiles(metrics) <= 0);
+  renderBreakdown(metrics);
   setOptionalHidden("selected-summary", false);
   if (fit) map.fitBounds(state.layers[index].getBounds().pad(0.12));
 }
@@ -386,7 +466,7 @@ function renderRoutes(payload, request = null) {
     card.type = "button";
     card.className = `route-card${index === 0 ? " active" : ""}`;
     card.setAttribute("aria-pressed", String(index === 0));
-    card.setAttribute("aria-label", `Route ${index + 1}, ${metrics.distance_miles.toFixed(2)} miles, ${metrics.traffic_signal_events} signals, ${Math.round(metrics.trail_fraction * 100)} percent trail`);
+    card.setAttribute("aria-label", `Route ${index + 1}, ${metrics.distance_miles.toFixed(2)} miles, ${plural(metrics.traffic_signal_events, "signal")}, ${plural(metrics.major_crossing_events, "major-road crossing")}, ${Math.round(metrics.trail_fraction * 100)} percent trail, ${tradeoffLine(metrics)}`);
     card.style.setProperty("--route-color", color);
     card.style.setProperty("--i", index);
 
@@ -420,7 +500,7 @@ function renderRoutes(payload, request = null) {
     const detail = document.createElement("span");
     detail.className = "route-metrics";
     const gain = metrics.elevation_coverage >= 0.95 ? `${Math.round(metrics.elevation_gain_feet)} ft` : "—";
-    for (const [value, label] of [[String(metrics.traffic_signal_events), "signals"], [gain, "climbing"], [`${Math.round(metrics.trail_fraction * 100)}%`, "trail"]]) {
+    for (const [value, label] of [[String(metrics.traffic_signal_events), "signals"], [String(metrics.major_crossing_events), "crossings"], [gain, "climbing"], [`${Math.round(metrics.trail_fraction * 100)}%`, "trail"]]) {
       const metric = document.createElement("span");
       metric.className = "route-metric";
       const metricValue = document.createElement("strong");
@@ -431,7 +511,10 @@ function renderRoutes(payload, request = null) {
       metric.append(metricValue, metricLabel);
       detail.append(metric);
     }
-    card.append(swatch, main, routeDistance, detail);
+    const tradeoffs = document.createElement("span");
+    tradeoffs.className = "route-tradeoffs";
+    tradeoffs.textContent = tradeoffLine(metrics);
+    card.append(swatch, main, routeDistance, detail, tradeoffs);
     card.addEventListener("click", () => selectRoute(index));
     routeList.appendChild(card);
   });
