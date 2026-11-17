@@ -97,8 +97,9 @@ bash slurm/run_batch.sh test
 Its pools land in `$BASE/batches/test/pools/pools.sqlite`. Before the next
 batch:
 
-- Copy the batch off scratch (next section). Both clusters' scratch is
-  volatile.
+- Archive the batch off scratch
+  ([When a batch finishes](#when-a-batch-finishes)). Both clusters'
+  scratch is volatile.
 - Check `sacct` for OUT_OF_MEMORY. Tasks ask for 4G, against the pilot's
   2.1 GB peak, and New York and Los Angeles (`b1`) may need more. Rerun with
   `MEM=8G bash slurm/run_batch.sh <name>`: built tiles and finished units are
@@ -133,7 +134,65 @@ rsync -a --files-from=b1-files.txt rivanna:/scratch/<id>/ ~/runline-archive/
 
 `--files` warns about any expected file that is missing (an unfinished unit,
 say). Check the copy (`du -sh`, a row count of `pools.sqlite`) before
-deleting anything on scratch.
+deleting anything on scratch. For a finished batch, prefer the archive
+below: it records a manifest the copy is checked against.
+
+### When a batch finishes
+
+Archive it before submitting the next batch and before anything on scratch
+is purged. `/bigtemp` has already lost the DC pilot's `plan.json.gz` once.
+
+1. **Login node, once the merge has finished:**
+   ```bash
+   DRY_RUN=1 bash slurm/archive_batch.sh b1   # prints the two sbatch lines and the laptop commands
+   bash slurm/archive_batch.sh b1
+   ```
+   This submits two jobs, so the hashing and the tar stay off the login
+   node. `runline-manifest` runs `scripts/batch_manifest.py`, which writes
+   `$BASE/batches/b1/manifest.json`: size and sha256 of the plan, every
+   shard, `pools.sqlite` and each planned tile's graph, plus the plan's cell
+   and tile counts, each tile's graph hash (as `pools.sqlite` records it and
+   as computed from its file), pool cells, pools, loops, `PRAGMA
+   quick_check` and whether the cell index is there. It fails if the batch
+   cannot be served as it is (a missing shard or tile graph, a tile graph
+   rebuilt after its pools, a failed check), and then nothing is packed.
+   Fix it, or archive it anyway with `ALLOW_PROBLEMS=1` when the data
+   matters more than its state. `runline-pack` then writes one uncompressed
+   tar (everything is already gzipped or SQLite) split into 3 GB parts
+   (`PART_SIZE`) in `$BASE/archives/b1/`, with `b1.parts.sha256` and a copy
+   of the manifest. The parts need as much free space as the batch.
+   `HERE=1` runs both steps in the current shell instead (in an `ijob`, or
+   for a small batch); `ARCHIVE_DIR=/standard/<group>/...` packs straight to
+   Research Standard storage on Rivanna.
+2. **Laptop, when `runline-pack` has finished:** run the commands the
+   script printed. One `rsync` pulls every part over the ControlMaster
+   connection (see [SSH](#ssh)); rerun the same command to resume it, and
+   never loop ssh or rsync per file. The destination can be a Drive-synced
+   folder, but unpack on a local disk:
+   ```bash
+   rsync -a --partial --progress -e "ssh -o ControlMaster=auto -o ControlPath=~/.ssh/cm-%r@%h:%p -o ControlPersist=8h" \
+       <id>@<login host>:<BASE>/archives/b1/ ~/runline-archive/b1/
+   (cd ~/runline-archive/b1 && shasum -a 256 -c b1.parts.sha256)
+   mkdir -p ~/runline-archive/b1/unpacked && cat ~/runline-archive/b1/b1.tar.* | tar -xf - -C ~/runline-archive/b1/unpacked
+   .venv/bin/python scripts/batch_manifest.py --verify ~/runline-archive/b1/unpacked/batches/b1
+   ```
+   `--verify` rehashes every file, recomputes the facts and checks that every
+   tile with pools has a graph whose hash matches; it exits 1 on any
+   mismatch.
+3. **Stage and smoke test it:**
+   ```bash
+   .venv/bin/python scripts/stage_metro_run.py ~/runline-archive/b1/unpacked/batches/b1 \
+       --metros-dir metros --skip-verify
+   ```
+   This writes `metros/<metro>/pools.sqlite` (that metro's share, with the
+   index) and `metros/<metro>/tile-graphs/` for each metro of the batch
+   (`--metro` for some, `--link symlink` to save disk), checks them, and
+   requests a few pooled loops through the API with no other coverage. It
+   fails unless each one comes back `source: pool`. Serve the result with
+   `RUNLINE_METROS_DIR=metros`.
+4. **Only then purge:** once `--verify` has passed on the laptop (and on a
+   second copy, if one is kept), delete `$BASE/batches/b1`,
+   `$BASE/archives/b1` and the batch's tile graphs from scratch.
 
 ## The top 50 metros, step by step
 
@@ -331,7 +390,7 @@ Every command runs on a login node in `~/runline` unless it says laptop.
    bash slurm/progress.sh /scratch/$USER/batches/test/tiles \
        /scratch/$USER/tile-graphs /scratch/$USER/batches/test/pools   # now and then
    ```
-   When the merge finishes: copy the batch off (above), check `sacct` for
+   When the merge finishes: archive the batch (When a batch finishes), check `sacct` for
    OUT_OF_MEMORY and TIMEOUT, run `build_tile_graphs.py summary --output
    /scratch/$USER/tile-graphs` and scale its MB by 8,447 / 222 tiles to fix
    the storage estimate, and compare the SUs used (`mam-list-transactions -a
@@ -341,7 +400,7 @@ Every command runs on a login node in `~/runline` unless it says laptop.
    priority):
    ```bash
    MEM=8G bash slurm/run_batch.sh b1      # New York and Los Angeles may need 8G
-   # ... merge done: copy b1 off, check sacct, then
+   # ... merge done: bash slurm/archive_batch.sh b1 (When a batch finishes), check sacct, then
    bash slurm/run_batch.sh b2
    ```
    After every batch, copy it off before starting the next, and before
