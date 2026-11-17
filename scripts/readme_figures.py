@@ -1,15 +1,18 @@
-"""Render the README's map figures from real RunLine output.
+"""Render the README's figures; the map figures come from real RunLine output.
 
-    python scripts/readme_figures.py            # writes docs/readme/*.svg
+    python scripts/readme_figures.py                 # writes docs/readme/*.svg
+    python scripts/readme_figures.py architecture    # just the deployment diagram
 
-Every figure is drawn from the shipped Charlottesville graph and the real
-planner, starting at the area's map centre from graphs/manifest.json, so no
+The architecture diagram is drawn from the deployment description below and
+needs no graph. Every map figure is drawn from the shipped Charlottesville
+graph and the real planner, starting at the area's map centre from graphs/manifest.json, so no
 coordinates live in this file. SVG is written directly (no plotting library)
 in the app's palette, with positions in local metres rounded to the pixel.
 """
 
 from __future__ import annotations
 
+import argparse
 import math
 import os
 import random
@@ -393,27 +396,119 @@ def funnel_figure(core, drawn, start: Coordinate) -> tuple[str, dict]:
             + "".join(body) + "</svg>\n"), facts
 
 
-def main() -> int:
+ARCHITECTURE_TITLE = (
+    "The browser loads runline-nine.vercel.app, whose /api rewrite reaches FastAPI on "
+    "runline-capstone.vercel.app with the rebuilt Charlottesville graph and complete pool. "
+    "On a coverage miss it forwards the request through RUNLINE_REMOTE_API to the Oracle VM, "
+    "which serves Washington, DC, New York and Los Angeles from their tile graphs and pools."
+)
+
+
+def architecture_figure() -> str:
+    """The deployed request chain, in the same card style as the map figures."""
+
+    width, height, box_w = 1140, 432, 300
+    columns = (28, 420, 812)
+    style = (
+        f'<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+        f'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="{MUTED}"/></marker><style>'
+        f'text {{ font-family: "DM Sans", "Inter", -apple-system, "Segoe UI", sans-serif; fill: {INK}; }}'
+        '.name { font-size: 17px; font-weight: 600; } .what { font-size: 13.5px; }'
+        f'.tech {{ font-size: 12px; fill: {MUTED}; }} .edge {{ font-size: 12.5px; fill: {MUTED}; }}'
+        f'.tag {{ font-size: 13px; font-weight: 600; fill: {GREEN_2}; }}</style></defs>'
+    )
+
+    def card(x: int, y: int, h: int, name: str, lines: list[str], tech: str, *, dashed: bool = False,
+             w: int = box_w) -> list[str]:
+        stroke = 'stroke="#8a8d84" stroke-dasharray="6 5" fill="none"' if dashed else f'stroke="{LINE}" fill="{PANEL}"'
+        parts = [f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="14" stroke-width="1.5" {stroke}/>',
+                 f'<text class="name" x="{x + 22}" y="{y + 32}">{name}</text>']
+        parts += [f'<text class="what" x="{x + 22}" y="{y + 58 + 19 * i}">{line}</text>' for i, line in enumerate(lines)]
+        parts.append(f'<text class="tech" x="{x + 22}" y="{y + h - 16}">{tech}</text>')
+        return parts
+
+    def arrow(d: str, colour: str = MUTED) -> str:
+        return f'<path d="{d}" fill="none" stroke="{colour}" stroke-width="1.6" marker-end="url(#arrow)"/>'
+
+    def edge(x: int, y: int, label: str, anchor: str = "middle") -> str:
+        return f'<text class="edge" x="{x}" y="{y}" text-anchor="{anchor}">{label}</text>'
+
+    top, row_h = 56, 148
+    body = [style, f'<rect width="{width}" height="{height}" fill="{CANVAS}"/>',
+            f'<text class="tag" x="28" y="38">Every request</text>']
+    body += card(columns[0], top, row_h, "Browser", ["Map, start, distance,", "surface and hills;",
+                                                    "GPX download"], "web/ · Leaflet")
+    body += card(columns[1], top, row_h, "runline-nine.vercel.app", ["Canonical site: serves the page",
+                                                                    "Rewrites /api/* to the",
+                                                                    "capstone API (same origin)"],
+                 "vercel.json · Git deployment")
+    body += card(columns[2], top, row_h, "runline-capstone.vercel.app", ["FastAPI with the rebuilt",
+                                                                        "Charlottesville graph + full pool",
+                                                                        "Saved loops first, live on a miss"],
+                 "scripts/release_capstone.py")
+    for left, out_label, back_label in ((columns[0] + box_w, "page + /api", "routes + GPX"),
+                                        (columns[1] + box_w, "/api/* rewrite", "routes + GPX")):
+        right = left + 92
+        body += [arrow(f"M{left} 104 H{right - 4}"), arrow(f"M{right} 160 H{left + 4}"),
+                 edge(left + 46, 94, out_label), edge(left + 46, 182, back_label)]
+
+    lower = top + row_h + 64
+    body += card(columns[2], lower, 140, "Oracle VM regional API", ["FastAPI on main: DC, NYC, LA",
+                                                                   "1,136 tile graphs + 12 GB pools"],
+                 "Direct HTTPS URL · no forwarding")
+    x_down, x_up = columns[2] + 80, columns[2] + 170
+    body += [arrow(f"M{x_down} {top + row_h} V{lower - 4}"), arrow(f"M{x_up} {lower} V{top + row_h + 4}"),
+             edge(x_down - 10, top + row_h + 28, "Coverage miss only:", "end"),
+             edge(x_down - 10, top + row_h + 46, "RUNLINE_REMOTE_API", "end"),
+             edge(x_up + 10, top + row_h + 37, "routes + GPX", "start")]
+    body.append(f'<text class="tag" x="28" y="{lower + 4}" style="fill:{MUTED}">Built ahead of time</text>')
+    body += card(28, lower + 20, 120, "Saved routes", [
+        "Loops computed on the UVA CS cluster. Each pool ships beside its exact graph;",
+        "a pool built for another graph is ignored and that start plans live.",
+    ], "Cville data pinned in deploy/capstone-artifacts.json", dashed=True, w=columns[1] + box_w - 28)
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" '
+            f'aria-labelledby="title"><title id="title">{ARCHITECTURE_TITLE}</title>'
+            f'<clipPath id="card"><rect width="{width}" height="{height}" rx="22"/></clipPath>'
+            f'<g clip-path="url(#card)">' + "".join(body) + "</g></svg>\n")
+
+
+FIGURES = ("architecture", "real-loops", "graph", "costs", "pool")
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("figures", nargs="*", choices=FIGURES, help="figures to write (default: all)")
+    selected = set(parser.parse_args(argv).figures or FIGURES)
+    OUT.mkdir(parents=True, exist_ok=True)
+    if "architecture" in selected:
+        (OUT / "architecture.svg").write_text(architecture_figure())
+        print(f"  architecture.svg {(OUT / 'architecture.svg').stat().st_size / 1024:.0f} KB")
+        selected.discard("architecture")
+    if not selected:
+        return 0
     area = next(item for item in areas() if item.slug == "charlottesville-va")
     graph = load_area_graph(area)
     centre = graph.nodes[_nearest_node(graph, area.center)]
     start = Coordinate(float(centre["y"]), float(centre["x"]))
-    OUT.mkdir(parents=True, exist_ok=True)
     # The planner's view: parallel OSM edges collapsed to one, with costs.
     drawn = collapse_graph(graph, RoutePreferences(TARGET_MILES, surface=SurfacePreference.MIXED))
     core = prepare_area(graph, SurfacePreference.MIXED)
 
-    loops, routes = loops_figure(core, drawn, start)
-    (OUT / "real-loops.svg").write_text(loops)
-    print("real-loops.svg:", ", ".join(f"{r.metrics.distance_miles:.2f} mi" for r in routes))
-    (OUT / "graph.svg").write_text(graph_figure(drawn, start))
-    costs, facts = costs_figure(drawn, start)
-    (OUT / "costs.svg").write_text(costs)
-    print("costs.svg:", {k: round(v, 3) for k, v in facts.items()})
-    funnel, counts = funnel_figure(core, drawn, start)
-    (OUT / "pool.svg").write_text(funnel)
-    print("pool.svg:", counts)
-    for name in ("real-loops", "graph", "costs", "pool"):
+    if "real-loops" in selected:
+        loops, routes = loops_figure(core, drawn, start)
+        (OUT / "real-loops.svg").write_text(loops)
+        print("real-loops.svg:", ", ".join(f"{r.metrics.distance_miles:.2f} mi" for r in routes))
+    if "graph" in selected:
+        (OUT / "graph.svg").write_text(graph_figure(drawn, start))
+    if "costs" in selected:
+        costs, facts = costs_figure(drawn, start)
+        (OUT / "costs.svg").write_text(costs)
+        print("costs.svg:", {k: round(v, 3) for k, v in facts.items()})
+    if "pool" in selected:
+        funnel, counts = funnel_figure(core, drawn, start)
+        (OUT / "pool.svg").write_text(funnel)
+        print("pool.svg:", counts)
+    for name in sorted(selected):
         print(f"  {name}.svg {(OUT / f'{name}.svg').stat().st_size / 1024:.0f} KB")
     return 0
 
