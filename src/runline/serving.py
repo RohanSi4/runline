@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import dataclasses
 import functools
-import hashlib
 import json
 import logging
 import math
@@ -46,9 +45,11 @@ from pathlib import Path
 
 import networkx as nx
 
+from .array_tiles import ArrayTile
+from .compact import file_sha256, graph_file, graph_fingerprint  # noqa: F401 (re-exported)
 from .coverage import Area, containing_area, graphs_root, load_area_graph
 from .grid import cell_id, neighbouring_cells
-from .metros import tile_for, tile_graph_file
+from .metros import load_tile_arrays, tile_for, tile_graph_file
 from .models import METERS_PER_MILE, Coordinate, RouteCandidate, RouteMetrics, RoutePreferences, StartCandidate
 from .osm import (
     _distinct_by_length,
@@ -121,35 +122,19 @@ def _current_meta(path: str) -> dict | None:
     return meta
 
 
-def file_sha256(path: Path) -> str:
-    """A file's full sha256, read in chunks."""
+def _fingerprint(path: Path) -> str:
+    """The graph hash scripts/precompute_pools.py records (runline.compact.graph_fingerprint).
 
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def graph_fingerprint(sha256: str) -> str:
-    """The graph hash scripts/precompute_pools.py records, from the file's full sha256.
-
-    scripts/batch_manifest.py hashes every archived file once and takes tile
-    graph hashes from those digests through this.
+    A pickle's sha256 prefix; for a compact file, the recorded hash of the
+    pickle it was made from, once its own content checks out.
     """
 
-    return sha256[:16]
-
-
-def _fingerprint(path: Path) -> str:
-    """The graph hash scripts/precompute_pools.py records."""
-
-    return graph_fingerprint(file_sha256(path))
+    return graph_fingerprint(path)
 
 
 @functools.lru_cache(maxsize=8)
-def _checked_pool_file(path: str, graph_path: str, modified: float) -> PoolFile | None:
-    """The pool file if it matches this code and this graph; cached per mtime."""
+def _checked_pool_file(path: str, graph_path: str, modified: float, graph_modified: float) -> PoolFile | None:
+    """The pool file if it matches this code and this graph; cached per mtime of both."""
 
     meta = _current_meta(path)
     if meta is None:
@@ -187,7 +172,8 @@ def _tile_pool_file(area: Area) -> PoolFile | None:
     tile = tile_for(area)
     if tile is None or tile.graph is None:
         return None
-    # Fetched first if the run lacks it and RUNLINE_TILE_GRAPHS_URL is set.
+    # The run's compact file, else its pickle, else (if the run lacks both and
+    # RUNLINE_TILE_GRAPHS_URL is set) a fetched pickle: what loading picks.
     with tile_graph_file(area) as graph_path:
         if not graph_path.exists():
             return None
@@ -206,7 +192,10 @@ def pool_file(area: Area) -> PoolFile | None:
     path = pools_root() / f"{area.slug}.sqlite"
     if not path.exists():
         return None
-    return _checked_pool_file(str(path), str(graphs_root() / area.filename), path.stat().st_mtime)
+    graph_path = graph_file(graphs_root() / area.filename)
+    if not graph_path.exists():
+        return None
+    return _checked_pool_file(str(path), str(graph_path), path.stat().st_mtime, graph_path.stat().st_mtime)
 
 
 def load_pool(pool: PoolFile, cell: str, surface: str) -> dict | None:
@@ -255,8 +244,10 @@ class _Reach:
     back_paths: dict[int, list[int]]
 
 
-def _reach(graph: nx.MultiDiGraph, start_node: int, connector_meters: float | None = None) -> _Reach:
+def _reach(graph, start_node: int, connector_meters: float | None = None) -> _Reach:
     cutoff = MAX_CONNECTOR_METERS if connector_meters is None else connector_meters
+    if isinstance(graph, ArrayTile):
+        return _Reach(*graph.reach(start_node, cutoff))
     out_meters, out_paths = nx.single_source_dijkstra(graph, start_node, cutoff=cutoff, weight="length")
     # Searched backwards, so each path runs from the start; reversed on use.
     back_meters, back_paths = nx.single_source_dijkstra(
@@ -293,15 +284,20 @@ def _anchored(loop: list[int], reach: _Reach) -> tuple[tuple[int, ...], float] |
 MAJOR_AT_KEY = "_runline_major_at"
 
 
-def _route_graph(graph: nx.MultiDiGraph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
+def _route_graph(graph, routes: list[tuple[int, ...]], preferences: RoutePreferences) -> nx.DiGraph:
     """The edges these routes use, each the cheapest parallel edge for the
     runner, plus every major-road edge at a node they pass.
 
     The same choice collapse_graph makes for the whole area, which takes
     seconds; this takes milliseconds. The major roads let measure_route count
-    crossings of roads the route does not walk along.
+    crossings of roads the route does not walk along. A compact tile's
+    arrays (runline.array_tiles) build the same graph without networkx.
     """
 
+    if isinstance(graph, ArrayTile):
+        return graph.route_graph(
+            routes, lambda data, destination, source: _edge_preference_cost(data, destination, preferences, source)
+        )
     small = nx.DiGraph()
 
     def add(u: int, v: int) -> None:
@@ -402,22 +398,34 @@ def warm(origin: Coordinate) -> str | None:
 
     Loads the graph a request at the origin would use (the owning tile's, in a
     metro), checks its pool file against it and builds its node index, so the
-    route request that follows starts with them in memory. Raises
-    CoverageError if that graph is missing.
+    route request that follows starts with them in memory. On a compact tile
+    with array serving on, that is the tile's arrays (runline.array_tiles),
+    which is what the first pool hit reads. Raises CoverageError if the graph
+    is missing.
     """
 
     area = containing_area(origin)
     if area is None:
         return None
     pool_file(area)
-    _nearest_node(load_area_graph(area), origin)
+    _nearest_node(_serving_graph(area), origin)
     return area.label
+
+
+def _serving_graph(area: Area):
+    """What a pool hit reads: a compact metro tile's arrays, else the area's networkx graph."""
+
+    return load_tile_arrays(area) or load_area_graph(area)
 
 
 CORE_KEY = "_runline_core"
 
 
-def _core_node(graph: nx.MultiDiGraph, node: int, origin: Coordinate) -> int | None:
+class _NeedsGraph(Exception):
+    """An ArrayTile cannot settle this question exactly; ask the networkx graph."""
+
+
+def _core_node(graph, node: int, origin: Coordinate) -> int | None:
     """The nearest node of the graph's largest strongly connected component
     to the origin, or None if ``node`` is already on it.
 
@@ -425,19 +433,28 @@ def _core_node(graph: nx.MultiDiGraph, node: int, origin: Coordinate) -> int | N
     loop) that cannot reach any pooled loop. Live planning starts from this
     component (osm._routable_core), so moving there matches what it would
     do. The component is found once per loaded graph, about 70 ms on
-    Charlottesville, and only when a request misses.
+    Charlottesville, and only when a request misses. A compact tile's arrays
+    (runline.array_tiles) find it with scipy; if two components tie for
+    largest, that raises _NeedsGraph and the caller uses the networkx graph.
     """
 
     import numpy as np
 
     cached = graph.graph.get(CORE_KEY)
     if cached is None or cached[0] != graph.number_of_nodes():
-        core = max(nx.strongly_connected_components(graph), key=len, default=set())
-        node_ids, _, _ = _node_index(graph)
-        mask = np.fromiter((int(n) in core for n in node_ids), dtype=bool, count=node_ids.size)
-        cached = graph.graph[CORE_KEY] = (graph.number_of_nodes(), core, mask)
+        if isinstance(graph, ArrayTile):
+            mask = graph.core_mask()
+            if mask is None:
+                raise _NeedsGraph
+            cached = graph.graph[CORE_KEY] = (graph.number_of_nodes(), None, mask)
+        else:
+            core = max(nx.strongly_connected_components(graph), key=len, default=set())
+            node_ids, _, _ = _node_index(graph)
+            mask = np.fromiter((int(n) in core for n in node_ids), dtype=bool, count=node_ids.size)
+            cached = graph.graph[CORE_KEY] = (graph.number_of_nodes(), core, mask)
     _, core, mask = cached
-    if node in core or not mask.any():
+    in_core = bool(mask[graph.index(node)]) if core is None else node in core
+    if in_core or not mask.any():
         return None
     node_ids, latitudes, longitudes = _node_index(graph)
     scale = math.cos(math.radians(origin.latitude))
@@ -447,7 +464,7 @@ def _core_node(graph: nx.MultiDiGraph, node: int, origin: Coordinate) -> int | N
 
 
 def _answer(
-    graph: nx.MultiDiGraph,
+    graph,
     pools: list[dict],
     start_node: int,
     preferences: RoutePreferences,
@@ -483,14 +500,19 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
     near = neighbouring_cells(cell)
     pools = load_pools(pool_source, near, surface)
 
-    graph = load_area_graph(area)
+    # A compact metro tile answers from its arrays; anything else from its graph.
+    graph = _serving_graph(area)
     start_node = _nearest_node(graph, origin)
     ranked, reason, small, retry = [], "no pool for the cell", None, ""
     try:
         if pools:
             ranked, reason, small = _answer(graph, pools, start_node, preferences)
         if not ranked:
-            core_node = _core_node(graph, start_node, origin)
+            try:
+                core_node = _core_node(graph, start_node, origin)
+            except _NeedsGraph:
+                graph = load_area_graph(area)
+                core_node = _core_node(graph, start_node, origin)
             if core_node is not None:
                 start_node, retry = core_node, "connected start"
                 if pools:

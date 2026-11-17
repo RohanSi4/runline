@@ -188,6 +188,17 @@ Phoenix and Tempe came from pools (first request in a tile 5–11 s, then about
 1 s); the process used about 3.5 GB afterwards. Disk use is 56 of 184 GB. A
 backup of the pools and plan is in the portal home directory under `~/pools/b4`.
 
+**Compact tile graphs** (branch `compact-tiles`, not deployed): see
+[compact-tiles.md](compact-tiles.md). `scripts/compact_graphs.py <tile-graphs>
+--verify` writes a `<slug>.npz` beside each pickle, about 2.7x smaller.
+It records the pickle's hash, so the existing DC and `b1` pools keep
+validating with no recompute (so would `b4`'s), and serving prefers it over the pickle. Pool
+hits on a compact tile use its arrays (about 13 MB a Charlottesville-sized
+tile against about 113 MB as a graph); the networkx graph is built only for
+live requests. Routes, bench and shape audit are identical. Rollback is
+deleting the `.npz` files and restarting. Measure a converted DC tile with
+`measure_tile_graphs.py --compact` before raising `RUNLINE_TILE_ARRAYS_CACHE`.
+
 The optional [deploy/README.md](../deploy/README.md) describes a separate
 portable VM recipe. Its paths (`/opt/runline/app` and `/srv/runline`) and
 uvicorn port (8000) differ from the existing Oracle setup. The current

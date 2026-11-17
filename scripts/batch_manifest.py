@@ -206,8 +206,9 @@ def facts(layout: Layout, plan: dict, records: dict[str, dict]) -> tuple[dict, l
     tiles = {}
     for tile in planned_tiles:
         expected = recorded.get(tile)
-        graph = records.get(layout.graph_key(f"{tile}.pkl.gz"))
-        found = graph_fingerprint(graph["sha256"]) if graph else None
+        graph_key = layout.graph_key(f"{tile}.pkl.gz")
+        graph = records.get(graph_key)
+        found = graph_fingerprint(layout.path(graph_key), sha256=graph["sha256"]) if graph else None
         tiles[tile] = {"graph": expected, "file": found, "pooled": tile in pooled}
         if expected is None:
             if tile in pooled:
@@ -314,10 +315,11 @@ def verify(layout: Layout, manifest_path: Path, jobs: int) -> int:
     # Every pooled tile's graph against the hash its pools were built on, as
     # the manifest recorded it, even if the copy's pools.sqlite is unreadable.
     for tile, entry in manifest.get("tile_graphs", {}).items():
-        record = records.get(layout.graph_key(f"{tile}.pkl.gz"))
+        graph_key = layout.graph_key(f"{tile}.pkl.gz")
+        record = records.get(graph_key)
         if entry["graph"] is None or record is None:
             continue
-        found = graph_fingerprint(record["sha256"])
+        found = graph_fingerprint(layout.path(graph_key), sha256=record["sha256"])
         if found != entry["graph"]:
             problems.append(f"tile graph {tile} has fingerprint {found}, its pools were built on {entry['graph']}")
     # A problem found two ways is reported once.
