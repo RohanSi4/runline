@@ -26,5 +26,10 @@
     "graphs/charlottesville-va-places.json": "6389f86f3c8c9dfcce7ee3ad5970fb5edfb0900236b2eaa9218064b538eb136b",
     "pools/charlottesville-va.sqlite": "c18a02a032cc1e4e825bea010cddc840863ec9a386f1ae4342de14801024f03c",
     "saved-demo.html": "07b51c0c88151f507b4974dddd169e5c497b13439a8761f443200a43d72e87ae"
+  },
+  "pools_generation_review": {
+    "through": "d757ed5fdfcf1e270e98bc3dd184d6adb5f81f2e",
+    "reviewed": "2026-11-18",
+    "note": "The pools were built at 9b56ec5. Changes to the generation files since then: the compact tile format (45d4745; same graph hash for a pickle), the MAX_RESCALE cap (1cf0466; only affects degenerate rescales, and this build had no failed tasks) and the shared is_awkward predicate (#32; bench and shape audit give identical routes). Serving re-measures every route, so these pools remain valid."
   }
 }

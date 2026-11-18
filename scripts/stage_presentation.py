@@ -33,9 +33,33 @@ def fingerprint(path: Path) -> str:
     return digest.hexdigest()
 
 
+GENERATION_FILES = ("src/runline/osm.py", "src/runline/scoring.py", "src/runline/models.py", "scripts/precompute_pools.py")
+
+
+def generation_changes(root: Path, built: str, commit: str, reviewed: str | None = None) -> str:
+    """The routing/generation diff these pools have not been checked against.
+
+    ``built`` is the commit the pools record. A person who has reviewed later
+    changes and found the pools still valid records the commit they reviewed
+    through (``pools_generation_review`` in deploy/capstone-artifacts.json);
+    only changes after it then count. It must lie between the build and the
+    release, so a review of some other history cannot open the gate.
+    """
+    base = built
+    if reviewed:
+        for older, newer in ((built, reviewed), (reviewed, commit)):
+            if subprocess.run(["git", "merge-base", "--is-ancestor", older, newer], cwd=root).returncode:
+                raise StageError(
+                    f"reviewed commit {reviewed[:12]} must lie between the pools' build {built[:12]} and the release"
+                )
+        base = reviewed
+    return subprocess.check_output(["git", "diff", base, commit, "--", *GENERATION_FILES], cwd=root, text=True)
+
+
 def stage(graphs: Path, pools: Path, output: Path, project_config: Path, *, sample: bool = False,
           offline_demo: Path | None = None, remote_api: str | None = None,
-          verified_pools_sha256: str | None = None, root: Path = ROOT) -> dict:
+          verified_pools_sha256: str | None = None, generation_reviewed_through: str | None = None,
+          root: Path = ROOT) -> dict:
     """Write a deployable directory and return its release report.
 
     A complete pool normally proves completeness with its build's progress.json.
@@ -69,11 +93,7 @@ def stage(graphs: Path, pools: Path, output: Path, project_config: Path, *, samp
                 or set(progress["surfaces"]) != {"road", "mixed", "trail"}):
             raise StageError("full build is incomplete or filtered; use --sample for a sample preview")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
-    source_changes = subprocess.check_output([
-        "git", "diff", meta["commit"], commit, "--", "src/runline/osm.py", "src/runline/scoring.py",
-        "src/runline/models.py", "scripts/precompute_pools.py",
-    ], cwd=root, text=True)
-    if source_changes:
+    if generation_changes(root, meta["commit"], commit, generation_reviewed_through):
         raise StageError("routing/generation changed since these pools were built; rebuild or review compatibility first")
     archive = subprocess.check_output(["git", "archive", commit, "app.py", "src", "web", "requirements.txt"], cwd=root)
     output.mkdir(parents=True)
