@@ -17,18 +17,17 @@ checks, which shows the pipeline generalizes beyond the city it was tuned on.
 Until 18 November the engine was ahead of the interface: a runner saw a good
 route but not why it was chosen, which is the part of the design the proposal
 said distinguished RunLine. That display is now in place and verified, but no
-runner outside the team has used it yet. The elevation preference works in the right direction
-but too weakly to rely on. The production backend is several changes behind
-the code we measured, and finished fixes (higher precomputed coverage, the
-notice for routes that double back, the drive-distance correction and the
-removal of start locations from logs) are not live. We also have no evidence about
+runner outside the team has used it yet. The elevation preference now works
+for live requests too, but its fix is a single tuned constant measured on
+eight starts, and the hilly setting still relies on ranking alone. The
+production backend now runs the code we measured, but the regional server for
+the metro areas was not part of that release, and its first requests in a new
+city remain slow. We also have no evidence about
 people other than ourselves, and none about the GPS run mode outdoors or about
 accessibility.
 
 \paragraph{What must happen before wider use.}
-In order: redeploy the
-backend from a recorded commit with the precomputed-coverage fix; complete the
-three-person browser checklist, the GPX import check and the route review;
+In order: complete the three-person browser checklist, the GPX import check and the route review;
 and run an accessibility review against a
 recognized checklist. Before anyone outside the team is invited to use it, we
 would also want a short observed session with a handful of runners. The

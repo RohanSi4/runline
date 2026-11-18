@@ -12,20 +12,21 @@ first validation run found the result weaker at the point where the runner
 meets the engine. The proposal promised that a runner could ``compare
 measurable tradeoffs'' and ``make the final choice'' themselves (US4), and on
 16 November the interface did not show most of the tradeoffs the engine was
-making. We fixed that display on 18 November and the rerun passed. Of the
-seven must-haves, six are now met and US6 is met only through the served
-path. One should-have is incomplete: US8 waits on the team checklist.
+making. We fixed that display on 18 November and the rerun passed. The same
+day we changed how the elevation preference steers the search, which brought
+US6 from 65.6\% to 90.6\% live, so all seven must-haves are now met. One
+should-have is incomplete: US8 waits on the team checklist.
 
 \paragraph{Priorities.}
 We ranked issues by how much they affect what a runner sees and by whether
 they break a must-have criterion. The two display gaps ranked first, so we
 fixed them first. They were the only failures a runner would notice on every
 request, and they undid the project's stated difference from existing tools,
-which is that the tradeoffs are visible. The weak elevation preference ranks
-next. It is a must-have, and
-a runner who asks for hills and gets the same route as ``flat'' will conclude
-the setting does nothing. Deployment issues follow, because several fixes are
-already written but not live. Map-data and scaling issues rank lower. They are
+which is that the tradeoffs are visible. The weak elevation preference ranked
+next. It is a must-have, and a runner who asks for hills and gets the same
+route as ``flat'' will conclude the setting does nothing; it was fixed second.
+Deployment issues followed, because several fixes were written but not live;
+the backend was redeployed on 18 November. Map-data and scaling issues rank lower. They are
 real, but they mostly affect the metros beyond our primary area.
 
 \paragraph{Decisions.}
@@ -47,18 +48,18 @@ Finding & Decision & Action & Owner & How we will verify \\
 \midrule
 US4: crossings, repetition, distance error and score not shown & Completed fix (\#29) & Restored crossings; added distance off target, repetition and score to each card and an expandable score breakdown & Rohan & Deployed rerun 18 Nov: 3,969 values, 0 mismatches, 8/8 components shown \\
 US9: drive cost and score not shown & Completed fix (\#29) & Show driving distance and score on alternative-start cards and in the panel & Rohan & Ten-case rerun 18 Nov: both shown, 19/19 in radius \\
-US6: hilly often ties flat & Design change & Let elevation influence path search, not only ranking, then retune its weight & Rohan & \texttt{acceptance.py}: US6 $\geq$80\% live \emph{and} US3 still met \\
-Production backend behind \texttt{main}; manual deploys & Planned fix & Release script merged (\#18); its pool check now accepts a recorded compatibility review (\#35); redeploy from a recorded commit & Rohan & \texttt{/api/version} equals the release commit \\
-Precomputed routes miss 8.7\% of requests & Completed fix, not deployed & Retry from the connected network and a wider ring (\#15) & Rohan & 600-request check $\geq$97\% after deploy \\
-Live answers can be all slivers or repeat 23\% & Completed fix, not deployed & Notice when shown routes double back (\#32); exclusion dropped, since no answer had a rounder alternative & Rohan & 48 park starts: identical routes, notice on the 12 affected answers \\
+US6: hilly often ties flat & Completed fix, deployed (\#38) & Flat requests pay for climbing in the path search; a hilly credit was tried and dropped & Rohan & \texttt{acceptance.py}: US6 90.6\% live, 87.5\% served; US1, US3, US5 unchanged \\
+Production backend behind \texttt{main}; manual deploys & Completed fix, deployed & Release script (\#18) with a recorded compatibility review (\#35); deploy and promote from the stage directory, refusing a candidate that reports another commit (\#39); backend on \texttt{62e37f5} since 18 Nov & Rohan & \texttt{/api/version} equals the release commit; release checks pass on both public URLs \\
+Precomputed routes miss 8.7\% of requests & Completed fix, deployed & Retry from the connected network and a wider ring (\#15) & Rohan & 600-request check $\geq$97\% after deploy \\
+Live answers can be all slivers or repeat 23\% & Completed fix, deployed & Notice when shown routes double back (\#32); exclusion dropped, since no answer had a rounder alternative & Rohan & 48 park starts: identical routes, notice on the 12 affected answers \\
 Place list served in one encoding to every client & Completed fix (\#34) & Turn off caching on the public site's \texttt{/api} forwarding route & Rohan & Each encoding correct on a preview; both rehearsal scripts pass against the public site \\
-Start locations written to logs & Completed fix, not deployed & Log the area name instead of coordinates or cells (\#31) & Rohan & Tests fail if a log line contains a start's coordinates or cell \\
+Start locations written to logs & Completed fix, deployed & Log the area name instead of coordinates or cells (\#31) & Rohan & Tests fail if a log line contains a start's coordinates or cell \\
 Tests did not catch removed UI fields; no CI on PRs & Completed fix & Tests run on every pull request (\#21); browser tests now assert the US4 and US9 fields are present (\#29) & Rohan & CI blocks a PR that removes a required field \\
 First request in a new city up to 23\,s & Backlog & Compact tile format (\#22) and pre-loading the map when a start is chosen & Krish & Deployed first-request times \\
 Metros use graphs without crosswalk signals & Deferred & Rebuild with the signal-preserving builder in the next cluster batch & Krish & Signal-node counts and benchmark per metro \\
 US1 5\% rule vs.\ the $\pm$0.25 mile band & Explicit decision & Keep the band; the 3 mile misses are deliberate trades for fewer interruptions & Rohan & Report both measures \\
 US2 overlap definition differs from the code & Backlog & Align the duplicate test with the shorter-route measure & Rohan & US2 served rerun \\
-Drive distance can be below straight line & Completed fix, not deployed & Add the legs from each start onto the road network (\#33) & Rohan & 37,061 park--start pairs: none below the straight line \\
+Drive distance can be below straight line & Completed fix, deployed & Add the legs from each start onto the road network (\#33) & Rohan & 37,061 park--start pairs: none below the straight line \\
 \bottomrule
 \end{tabularx}
 \end{table}
