@@ -236,7 +236,8 @@ def _warm_quietly(origin: Coordinate) -> None:
         warm(origin)
     except Exception:
         # A failed warm-up only means the route request does the work itself.
-        LOGGER.warning("warming %s failed", origin, exc_info=True)
+        # The start stays out of the log: hosting platforms keep logs.
+        LOGGER.warning("warming a start failed", exc_info=True)
 
 
 @app.post("/api/warm", status_code=202)
