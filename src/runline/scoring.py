@@ -60,6 +60,12 @@ def _elevation_penalty(
     return abs(position - 0.5) * 2.0
 
 
+def is_awkward(metrics) -> bool:
+    """Close to an out-and-back, or repeating more than MAX_REPEATED of its distance."""
+
+    return metrics.compactness < MIN_COMPACTNESS or metrics.repeated_fraction > MAX_REPEATED
+
+
 def rank_candidates(
     candidates: list[RouteCandidate],
     preferences: RoutePreferences,
@@ -113,11 +119,7 @@ def rank_candidates(
     def ranking_key(candidate: RouteCandidate) -> tuple[float, ...]:
         error = abs(candidate.metrics.distance_miles - preferences.target_distance_miles)
         if error <= preferences.distance_tolerance_miles:
-            awkward = (
-                candidate.metrics.compactness < MIN_COMPACTNESS
-                or candidate.metrics.repeated_fraction > MAX_REPEATED
-            )
-            return (0, awkward, candidate.score, error)
+            return (0, is_awkward(candidate.metrics), candidate.score, error)
         # If every option misses the target, the closest route is the honest fallback.
         return (1, error, candidate.score)
 

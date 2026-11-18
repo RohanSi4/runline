@@ -11,7 +11,7 @@ from .coverage import CoverageError, MapDataUnavailable
 from .elevation import enrich_graph_open_meteo
 from .models import Coordinate, RouteCandidate, RoutePreferences, StartCandidate
 from .osm import generate_loops, graph_radius_meters, prepare_core
-from .scoring import rank_candidates
+from .scoring import is_awkward, rank_candidates
 from .serving import serve_from_pool
 from .starts import discover_public_starts
 
@@ -55,6 +55,29 @@ def geocode_address(
     if not payload:
         raise ValueError(f"could not find a location for {address!r}")
     return Coordinate(float(payload[0]["lat"]), float(payload[0]["lon"]))
+
+
+def awkward_notice(ranked: list[RouteCandidate]) -> str | None:
+    """Say so when shown routes double back; ranking only puts them last.
+
+    Live planning keeps such routes rather than return fewer: on the 48 public
+    park starts at 3 and 5 miles, no answer that showed one had a rounder
+    alternative within twice the distance tolerance.
+    """
+
+    count = sum(is_awkward(candidate.metrics) for candidate in ranked)
+    if not count:
+        return None
+    if count == len(ranked):
+        return (
+            "No rounder loop of this length was found from this start: these routes "
+            "run out and back or repeat more than 10% of their distance."
+        )
+    if count == 1:
+        what = "1 of these routes runs out and back or repeats more than 10% of its distance"
+    else:
+        what = f"{count} of these routes run out and back or repeat more than 10% of their distance"
+    return f"{what}; no rounder loop of this length was found from this start."
 
 
 def plan_routes(
@@ -148,6 +171,9 @@ def plan_routes(
         for candidate in ranked
     ):
         warnings.append("No route is within the requested distance tolerance; showing the closest available options.")
+    notice = awkward_notice(ranked)
+    if notice:
+        warnings.append(notice)
     return PlanResult(
         candidates=ranked,
         discovered_starts=max(0, len(starts) - 1),
