@@ -27,12 +27,12 @@ US2 & 32/32 with a distinct pair & 31/32 (96.9\%) & \pass \\
 US3 & Median interruptions 14 $\rightarrow$ 4 ($-$71\%); error 1.45\% & 14 $\rightarrow$ 3 ($-$79\%); error 0.95\% & \pass \\
 US4 & \multicolumn{2}{l}{Values match API (0 of 3,969 differ); all 8 components shown (fixed 18 Nov)} & \pass \\
 US5 & 62/64 (96.9\%) toward preference & 63/64 (98.4\%) & \pass \\
-US6 & 21/32 (65.6\%), 11 ties & 26/32 (81.2\%), 6 ties & \partmet \\
+US6 & 21/32 (65.6\%) $\rightarrow$ 29/32 (90.6\%) after fix & 26/32 (81.2\%); 28/32 on rerun & \pass \\
 US7 & 10/10 valid against GPX 1.1 schema & 10/10; outside-app import \todo{team} & \partmet \\
 US8 & \multicolumn{2}{l}{Team checklist \todo{results}; automated browser tests 35/35} & \pending \\
 US9 & \multicolumn{2}{l}{19/19 starts in radius; score and drive cost shown (fixed 18 Nov)} & \pass \\
-US10 & Laptop: median 0.33\,s, p95 1.18\,s & Production: median 0.48\,s, p95 1.95\,s & \pass \\
-US11 & \multicolumn{2}{l}{6/6 areas: 72/72 requests, 216 valid routes} & \pass \\
+US10 & Laptop: median 0.33\,s, p95 1.18\,s & Production: median 0.48\,s, p95 1.95\,s; rerun 0.44 / 1.42\,s & \pass \\
+US11 & \multicolumn{2}{l}{6/6 areas: 72/72 requests, 216 valid routes; rerun 71/72} & \pass \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -128,6 +128,21 @@ In one 3 mile case the hilly ranking still put a 231\,ft route first, ahead
 of alternatives climbing 372 and 414\,ft that also had no interruptions. The
 median top-route gain was 581\,ft flat and 646\,ft hilly: the preference
 works in the intended direction, but weakly.
+
+We changed the design on 18 November (\#38). A flat request now pays for
+climbing during the path search itself: each metre of ascent costs as much as
+ten metres of extra distance, so a 5\% grade adds half an edge's length.
+Balanced and hilly searches are unchanged. We also tried a matching credit for
+climbing on hilly requests, but it doubled the hilly routes that were near
+out-and-backs (9 to 18 of 96) and raised their repetition from 4.6\% to 6.9\%
+without raising their median climb, so we dropped it. Rerunning the same
+acceptance suite on the deployed data, the hilly route now climbs more than
+the flat one in 29 of 32 live pairs (90.6\%) with no ties, and in 28 of 32
+served (87.5\%). The median flat top route fell from 581 to 475\,ft, all 32
+flat top routes were within the distance band (31 before), and the shape of
+flat routes did not change. Balanced requests, and therefore US1, US3 and US5,
+gave identical results. US6 is now met; the fix has been deployed since
+18 November.
 
 \subsection{Export (US7)}
 Ten routes sampled across the four distances all parsed and validated against
@@ -243,6 +258,20 @@ All areas & 66 & 0.48 & 1.95 & & \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\paragraph{Rerun after the 18 November release.}
+We repeated the whole deployed check after redeploying the backend (174
+requests). Charlottesville and Washington answered every request well inside
+the criterion, and over all areas warm 3 and 5 mile requests had a median of
+0.44\,s and a 95th percentile of 1.42\,s, both better than on 16 November, so
+US10 is still met as the proposal defines it. Three metro results were worse,
+all on the regional server, which the backend release does not change. One
+warm Los Angeles request took 29.0\,s, which alone puts that area's own 95th
+percentile above 20\,s. First requests in a new city took up to 125\,s (New
+York, planned live because its precomputed routes missed). One Boston request
+lost its connection before any answer, so Boston passed 11 of 12 requests;
+the other five areas passed all of theirs, and US11 still holds. The regional
+server needs the same first-request work listed in Table~\ref{tab:actions}.
 
 \paragraph{Additional areas (US11).}
 All six metro areas passed every smoke check: 72 requests at 3, 5 and 8 miles
