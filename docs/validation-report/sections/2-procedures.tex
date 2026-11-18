@@ -1,0 +1,163 @@
+\section{Validation Artifacts \& Procedures}
+
+Every scripted artifact below lives in the repository \citep{runline2026repo},
+takes fixed inputs, and writes its results to a JSON file plus a short
+summary. Anyone with the repository and its pinned environment can rerun
+them. Appendix~\ref{app:repro} lists the exact commands, and
+Appendix~\ref{app:checklists} holds the manual checklists.
+
+\paragraph{Who did the work.}
+The team members wrote the requirements, chose the benchmark and its
+thresholds, reviewed every change through pull requests, and are responsible
+for the manual checks. Much of the measurement tooling (the benchmark
+harness, the crossing audit, the pool comparison and the acceptance and
+deployment scripts) was written with AI coding assistants (Claude Code and
+Codex), which ran under our direction and whose output we reviewed before
+merging. \todo{confirm this disclosure matches the course's generative-AI
+policy and how each member used these tools.} The automated measurements in
+Section~\ref{sec:evidence} were run on \todo{date of final runs} on a MacBook
+running Python~3.13 with the exact package versions pinned in
+\texttt{requirements.txt}. The pins matter because the saved map graphs only
+load under the library versions that built them.
+
+\subsection{Automated tests}
+The suite has 223 Python tests across 24 files and 35 Node tests that load the
+real browser scripts (\texttt{web/app.js} and \texttt{web/run.js}) into a
+sandbox. Table~\ref{tab:tests} groups them by what they protect. Tests build
+small synthetic graphs where an answer can be worked out by hand, for example
+a straight crossing of a major road versus a turn that stays on the same
+side, and they also run complete requests on the shipped Charlottesville
+graph. A GitHub Actions workflow runs both suites on every pull request; it
+was added during this validation work (pull request \#21), after we found
+that only Vercel's preview build had been checking pull requests. A pull
+request that broke tests could previously show as passing.
+
+\begin{table}[ht]
+\centering\small
+\caption{Automated test suite by area (Python unless noted).}
+\label{tab:tests}
+\begin{tabularx}{\linewidth}{@{}Y r Y@{}}
+\toprule
+Area & Tests & What it checks \\
+\midrule
+Graph building and metrics (\texttt{osm}, \texttt{pbf}, signal builders) & 63 & Simplification keeps geometry and signal nodes; crossing, signal and repetition counts on hand-built cases \\
+Pool storage and serving & 34 & Format round trips, graph-hash checks, neighbour reads, corrupt or stale pools fall back to live planning \\
+Metro tiling and tile serving & 52 & Each cell owned by exactly one tile; tile loading, cache bounds, metro precompute \\
+Scoring, planning and coverage & 22 & Penalties applied correctly; preferences change rank; coverage limits reported \\
+Start-to-finish routes & 20 & Snapping limits, unreachable or identical endpoints, forwarding rules \\
+API, regional forwarding and errors & 16 & Validation errors return explained 4xx; regional outages return 503 \\
+GPX and export & 5 & Well-formed GPX whose track matches the route \\
+Other (geometry, elevation, starts, privacy, rehearsal) & 11 & Includes a check that the public benchmark file holds no coordinates or addresses \\
+Browser logic (Node) & 35 & Request flow, error display, route switching, GPS recording on synthetic samples \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Route benchmark and acceptance script}
+The benchmark uses eight public Charlottesville starts: the Rotunda, the
+centre of the map area, and six points 2.5\,km from the centre at 60 degree
+intervals. Each start is requested at 3, 5, 8 and 12 miles, giving 32
+requests that return up to 96 routes. Private starts that team members use
+for their own runs are kept in a git-ignored file and are excluded from every
+reported result. The acceptance script (\texttt{scripts/acceptance.py})
+plans each request under the default settings (mixed surface, balanced
+elevation), then again as road, trail, flat and hilly, and computes each
+criterion exactly as Table~\ref{tab:criteria} states it:
+
+\begin{itemize}
+\item \textbf{Distance (US1).} Absolute error of the top-ranked route as a
+  percentage of the target.
+\item \textbf{Alternatives (US2).} For each pair of returned routes, shared
+  edge length divided by the shorter route's length; a request passes when
+  some pair overlaps by 80\% or less.
+\item \textbf{Interruptions (US3).} Mapped signal events plus major-road
+  crossings, compared with a \emph{distance-only baseline} planned on the
+  same requests. The baseline is a genuine alternative planner, not the
+  production one with a setting changed: its path costs are plain edge
+  lengths with no signal, crossing or surface penalties, and it ranks only
+  by distance error. Both use Dijkstra's algorithm
+  \citep{dijkstra1959note}.
+\item \textbf{Preferences (US5, US6).} Paired comparisons on the same start
+  and distance. A road or trail request ``moves toward'' its surface when its
+  trail share is no higher (road) or no lower (trail) than the mixed
+  request's. A pair counts for US5 only if the mixed route contains both
+  surface types. For US6 the hilly route must have strictly more elevation
+  gain than the flat one. Elevation comes from the Copernicus GLO-90 terrain
+  model \citep{copernicus2022dem}, baked into the graph when it is built.
+\item \textbf{GPX (US7).} Ten routes are sampled across the four distances.
+  Each file is parsed and validated against the official GPX~1.1 schema
+  \citep{topografix2004gpx}, and its track must be closed and match the
+  route's reported length within 1\%.
+\item \textbf{Speed, local (US10).} Wall time per request after the map is
+  loaded, for 3 and 5 miles.
+\end{itemize}
+
+The script runs twice: once against the live planner alone, and once through
+the deployed serving path, which answers from precomputed routes first and
+plans live only when none fit. The second run measures what a runner actually
+receives. The graph's hash is recorded with the results so they can be tied
+to the exact map they came from.
+
+\subsection{Shape and crossing audits}
+\texttt{scripts/shape\_audit.py} plans 96 routes from a ring of starts and
+records properties that the acceptance criteria do not mention but that make
+a route bad to run: roundness, measured as $4\pi A/L^2$ (the Polsby--Popper
+score \citep{polsby1991third}, where 1 is a circle and below 0.2 is close to
+an out-and-back), whether the route enters a dead end, short revisits, and the
+share of its length that repeats.
+
+\texttt{scripts/audit\_crossings.py} provides independent labels for US3. For
+each stretch of route that touches a major road, it draws a 15\,m corridor
+with at least 50\,m of travel on either side, cuts it along the road's
+centreline, and counts a crossing when the route passes from one piece to the
+other. Grade-separated passes are excluded. The planner's own count is then
+scored against these labels for precision and recall. The labeller never calls
+the planner's crossing rule, so the two can disagree, and when they did we
+plotted each disagreement and settled it by inspecting the map.
+
+\subsection{Precomputed route (pool) check}
+\texttt{scripts/compare\_pools.py} draws 40 starts at random (seed 7) within
+6\,km of the Charlottesville centre and requests 3, 5, 6.5, 8 and 12 miles on
+all three surfaces: 600 requests. It records whether the precomputed routes
+could answer, how long that took, and the same quality metrics as the
+benchmark, so answers from pools can be compared with live planning on the
+same requests.
+
+\subsection{Deployed-system validation}
+\texttt{scripts/validate\_deployed.py} sends requests to the public URL one at
+a time with a pause between them, using public landmark starts only, and
+caps the total at about 250 requests to stay polite to the shared servers.
+For US10 it times 3 and 5 mile requests at ten Charlottesville starts, twice
+each, reporting the first request at each start separately as a cold start.
+For US11 it requests 3, 5 and 8 miles from public landmarks in each metro
+area and checks that each loop is closed, in the distance band, and has a GPX
+file whose track matches the route. For US9 it runs ten nearby-start cases
+across 1, 3 and 5 mile radii and checks every suggested start against the
+radius. For US4 a Node harness feeds real responses captured from production
+into the interface's own rendering code and compares every number shown on a
+route card with the API's metrics. Separately,
+\texttt{scripts/presentation\_check.py} replays ten fixed scenarios, including
+error cases and address autocomplete, and confirms each GPX file matches its
+drawn route.
+
+\subsection{Manual checks}
+Three procedures need a person. Each team member runs the browser checklist
+in Appendix~\ref{app:checklists} (US8) in a desktop browser and on a phone,
+recording pass, fail or notes for each step. The team opens at least one GPX
+file per distance in an outside application and records whether the track
+appears correctly (US7). Each member also independently reviews the same
+twelve benchmark routes against a five-point checklist covering continuity,
+backtracking, unreasonable crossings, map rendering, and agreement between
+the drawn route and its metrics. Disagreements are discussed and the outcome
+recorded.
+
+\subsection{Consent, privacy and accessibility}
+No outside participants took part, so no consent was needed. Privacy shaped
+the procedures in three ways. Only public landmarks appear in tracked files
+and in this report, and a test fails the suite if coordinates or addresses
+appear in the public benchmark file. The application keeps no account,
+history or saved requests. A recorded run stays in the page's memory and is
+discarded when the page closes \citep{w3c2026geolocation}. Map data is
+OpenStreetMap's, used under the Open Database License with attribution
+\citep{osm2026copyright}. We did not evaluate accessibility, which is listed
+as a gap in Section~\ref{sec:analysis}.

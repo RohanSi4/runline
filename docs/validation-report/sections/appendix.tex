@@ -1,0 +1,103 @@
+\section{Reproducing the measurements}
+\label{app:repro}
+
+All commands run from a checkout of the repository \citep{runline2026repo}
+with its pinned environment
+(\texttt{pip install -r requirements.txt -e '.[dev,build]'}). Results are
+written to the git-ignored \texttt{output/} directory.
+
+\begin{small}
+\begin{verbatim}
+python -m pytest -q -rs                                # Python suite (223 tests)
+node --test tests/web_flow.mjs tests/run_session.mjs   # browser logic (35 tests)
+python scripts/acceptance.py --data <dir with graphs/ and pools/>
+                                    # US1-US3, US5-US7, US10 (local); seed 4971
+python scripts/shape_audit.py                          # roundness, dead ends, repeats
+python scripts/audit_crossings.py                      # independent crossing labels
+python scripts/compare_pools.py                        # 600-request pool check, seed 7
+python scripts/validate_deployed.py --pause 1.0 --budget 250
+                                    # US4, US9, US10, US11 against production
+node scripts/ui_display_check.mjs output/deployed-validation   # US4/US9 UI checks
+python scripts/presentation_check.py --api <url> --require-pool
+\end{verbatim}
+\end{small}
+
+\noindent The acceptance results were produced on code \texttt{61f45cd}
+with the rebuilt Charlottesville graph (SHA-256 prefix
+\texttt{66b524897627167e}) and its matching complete pool file. The
+deployed-system run was on 16 November against backend commit
+\texttt{ebcd150}. Full tables, definitions and per-case outputs are in
+\texttt{docs/acceptance.md} and \texttt{docs/deployed-validation.md} in the
+repository.
+
+\section{Manual checklists}
+\label{app:checklists}
+
+\subsection{US8 browser checklist}
+Each member runs this once on a desktop browser and once on a phone, at
+\url{https://runline-nine.vercel.app}, using only public starts. Record P
+(pass), F (fail, with a note) or N/A.
+
+\begin{table}[ht]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}r Y c c c@{}}
+\toprule
+\# & Step & Adithya & Krish & Rohan \\
+\midrule
+1 & Search for ``Rotunda'' and pick the suggestion; the pin moves there. & & & \\
+2 & Click elsewhere on the map; the start moves to the click. & & & \\
+3 & Request 5 miles, mixed, balanced; routes appear without an error. & & & \\
+4 & Switch between the route cards; the map highlights the chosen route. & & & \\
+5 & Change surface to trail and regenerate; the results change or a notice explains why not. & & & \\
+6 & Change elevation to hilly and regenerate; the climb shown changes or a notice explains why not. & & & \\
+7 & Download GPX for the selected route; a file is saved. & & & \\
+8 & Enter an invalid distance (0 or blank); an explained error appears. & & & \\
+9 & Choose a start outside the supported areas; an explained error appears. & & & \\
+10 & Use Start $\rightarrow$ finish with two points in Charlottesville; a one-way route appears. & & & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{US7 GPX import}
+For one route at each of 3, 5, 8 and 12 miles, import the downloaded file into
+an outside application \todo{name the application, e.g. Garmin Connect,
+Strava or gpx.studio} and record whether the track appears, whether its
+distance matches RunLine's within 2\%, and whether start and finish meet.
+
+\subsection{Route review}
+Each member independently marks twelve benchmark routes (three starts
+$\times$ four distances, routes listed in the acceptance output) on five
+questions: (1) the route is continuous; (2) it has no obvious backtracking;
+(3) it has no crossing a runner would refuse; (4) it renders correctly on the
+map; (5) the displayed metrics agree with what the map shows. Disagreements
+are discussed and the agreed outcome recorded.
+
+\section{Detailed results}
+\label{app:results}
+
+\paragraph{US11 per area.} Routes within 5\% of target out of 36 (12 requests
+at 3, 5 and 8 miles, three routes each). All 216 were closed, within the
+$\pm$0.25 mile band and within 10\%, with matching GPX.
+
+\begin{center}\small
+\begin{tabular}{@{}l r l@{}}
+\toprule
+Area & Within 5\% & Answered from \\
+\midrule
+Washington, DC & 36/36 & precomputed \\
+New York & 35/36 & 4 of 12 precomputed, 8 live \\
+Los Angeles & 36/36 & precomputed \\
+Atlanta & 34/36 & precomputed \\
+Boston & 35/36 & precomputed \\
+Phoenix & 34/36 & precomputed \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{US6 ties (live).} The eleven pairs where flat and hilly returned
+the same top route: ring\_060 5\,mi; ring\_120 3 and 12\,mi; ring\_180 3, 5, 8
+and 12\,mi; ring\_240 5, 8 and 12\,mi; ring\_300 3\,mi. No pair had the hilly
+route climbing less.
+
+\paragraph{Manual checklists.} \todo{Attach the completed US8 checklists, GPX
+import record and route review from Appendix~\ref{app:checklists}.}

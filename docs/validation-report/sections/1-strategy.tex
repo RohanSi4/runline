@@ -1,0 +1,128 @@
+\section{Validation Strategy Overview}
+
+RunLine is a web application that generates running loops. A runner chooses a
+start, a target distance, a surface preference (road, mixed or trail) and an
+elevation preference (flat, balanced or hilly), and RunLine returns up to three
+loops ranked by how well they fit the request. Each route can be downloaded as
+GPX for a watch or navigation app. The routing engine searches an
+OpenStreetMap walking network \citep{boeing2017osmnx,hagberg2008networkx} with
+a cost function that penalizes mapped traffic signals, major-road crossings,
+repeated segments, the wrong surface and the wrong amount of climbing.
+
+\paragraph{Definition of success.}
+Our Project Proposal \& Plan \citep{runguys2026proposal} defined success as a
+runner being able to enter a start and a distance, receive several routes that
+stay close to that distance, compare measurable tradeoffs between them, and
+export the one they choose. It turned that goal into eleven user stories with
+numeric acceptance criteria: seven must-haves (US1 to US7), three
+should-haves (US8 to US10) and one nice-to-have (US11). We use those criteria
+unchanged as the definition of ``working'' in this report, because they were
+fixed before most of the system was built and so cannot have been tuned to
+the results. Table~\ref{tab:criteria} restates them. The proposal also set two
+technical questions: whether interruption-aware scoring reduces mapped
+signals and crossings without losing distance accuracy (US3), and whether the
+surface and elevation preferences change the selected routes in the intended
+direction (US5, US6).
+
+Two further expectations came from the proposal's discussion of limits rather
+than from a user story, and we hold the system to them as well. RunLine must
+present route characteristics, never safety guarantees, since OpenStreetMap
+can omit crossings, signals and restrictions. It must also avoid retaining
+runners' locations, because a start is often a home.
+
+\begin{table}[ht]
+\centering\small
+\caption{Acceptance criteria from the Project Proposal \& Plan, used as the definition of success.}
+\label{tab:criteria}
+\begin{tabularx}{\linewidth}{@{}l l Y@{}}
+\toprule
+ID & Priority & Acceptance criterion (abridged) \\
+\midrule
+US1 & Must & $\geq$80\% of successful benchmark requests return a top-ranked route within 5\% of the requested distance; all return a route within 10\%. \\
+US2 & Must & For $\geq$80\% of requests where the network permits it, at least two candidates overlap by no more than 80\%. \\
+US3 & Must & Against a distance-only baseline, median signals plus major-road crossings fall by $\geq$20\% with median distance error $\leq$5\%. \\
+US4 & Must & Each candidate shows distance error and the major score components, matching the calculated metrics within display rounding. \\
+US5 & Must & Where more than one surface exists, the route moves toward the requested surface relative to the neutral setting in $\geq$75\% of cases. \\
+US6 & Must & The hilly route has more elevation gain than the flat route in $\geq$80\% of paired requests. \\
+US7 & Must & Ten sampled routes produce GPX that parses without error; one route per distance opens in a GPX-compatible application. \\
+US8 & Should & All three team members complete a browser checklist (search, map click, generate, switch, export) without blocking errors. \\
+US9 & Should & With a drive radius set, every suggested start lies within the radius and the comparison shows route score and driving cost; ten cases checked. \\
+US10 & Should & Warm 3 and 5 mile requests: median below 10\,s, 95th percentile below 20\,s. \\
+US11 & Nice & At least one additional area, built with the same pipeline, passes the distance, validity, browser and GPX smoke tests. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Methods.}
+We used five validation methods, each chosen for what it can establish about
+a route planner and what the others cannot.
+
+\begin{enumerate}
+\item \textbf{Automated tests.} A pytest suite and two Node test files check
+  the deterministic pieces: distance and overlap calculations, signal and
+  crossing counts, repeated-segment detection, scoring, GPX generation, pool
+  storage and serving, coverage errors, and the browser's request and
+  recording logic. These establish that each component computes what it
+  claims to on known inputs. They cannot show that the routes are good.
+\item \textbf{A fixed route benchmark measured against the acceptance
+  criteria.} Eight public Charlottesville starts at 3, 5, 8 and 12 miles
+  (32 requests) are planned under each preference setting, and a script
+  computes every numeric criterion (US1, US2, US3, US5, US6, US7 and the local
+  part of US10). This is the method the proposal committed to. Because the
+  inputs are fixed, it also works as a regression test: our repository rules
+  require before-and-after benchmark and shape-audit numbers for any change
+  to the routing, scoring or model code before it can be merged.
+\item \textbf{An independent audit of the crossing metric.} US3 depends on
+  the planner counting major-road crossings correctly, and a metric that only
+  agrees with itself proves nothing. We built a separate geometric labeller
+  that cuts each route's corridor along major-road centrelines and counts a
+  crossing whenever the route moves from one side to the other. We then
+  checked it against hand-labelled cases and measured the planner's count
+  against its labels.
+\item \textbf{Validation of the deployed system.} Scripted requests against
+  the public URL check what a runner actually receives: response times
+  (US10), coverage in the additional metro areas (US11), closed loops and
+  matching GPX, error handling, nearby-start suggestions (US9), and whether
+  the numbers the interface displays match the API's metrics (US4).
+\item \textbf{Manual review by the team.} The browser checklist (US8), the
+  ten nearby-start cases (US9), opening GPX files in an outside application
+  (US7) and a three-person route review cover what scripts cannot judge:
+  whether the interface is usable and whether a route looks like something a
+  runner would actually run.
+\end{enumerate}
+
+We deliberately did not run a study with outside participants, as the
+proposal stated. Recruiting runners would have required consent procedures
+and handling of participants' locations. Our acceptance criteria are also
+mostly properties of routes, which a fixed benchmark measures more
+repeatably than a small participant group would. The cost is that no
+evidence in this report shows that runners other than ourselves find the
+routes or the score breakdown useful. We return to this gap in
+Sections~\ref{sec:analysis} and~\ref{sec:readiness}.
+
+\paragraph{Scope.}
+This report covers \texttt{main} at commit \texttt{f482881}
+\citep{runline2026repo} and the production deployment at
+\url{https://runline-nine.vercel.app}. When we measured it, the production
+backend reported commit \texttt{ebcd150} from 11 November, three code
+pull requests behind \texttt{main}. None of them changed scoring, but one
+(\#26) changed how loops are generated, so for some requests production can
+return different routes from the benchmark, which used \texttt{main}. Charlottesville
+is the primary area. Its graph was rebuilt in November to keep signalized
+crosswalks, and it is served with a complete set of precomputed routes
+(11,417 pools, 605,206 loops). Washington DC, New York, Los Angeles, Atlanta,
+Boston and Phoenix are served from a team member's virtual machine and are
+covered only as US11 evidence. The stakeholders are the three team members
+acting as runners and the course staff. The features covered are loop
+generation, preferences, ranking, the comparison interface, GPX export,
+nearby starts and start-to-finish routes.
+
+We could not validate several things. In-app GPS run recording was added late
+and has only been tested on synthetic location samples, never outdoors on a
+phone. We did not audit accessibility (keyboard use, screen readers or
+contrast). We did not load-test the deployment with concurrent users. The
+metro areas other than Charlottesville were built from an older map graph
+that does not keep signalized crosswalks, so their signal counts are less
+complete. We also cannot independently verify OpenStreetMap's tags in the
+field, so every interruption count in this report means \emph{mapped}
+signals and crossings \citep{osmwiki2026signals}.

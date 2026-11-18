@@ -1,0 +1,90 @@
+\section{Analysis \& Action Plan}
+\label{sec:analysis}
+
+\paragraph{Against the definition of success.}
+The routing engine meets the goal the proposal set for it. Requests return
+loops close to the requested distance (US1), with real alternatives (US2), and
+with a quarter to a third of the interruptions a distance-only planner would pick
+(US3), at a distance cost well inside the limit. The surface preference works
+reliably (US5), GPX output is valid (US7), the system is fast once warm
+(US10), and the same pipeline now serves six more metro areas (US11). The
+first validation run found the result weaker at the point where the runner
+meets the engine. The proposal promised that a runner could ``compare
+measurable tradeoffs'' and ``make the final choice'' themselves (US4), and on
+16 November the interface did not show most of the tradeoffs the engine was
+making. We fixed that display on 18 November and the rerun passed. Of the
+seven must-haves, six are now met and US6 is met only through the served
+path. One should-have is incomplete: US8 waits on the team checklist.
+
+\paragraph{Priorities.}
+We ranked issues by how much they affect what a runner sees and by whether
+they break a must-have criterion. The two display gaps ranked first, so we
+fixed them first. They were the only failures a runner would notice on every
+request, and they undid the project's stated difference from existing tools,
+which is that the tradeoffs are visible. The weak elevation preference ranks
+next. It is a must-have, and
+a runner who asks for hills and gets the same route as ``flat'' will conclude
+the setting does nothing. Deployment issues follow, because several fixes are
+already written but not live. Map-data and scaling issues rank lower. They are
+real, but they mostly affect the metros beyond our primary area.
+
+\paragraph{Decisions.}
+Table~\ref{tab:actions} records a decision for each important finding. Owners
+follow the areas of responsibility in our proposal: the interface for
+Adithya, data, performance and deployment for Krish, and routing and scoring
+for Rohan. Each item names how we will check that it worked. In every case
+the check reruns the same script that found the problem, so a fix is not
+counted until the measurement that failed passes.
+\todo{Team to confirm owners and target dates.}
+
+\begin{table}[ht]
+\centering\footnotesize
+\caption{Decisions on the main findings.}
+\label{tab:actions}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{1.5cm} Y l >{\raggedright\arraybackslash}p{3.1cm}@{}}
+\toprule
+Finding & Decision & Action & Owner & How we will verify \\
+\midrule
+US4: crossings, repetition, distance error and score not shown & Completed fix (\#29) & Restored crossings; added distance off target, repetition and score to each card and an expandable score breakdown & Rohan & Deployed rerun 18 Nov: 3,969 values, 0 mismatches, 8/8 components shown \\
+US9: drive cost and score not shown & Completed fix (\#29) & Show driving distance and score on alternative-start cards and in the panel & Rohan & Ten-case rerun 18 Nov: both shown, 19/19 in radius \\
+US6: hilly often ties flat & Design change & Let elevation influence path search, not only ranking, then retune its weight & Rohan & \texttt{acceptance.py}: US6 $\geq$80\% live \emph{and} US3 still met \\
+Production backend behind \texttt{main}; manual deploys & Planned fix & Merge the reproducible release script (\#18) and redeploy from a recorded commit & Rohan & \texttt{/api/version} equals the release commit \\
+Precomputed routes miss 8.7\% of requests & Completed fix, not deployed & Retry from the connected network and a wider ring (\#15) & Rohan & 600-request check $\geq$97\% after deploy \\
+Live answers can be all slivers or repeat 23\% & Planned fix & Exclude routes over the repetition limit when alternatives exist; otherwise show a notice & Rohan & Shape audit; the failing park case \\
+Place list served Brotli to non-browser clients & Planned fix & Stop the cache serving one encoding to every client & Krish & Both rehearsal scripts pass against the public site \\
+Start locations written to logs & Planned fix & Log the area name instead of coordinates or cells & Rohan & Test that fails if a log line contains coordinates \\
+Tests did not catch removed UI fields; no CI on PRs & Completed fix & Tests run on every pull request (\#21); browser tests now assert the US4 and US9 fields are present (\#29) & Rohan & CI blocks a PR that removes a required field \\
+First request in a new city up to 23\,s & Backlog & Compact tile format (\#22) and pre-loading the map when a start is chosen & Krish & Deployed first-request times \\
+Metros use graphs without crosswalk signals & Deferred & Rebuild with the signal-preserving builder in the next cluster batch & Krish & Signal-node counts and benchmark per metro \\
+US1 5\% rule vs.\ the $\pm$0.25 mile band & Explicit decision & Keep the band; the 3 mile misses are deliberate trades for fewer interruptions & Rohan & Report both measures \\
+US2 overlap definition differs from the code & Backlog & Align the duplicate test with the shorter-route measure & Rohan & US2 served rerun \\
+Drive distance can be below straight line & Backlog & Add the legs from each start onto the road network & Rohan & US9 check: road $\geq$ straight line \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Limits of the evidence.}
+Several limits qualify every conclusion above.
+\begin{itemize}
+\item \textbf{One city.} The benchmark is 32 requests from eight starts in a
+  single city. It was fixed before the system was tuned, but it is small, and
+  the metro checks used six warm requests per area, where the 95th percentile
+  is just the slowest request.
+\item \textbf{Mapped interruptions only.} Signals and crossings are counted
+  from OpenStreetMap \citep{osmwiki2026signals}. The crossing audit shows the
+  planner counts what the map contains, not that the map is complete. Fewer
+  signals is also not the same as safer, since a signal may protect a
+  crossing.
+\item \textbf{Self-built ground truth.} The crossing labels came from our own
+  geometric labeller. We checked it against hand-labelled cases and inspected
+  every disagreement, but it is not an independent survey.
+\item \textbf{Elevation resolution.} Elevation comes from a 90\,m terrain
+  model \citep{copernicus2022dem}, which captures hills but not short, steep
+  grades.
+\item \textbf{Test conditions.} Production timings come from one network
+  path at one time of day, with no concurrent users.
+\item \textbf{No outside users.} No runner outside the team has used
+  RunLine under observation. Whether the tradeoffs, once displayed, actually
+  help someone choose is untested, and so is whether our ranking matches
+  what runners prefer.
+\end{itemize}

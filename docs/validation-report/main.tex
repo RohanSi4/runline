@@ -1,0 +1,46 @@
+% Standalone build of the RunLine QA / Validation Report.
+% To submit: copy sections/*.tex and references.bib into the CS 4971 Overleaf
+% template and keep its formatting. This preamble only exists so the draft
+% compiles locally (tectonic main.tex).
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+\setlist{nosep,leftmargin=1.4em}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\pass}{\textbf{Met}}
+\newcommand{\fail}{\textbf{Not met}}
+\newcommand{\partmet}{\textbf{Partly met}}
+\newcommand{\pending}{\textbf{Pending}}
+% Marks a value the team must still fill in or confirm before submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\title{\textbf{RunLine}\\[4pt]\large CS 4971 QA / Validation Report}
+\author{RunGuys (Team M3)\\[2pt]
+Adithya Balasubramaniam, Krish Patel, Rohan Singh}
+\date{\todo{report date}}
+
+\begin{document}
+\maketitle
+
+\input{sections/1-strategy}
+\input{sections/2-procedures}
+\input{sections/3-evidence}
+\input{sections/4-analysis}
+\input{sections/5-readiness}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}
