@@ -227,10 +227,13 @@ def load_pools(pool: PoolFile, cells: list[str], surface: str) -> list[dict]:
     return [decode_pool(rows[cell]) for cell in cells if cell in rows]
 
 
-def _miss(reason: str, cell: str, surface: str) -> None:
-    """Log why a request found a pool but could not use it; returns None."""
+def _miss(reason: str, area: str, surface: str) -> None:
+    """Log why a request found a pool but could not use it; returns None.
 
-    LOGGER.debug("pool %s %s cannot answer: %s", cell, surface, reason, extra={"pool_miss": reason})
+    Logs name the area, never the start or its cell: hosting platforms keep logs.
+    """
+
+    LOGGER.debug("%s %s pool cannot answer: %s", area, surface, reason, extra={"pool_miss": reason})
     return None
 
 
@@ -525,12 +528,12 @@ def serve_from_pool(origin: Coordinate, preferences: RoutePreferences) -> list[R
                 ranked, reason, small = _answer(graph, pools, start_node, preferences, FALLBACK_CONNECTOR_METERS)
     except KeyError as error:
         # Checked by hash above, so this would be a corrupt pool, not a stale one.
-        LOGGER.warning("pool near %s %s names a missing edge: %s", cell, surface, error)
+        LOGGER.warning("%s %s pool names a missing edge: %s", area.label, surface, error)
         return None
     if not ranked:
-        return _miss(reason, cell, surface)
+        return _miss(reason, area.label, surface)
     if retry:
-        LOGGER.debug("pool %s %s answered on retry: %s", cell, surface, retry, extra={"pool_retry": retry})
+        LOGGER.debug("%s %s pool answered on retry: %s", area.label, surface, retry, extra={"pool_retry": retry})
 
     start = StartCandidate("Start here", "origin", origin, 0)
     for position, candidate in enumerate(ranked, start=1):

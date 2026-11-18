@@ -478,3 +478,42 @@ def test_served_routes_count_doubling_back_as_repeated(built, pools_dir) -> None
 def test_a_pool_whose_loops_double_back_falls_back(built, pools_dir, monkeypatch) -> None:
     monkeypatch.setattr(serving, "MAX_DOUBLED_BACK", -1.0)
     assert serving.serve_from_pool(_origin(built), _preferences()) is None
+
+
+def _location_in(text: str, origin: Coordinate, cell: str) -> list[str]:
+    """Any trace of a start in a log: its cell, or its coordinates to 3+ decimals."""
+
+    marks = [cell, f"{origin.latitude:.3f}", f"{origin.longitude:.3f}", f"{origin.latitude:.6f}"]
+    return [mark for mark in marks if mark in text]
+
+
+def test_pool_logs_name_the_area_not_the_start(built, pools_dir, monkeypatch, caplog) -> None:
+    _, graph, _, pool = built
+    reached, _ = _cell_nodes_by_reach(built)
+    off_the_loops = next(node for node in reached if node not in _loop_nodes(pool))
+    origin = _at(graph, off_the_loops)
+    cell = cell_id(origin.latitude, origin.longitude, 200.0)
+    caplog.set_level("DEBUG", logger="runline")
+
+    monkeypatch.setattr(serving, "MAX_CONNECTOR_METERS", 0.0)
+    assert serving.serve_from_pool(origin, _preferences(result_count=1))  # answered on a retry
+    monkeypatch.setattr(serving, "FALLBACK_CONNECTOR_METERS", 0.0)
+    assert serving.serve_from_pool(origin, _preferences(result_count=1)) is None  # a miss
+
+    assert _retries(caplog) and any(hasattr(record, "pool_miss") for record in caplog.records)
+    assert all("Charlottesville" in record.getMessage() for record in caplog.records if hasattr(record, "pool_miss"))
+    assert _location_in(caplog.text, origin, cell) == []
+
+
+def test_a_failed_warm_up_does_not_log_the_start(monkeypatch, caplog) -> None:
+    from runline import api
+
+    def broken(_origin):
+        raise RuntimeError("graph unavailable")
+
+    monkeypatch.setattr(api, "warm", broken)
+    origin = Coordinate(38.035556, -78.503333)
+    with caplog.at_level("WARNING", logger="runline"):
+        api._warm_quietly(origin)
+    assert "warming a start failed" in caplog.text
+    assert _location_in(caplog.text, origin, cell_id(origin.latitude, origin.longitude, 200.0)) == []
