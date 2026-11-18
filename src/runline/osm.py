@@ -22,6 +22,7 @@ from .geo import destination, distance_meters
 from .models import (
     METERS_PER_MILE,
     Coordinate,
+    ElevationPreference,
     RouteCandidate,
     RouteMetrics,
     RoutePreferences,
@@ -123,7 +124,30 @@ def _edge_preference_cost(
     elif preferences.surface is SurfacePreference.ROAD and trail:
         cost += length * 0.8
 
+    # "Flat" steers the search away from climbs, not only the ranking: ranking
+    # alone chooses among loops found for other reasons, so "hilly" often tied
+    # "flat" on the same top route. A matching credit for "hilly" doubled its
+    # near out-and-backs without raising its climb (docs/routing-study.md), so
+    # "hilly" keeps the balanced search and is chosen by ranking.
+    if preferences.elevation is ElevationPreference.FLAT:
+        cost += _rise(source_node, destination_node) * FLAT_CLIMB_COST
+
     return cost
+
+
+# Cost (metres of path) per metre climbed: a 5% grade adds half the edge's length.
+FLAT_CLIMB_COST = 10.0
+
+
+def _rise(source_node: dict[str, Any] | None, destination_node: dict[str, Any]) -> float:
+    """Metres climbed along an edge, or 0 without elevation at both ends."""
+
+    if source_node is None:
+        return 0.0
+    start, end = source_node.get("elevation"), destination_node.get("elevation")
+    if start is None or end is None:
+        return 0.0
+    return max(0.0, float(end) - float(start))
 
 
 def _iter_edges(graph: nx.Graph):
@@ -541,6 +565,8 @@ def prepare_core(
         key_origin.longitude,
         round(padded_radius),
         preferences.surface.value,
+        # Only "flat" changes edge costs (_edge_preference_cost).
+        preferences.elevation is ElevationPreference.FLAT,
     )
     with _PREPARED_CACHE_LOCK:
         cached = _PREPARED_CACHE.get(key)
