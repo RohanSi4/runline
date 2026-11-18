@@ -134,9 +134,15 @@
       <div class="map-tip" id="map-tip"><span></span>Click map to set start</div>
 
       <div class="selected-summary" id="selected-summary" hidden>
-        <div class="summary-primary"><span id="summary-distance">—</span><small id="summary-start">Start here</small></div>
+        <div class="summary-primary"><span id="summary-distance">—</span><small id="summary-start">Start here</small><small id="summary-drive" hidden></small></div>
         <div><span id="summary-gain">—</span><small>Elevation gain</small></div>
         <div><span id="summary-signals">—</span><small>Traffic signals</small></div>
+        <div><span id="summary-crossings">—</span><small>Major crossings</small></div>
+        <details class="score-breakdown" id="score-breakdown" hidden>
+          <summary>Why this rank <span>score <b id="score-total">—</b></span></summary>
+          <ol id="score-parts"></ol>
+          <p class="score-note">Points per factor; lower ranks higher. Routes within 0.25 mi of your distance come first, then routes that are not near out-and-backs or more than 10% repeated, then the lowest score.</p>
+        </details>
         <div class="summary-actions">
           <button id="start-run" type="button" aria-label="Start recording a run on the selected route"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8V4Z"/></svg>Run this route</button>
           <button id="download-gpx" type="button" aria-label="Download selected route as GPX"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v4h14v-4"/></svg>GPX</button>
