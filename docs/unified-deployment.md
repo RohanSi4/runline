@@ -104,9 +104,9 @@ differences between the archive and a staged copy do not matter.
 4. Run the printed commands in order:
 
    ```bash
-   vercel deploy --prod --skip-domain --yes --cwd output/release/<sha12>/stage
+   vercel deploy --prod --skip-domain --yes --force --cwd output/release/<sha12>/stage
    export CANDIDATE_URL=<URL printed by vercel deploy>
-   vercel curl "$CANDIDATE_URL"/api/version --cwd output/release/<sha12>/stage
+   cd output/release/<sha12>/stage && vercel curl "$CANDIDATE_URL"/api/version; cd -
    vercel promote "$CANDIDATE_URL" --yes --cwd output/release/<sha12>/stage
    python scripts/presentation_check.py --require-pool --expected-commit <sha> \
        --api https://runline-capstone.vercel.app --output output/release/<sha12>/public-check.json
@@ -114,6 +114,11 @@ differences between the archive and a staged copy do not matter.
        --api https://runline-nine.vercel.app --output output/release/<sha12>/site-check.json
    ```
 
+   `--force` skips the build cache: on 18 November a candidate built from
+   the previous deployment's cache served that release's code and commit
+   although its uploaded source was new. `vercel curl` hands any option after
+   the URL to curl, so run it from the stage directory rather than with
+   `--cwd`.
    `--skip-domain` creates a production build without moving the public URL;
    the candidate is protected, so check it with `vercel curl`. Confirm it
    reports the staged commit and that its `/api/areas` lists both
