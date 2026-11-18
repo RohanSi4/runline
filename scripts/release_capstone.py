@@ -242,8 +242,11 @@ def commands(stage_dir: Path, commit: str, manifest: dict, vercel: str) -> dict[
     candidate = CANDIDATE
     check = ["python", "scripts/presentation_check.py", "--require-pool", "--expected-commit", commit]
     steps = {
-        "deploy": shlex.join([*cli, "deploy", "--prod", "--skip-domain", "--yes", "--cwd", str(stage_dir)]),
-        "verify_candidate": shlex.join([*cli, "curl", f"{candidate}/api/version", "--cwd", str(stage_dir)]),
+        "deploy": shlex.join(deploy_command(stage_dir, vercel)),
+        # `vercel curl` passes every later argument to curl, --cwd included, so
+        # run it from the linked stage directory instead.
+        "verify_candidate": f"cd {shlex.quote(str(stage_dir))} && "
+                            + shlex.join([*cli, "curl", f"{candidate}/api/version"]),
         "promote": shlex.join([*cli, "promote", candidate, "--yes", "--cwd", str(stage_dir)]),
         "verify_public": shlex.join([*check, "--api", public, "--output", f"output/release/{commit[:12]}/public-check.json"]),
         "verify_site": shlex.join([*check, "--api", "https://runline-nine.vercel.app",
@@ -252,8 +255,15 @@ def commands(stage_dir: Path, commit: str, manifest: dict, vercel: str) -> dict[
     return {key: value.replace(CANDIDATE, '"$CANDIDATE_URL"') for key, value in steps.items()}
 
 
+def deploy_command(stage_dir: Path, vercel: str) -> list[str]:
+    # --force skips the build cache. Restored from the previous deployment, it
+    # made the 18 Nov candidate serve the old release's code and commit even
+    # though the uploaded source was new.
+    return [*shlex.split(vercel), "deploy", "--prod", "--skip-domain", "--yes", "--force", "--cwd", str(stage_dir)]
+
+
 def deploy(stage_dir: Path, vercel: str) -> str:
-    command = [*shlex.split(vercel), "deploy", "--prod", "--skip-domain", "--yes", "--cwd", str(stage_dir)]
+    command = deploy_command(stage_dir, vercel)
     print("$", shlex.join(command), flush=True)
     result = subprocess.run(command, text=True, capture_output=True)
     sys.stderr.write(result.stderr)

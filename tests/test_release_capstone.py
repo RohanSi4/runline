@@ -167,7 +167,7 @@ def test_staged_but_uncommitted_change_is_refused(tmp_path):
 
 def test_printed_deploy_never_moves_the_domain_or_promotes(tmp_path):
     steps = commands(tmp_path / "stage", "a" * 40, load_manifest(MANIFEST), "vercel")
-    assert "deploy --prod --skip-domain --yes" in steps["deploy"]
+    assert "deploy --prod --skip-domain --yes --force" in steps["deploy"]
     assert "promote" not in steps["deploy"]
     assert steps["promote"].startswith('vercel promote "$CANDIDATE_URL" --yes')
     assert "--expected-commit " + "a" * 40 in steps["verify_public"]
@@ -225,3 +225,16 @@ def test_a_review_outside_the_release_history_is_refused(tmp_path):
 def test_the_checked_in_review_names_a_full_commit():
     review = load_manifest(MANIFEST).get("pools_generation_review")
     assert review and len(review["through"]) == 40 and review["note"]
+
+
+def test_the_build_cache_is_never_reused(tmp_path):
+    from scripts.release_capstone import deploy_command
+
+    assert "--force" in deploy_command(tmp_path / "stage", "npx vercel@latest")
+
+
+def test_the_candidate_check_runs_from_the_stage_directory(tmp_path):
+    steps = commands(tmp_path / "stage", "a" * 40, load_manifest(MANIFEST), "vercel")
+    check = steps["verify_candidate"]
+    assert check.startswith(f"cd {tmp_path / 'stage'} && vercel curl")
+    assert "--cwd" not in check
