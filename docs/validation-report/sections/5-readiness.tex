@@ -1,0 +1,56 @@
+\section{Reflection on Readiness}
+\label{sec:readiness}
+
+\paragraph{What is reliable now.}
+For a runner in Charlottesville who looks at a route before running it,
+RunLine is ready to use. The evidence for that is strong and repeatable. Every
+benchmark request in both modes returned routes, distance fit met its
+criterion, interruptions fell by more than 70\% against a distance-only
+planner, the surface preference moved routes the right way in 97 to 98\% of
+cases, every GPX file we generated validated, and warm requests answer in
+under a second. The precomputed routes served in production are on average
+better than live planning: all were within the distance band and fewer
+repeated themselves. The six additional metro areas passed the same smoke
+checks, which shows the pipeline generalizes beyond the city it was tuned on.
+
+\paragraph{What remains uncertain.}
+Until 18 November the engine was ahead of the interface: a runner saw a good
+route but not why it was chosen, which is the part of the design the proposal
+said distinguished RunLine. That display is now in place and verified, but no
+runner outside the team has used it yet. The elevation preference works in the right direction
+but too weakly to rely on. The production backend is several changes behind
+the code we measured, and two finished fixes (higher precomputed coverage and
+the reproducible release) are not live. We also have no evidence about
+people other than ourselves, and none about the GPS run mode outdoors or about
+accessibility.
+
+\paragraph{What must happen before wider use.}
+In order: redeploy the
+backend from a recorded commit with the precomputed-coverage fix; complete the
+three-person browser checklist, the GPX import check and the route review;
+remove start locations from logs; and run an accessibility review against a
+recognized checklist. Before anyone outside the team is invited to use it, we
+would also want a short observed session with a handful of runners. The
+proposal's premise was that visible tradeoffs help a runner choose, and
+nothing in this report tests it. The metro
+areas should not be promoted beyond a preview until they are rebuilt with the
+crosswalk signals and the first request in a new city is reliably fast.
+
+\paragraph{What validation taught us.}
+Three lessons changed how we work. The first is that a metric needs a check
+that does not share its assumptions. Building the independent crossing
+labeller found errors in both directions: the labeller was wrong in eight of
+the cases we first blamed on the planner, and the planner was missing a whole
+class of crossings. Without the audit, the US3 result would rest on a count
+nobody had checked. The second is that tests prove what they assert and
+nothing else. Our interface tests confirmed that every displayed number was
+correct, and so stayed green when the numbers that mattered most for US4 were
+removed from the screen. Measuring against the proposal's criteria, rather
+than against our tests, is what exposed it, and it is why our browser tests now
+check that required fields are present and why tests run on every pull request. The third
+is that the deployed system is its own thing to validate. The backend was
+behind the code we benchmarked, and a caching behaviour broke our own
+rehearsal scripts while leaving browsers unaffected. Neither shows up on a
+laptop. The validation plan for the final sprint therefore reruns the
+acceptance and deployment scripts against production after every release,
+not only the test suite before it.
