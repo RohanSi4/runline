@@ -241,13 +241,13 @@ def commands(stage_dir: Path, commit: str, manifest: dict, vercel: str) -> dict[
     public = manifest["vercel"]["production_url"]
     candidate = CANDIDATE
     check = ["python", "scripts/presentation_check.py", "--require-pool", "--expected-commit", commit]
+    # Every Vercel command runs from inside the stage directory, never with
+    # --cwd (see deploy_command); `vercel curl` would also hand --cwd to curl.
+    inside = f"cd {shlex.quote(str(stage_dir))} && "
     steps = {
-        "deploy": shlex.join(deploy_command(stage_dir, vercel)),
-        # `vercel curl` passes every later argument to curl, --cwd included, so
-        # run it from the linked stage directory instead.
-        "verify_candidate": f"cd {shlex.quote(str(stage_dir))} && "
-                            + shlex.join([*cli, "curl", f"{candidate}/api/version"]),
-        "promote": shlex.join([*cli, "promote", candidate, "--yes", "--cwd", str(stage_dir)]),
+        "deploy": inside + shlex.join(deploy_command(vercel)),
+        "verify_candidate": inside + shlex.join([*cli, "curl", f"{candidate}/api/version"]),
+        "promote": inside + shlex.join([*cli, "promote", candidate, "--yes"]),
         "verify_public": shlex.join([*check, "--api", public, "--output", f"output/release/{commit[:12]}/public-check.json"]),
         "verify_site": shlex.join([*check, "--api", "https://runline-nine.vercel.app",
                                    "--output", f"output/release/{commit[:12]}/site-check.json"]),
@@ -255,17 +255,24 @@ def commands(stage_dir: Path, commit: str, manifest: dict, vercel: str) -> dict[
     return {key: value.replace(CANDIDATE, '"$CANDIDATE_URL"') for key, value in steps.items()}
 
 
-def deploy_command(stage_dir: Path, vercel: str) -> list[str]:
-    # --force skips the build cache. Restored from the previous deployment, it
-    # made the 18 Nov candidate serve the old release's code and commit even
-    # though the uploaded source was new.
-    return [*shlex.split(vercel), "deploy", "--prod", "--skip-domain", "--yes", "--force", "--cwd", str(stage_dir)]
+def deploy_command(vercel: str) -> list[str]:
+    """The deploy, to be run with the stage directory as the working directory.
+
+    Not `--cwd STAGE` from this checkout: on 18 November two candidates
+    deployed that way served the checkout's own vercel.json, the frontend's,
+    which rewrites /api to runline-capstone itself. Each candidate URL then
+    answered as the current production, and promoting one made the public
+    backend rewrite to itself (INFINITE_LOOP_DETECTED) until it was rolled
+    back. Deployed from inside the stage directory, the same files served
+    their own commit. --force also skips the build cache.
+    """
+    return [*shlex.split(vercel), "deploy", "--prod", "--skip-domain", "--yes", "--force"]
 
 
 def deploy(stage_dir: Path, vercel: str) -> str:
-    command = deploy_command(stage_dir, vercel)
-    print("$", shlex.join(command), flush=True)
-    result = subprocess.run(command, text=True, capture_output=True)
+    command = deploy_command(vercel)
+    print("$ cd", shlex.quote(str(stage_dir)), "&&", shlex.join(command), flush=True)
+    result = subprocess.run(command, text=True, capture_output=True, cwd=stage_dir)
     sys.stderr.write(result.stderr)
     if result.returncode:
         raise ReleaseError("vercel deploy failed; nothing was promoted")
@@ -273,6 +280,16 @@ def deploy(stage_dir: Path, vercel: str) -> str:
     if not urls:
         raise ReleaseError(f"vercel deploy printed no deployment URL:\n{result.stdout}")
     return urls[-1]
+
+
+def candidate_commit(stage_dir: Path, candidate: str, vercel: str) -> str | None:
+    """The commit a protected candidate reports, read through `vercel curl`."""
+    command = [*shlex.split(vercel), "curl", f"{candidate}/api/version", "--", "-s"]
+    result = subprocess.run(command, text=True, capture_output=True, cwd=stage_dir)
+    try:
+        return json.loads(result.stdout.strip().splitlines()[-1]).get("commit")
+    except (IndexError, ValueError, AttributeError):
+        return None
 
 
 def main(argv=None) -> int:
@@ -350,6 +367,15 @@ def main(argv=None) -> int:
             return 1
         steps.pop("deploy")
         print(f"\nDeployed candidate {candidate} (not promoted).\n  export CANDIDATE_URL={shlex.quote(candidate)}")
+        reported = candidate_commit(stage_dir, candidate, args.vercel)
+        if reported != commit:
+            # A candidate answering with another commit is serving something
+            # else (see deploy_command); promoting it could take the API down.
+            print(f"REFUSED: the candidate reports commit {reported!r}, not {commit}; do not promote it",
+                  file=sys.stderr)
+            return 1
+        steps.pop("verify_candidate")
+        print(f"  It reports the staged commit {commit[:12]}.")
     print("\nNext steps (run from this checkout; nothing below has been run):")
     for key, label in [("deploy", "1. Deploy a production candidate without moving the domain"),
                        ("verify_candidate", "2. export CANDIDATE_URL=<URL printed by step 1>, then confirm the "

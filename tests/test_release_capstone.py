@@ -167,9 +167,8 @@ def test_staged_but_uncommitted_change_is_refused(tmp_path):
 
 def test_printed_deploy_never_moves_the_domain_or_promotes(tmp_path):
     steps = commands(tmp_path / "stage", "a" * 40, load_manifest(MANIFEST), "vercel")
-    assert "deploy --prod --skip-domain --yes --force" in steps["deploy"]
-    assert "promote" not in steps["deploy"]
-    assert steps["promote"].startswith('vercel promote "$CANDIDATE_URL" --yes')
+    assert "vercel deploy --prod --skip-domain --yes --force" in steps["deploy"]
+    assert 'vercel promote "$CANDIDATE_URL" --yes' in steps["promote"]
     assert "--expected-commit " + "a" * 40 in steps["verify_public"]
 
 
@@ -227,10 +226,16 @@ def test_the_checked_in_review_names_a_full_commit():
     assert review and len(review["through"]) == 40 and review["note"]
 
 
-def test_the_build_cache_is_never_reused(tmp_path):
+def test_every_vercel_command_runs_inside_the_stage_directory(tmp_path):
+    """--cwd from the checkout deployed the frontend's vercel.json (18 Nov)."""
     from scripts.release_capstone import deploy_command
 
-    assert "--force" in deploy_command(tmp_path / "stage", "npx vercel@latest")
+    assert "--cwd" not in deploy_command("npx vercel@latest")
+    assert "--force" in deploy_command("npx vercel@latest")
+    steps = commands(tmp_path / "stage", "a" * 40, load_manifest(MANIFEST), "vercel")
+    for key in ("deploy", "verify_candidate", "promote"):
+        assert steps[key].startswith(f"cd {tmp_path / 'stage'} && vercel ")
+        assert "--cwd" not in steps[key]
 
 
 def test_the_candidate_check_runs_from_the_stage_directory(tmp_path):
@@ -238,3 +243,16 @@ def test_the_candidate_check_runs_from_the_stage_directory(tmp_path):
     check = steps["verify_candidate"]
     assert check.startswith(f"cd {tmp_path / 'stage'} && vercel curl")
     assert "--cwd" not in check
+
+
+def test_a_candidate_reporting_another_commit_is_detected(tmp_path):
+    import shlex
+    import sys
+
+    from scripts.release_capstone import candidate_commit
+
+    def fake_cli(body: str) -> str:
+        return shlex.join([sys.executable, "-c", f"print({body!r})"])
+
+    assert candidate_commit(tmp_path, "https://c.example", fake_cli('{"commit": "abc"}')) == "abc"
+    assert candidate_commit(tmp_path, "https://c.example", fake_cli("Infinite loop detected")) is None
