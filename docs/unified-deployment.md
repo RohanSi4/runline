@@ -104,21 +104,30 @@ differences between the archive and a staged copy do not matter.
 4. Run the printed commands in order:
 
    ```bash
-   vercel deploy --prod --skip-domain --yes --force --cwd output/release/<sha12>/stage
+   cd output/release/<sha12>/stage
+   vercel deploy --prod --skip-domain --yes --force
    export CANDIDATE_URL=<URL printed by vercel deploy>
-   cd output/release/<sha12>/stage && vercel curl "$CANDIDATE_URL"/api/version; cd -
-   vercel promote "$CANDIDATE_URL" --yes --cwd output/release/<sha12>/stage
+   vercel curl "$CANDIDATE_URL"/api/version      # must report <sha>
+   vercel promote "$CANDIDATE_URL" --yes
+   cd -
    python scripts/presentation_check.py --require-pool --expected-commit <sha> \
        --api https://runline-capstone.vercel.app --output output/release/<sha12>/public-check.json
    python scripts/presentation_check.py --require-pool --expected-commit <sha> \
        --api https://runline-nine.vercel.app --output output/release/<sha12>/site-check.json
    ```
 
-   `--force` skips the build cache: on 18 November a candidate built from
-   the previous deployment's cache served that release's code and commit
-   although its uploaded source was new. `vercel curl` hands any option after
-   the URL to curl, so run it from the stage directory rather than with
-   `--cwd`.
+   Run every Vercel command from inside the stage directory, never with
+   `--cwd` from this checkout. On 18 November two candidates deployed with
+   `--cwd` served the checkout's own `vercel.json` (the frontend's, which
+   rewrites `/api` to runline-capstone): each candidate URL answered as the
+   current production, and promoting one made the public API rewrite to
+   itself (`INFINITE_LOOP_DETECTED`) until it was rolled back. The same files
+   deployed from inside the stage directory served their own commit.
+   `release_capstone.py --deploy` now deploys that way and refuses to print
+   a promote step unless the candidate reports the staged commit, so never
+   promote a candidate whose `/api/version` shows another commit. `vercel
+   curl` also hands any option after the URL to curl. `--force` skips the
+   build cache.
    `--skip-domain` creates a production build without moving the public URL;
    the candidate is protected, so check it with `vercel curl`. Confirm it
    reports the staged commit and that its `/api/areas` lists both
@@ -157,7 +166,7 @@ rebuild. Keep the deployment ID recorded in step 3.
   deployment's commit:
 
   ```bash
-  vercel rollback <previous-deployment-id-or-url> --cwd output/release/<sha12>/stage
+  (cd output/release/<sha12>/stage && vercel promote <previous-deployment-url> --yes)
   # or: vercel promote <previous-deployment-id-or-url> --yes
   vercel ls runline-capstone --prod     # find older production deployments
   ```
