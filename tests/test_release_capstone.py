@@ -171,3 +171,57 @@ def test_printed_deploy_never_moves_the_domain_or_promotes(tmp_path):
     assert "promote" not in steps["deploy"]
     assert steps["promote"].startswith('vercel promote "$CANDIDATE_URL" --yes')
     assert "--expected-commit " + "a" * 40 in steps["verify_public"]
+
+
+def _history(tmp_path):
+    """built -> reviewed (osm.py changed) -> head (README only) -> later (osm.py again)."""
+    from scripts.stage_presentation import GENERATION_FILES
+
+    repository = tmp_path / "history"
+    (repository / "src/runline").mkdir(parents=True)
+
+    def commit(path: str, text: str) -> str:
+        (repository / path).write_text(text)
+        subprocess.run(["git", "add", path], cwd=repository, check=True)
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                        "commit", "-q", "-m", path], cwd=repository, check=True)
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repository, text=True).strip()
+
+    subprocess.run(["git", "init", "-q"], cwd=repository, check=True)
+    assert "src/runline/osm.py" in GENERATION_FILES
+    built = commit("src/runline/osm.py", "v1\n")
+    reviewed = commit("src/runline/osm.py", "v2\n")
+    head = commit("README.md", "docs\n")
+    later = commit("src/runline/osm.py", "v3\n")
+    return repository, built, reviewed, head, later
+
+
+def test_generation_changes_since_the_build_close_the_gate(tmp_path):
+    from scripts.stage_presentation import generation_changes
+
+    repository, built, _, head, _ = _history(tmp_path)
+    assert generation_changes(repository, built, head)
+
+
+def test_a_recorded_review_covers_changes_up_to_it(tmp_path):
+    from scripts.stage_presentation import generation_changes
+
+    repository, built, reviewed, head, later = _history(tmp_path)
+    assert generation_changes(repository, built, head, reviewed) == ""
+    # Changes after the review still close the gate.
+    assert generation_changes(repository, built, later, reviewed)
+
+
+def test_a_review_outside_the_release_history_is_refused(tmp_path):
+    from scripts.stage_presentation import StageError, generation_changes
+
+    repository, built, reviewed, head, later = _history(tmp_path)
+    with pytest.raises(StageError, match="must lie between"):
+        generation_changes(repository, built, head, later)  # reviewed after the release
+    with pytest.raises(StageError, match="must lie between"):
+        generation_changes(repository, reviewed, head, built)  # reviewed before the build
+
+
+def test_the_checked_in_review_names_a_full_commit():
+    review = load_manifest(MANIFEST).get("pools_generation_review")
+    assert review and len(review["through"]) == 40 and review["note"]

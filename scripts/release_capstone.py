@@ -314,7 +314,8 @@ def main(argv=None) -> int:
         stage_dir = work / "stage"
         report = stage(artifacts / "graphs", artifacts / "pools" / f"{area}.sqlite", stage_dir, project_config,
                        offline_demo=locate(artifacts, "saved-demo.html"), remote_api=manifest["remote_api"],
-                       verified_pools_sha256=manifest["files"][f"pools/{area}.sqlite"])
+                       verified_pools_sha256=manifest["files"][f"pools/{area}.sqlite"],
+                       generation_reviewed_through=manifest.get("pools_generation_review", {}).get("through"))
         report["artifacts"] = {"source": origin, "manifest": str(args.manifest.resolve().relative_to(ROOT))
                                if args.manifest.resolve().is_relative_to(ROOT) else str(args.manifest),
                                "verified": verified}
