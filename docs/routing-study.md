@@ -230,3 +230,33 @@ correctly counts the enclosed faces of self-crossing loops, and nearby
 signal nodes are grouped into events. Those corrections re-rank routes;
 they do not improve every aggregate. Full before/after numbers, dependency
 versions and reproduction are in [validation.md](validation.md).
+
+## Elevation in the path search (US6)
+
+The validation report found "hilly" tying "flat" on the same top route in 11
+of 32 live pairs (US6 65.6% live, criterion 80%): elevation only re-ranked
+loops that the search had found for other reasons. `_edge_preference_cost`
+now charges "flat" `FLAT_CLIMB_COST` (10) metres of path per metre climbed,
+so a 5% grade adds half an edge's length; descending is free. Balanced and
+hilly costs are unchanged, so the benchmark, the shape audit and the pools
+(built with balanced costs) are unaffected.
+
+`scripts/acceptance.py` on the deployed Charlottesville data (live mode,
+8 public starts x 3/5/8/12 mi, 18 November):
+
+| Measure | Before | Flat cost | Flat cost + hilly credit |
+|---|---:|---:|---:|
+| US6 hilly > flat (live) | 21/32, 11 ties | **29/32**, 0 ties | 28/32, 0 ties |
+| Median top-route climb flat / hilly, ft | 581 / 646 | 475 / 646 | 475 / 634 |
+| Flat top route in band | 31/32 | 32/32 | 32/32 |
+| Hilly routes with compactness < 0.20 | 9/96 | 9/96 | 18/96 |
+| Hilly mean repeated | 4.64% | 4.64% | 6.91% |
+
+A matching credit for "hilly" (cost reduced by 10 m per metre climbed, never
+below 40% of the edge's length) doubled hilly's near out-and-backs and raised
+its repetition without raising its median climb, so it was dropped. US1, US3
+and US5 use balanced requests and are identical; served US6 stays 28/32
+because pools are generated with balanced costs. Flat requests now build their
+own prepared graph (the cache key includes it), so the first flat request at
+a start pays that preparation: median live flat time 0.54 s -> 1.53 s in this
+run, well inside US10.
