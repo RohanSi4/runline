@@ -208,7 +208,9 @@ These requests always plan live and took a median of 15.2\,s (worst
 24.0\,s). In 5 of the 19 routes the reported driving distance was
 \emph{shorter} than the straight-line distance, because it is measured
 between the nearest road-network points and leaves out the short legs onto
-the network.
+the network. A fix (\#33) adds those legs: over all 37,061 pairs of a public
+park and a shipped start within 3 miles of it, the drive was below the
+straight line in 380 pairs before and in none after.
 
 \paragraph{Response time (US10).}
 Table~\ref{tab:latency} gives end-to-end times measured from a laptop
@@ -265,7 +267,13 @@ making a single route request, while passing against the backend directly.
 The cause is the place-list endpoint: the hosting platform's cache returns
 it Brotli-compressed even to clients that only accept gzip, which browsers
 handle but ordinary HTTP libraries do not. Runners are unaffected, but any
-non-browser client, including our monitoring, is.
+non-browser client, including our monitoring, is. On 18 November the same
+cache returned gzip to every client, including one that asked for no
+compression. The public site's \texttt{/api} route forwards to the backend,
+and the platform's cache for that forwarding stored the backend's
+already-compressed answer for whichever client asked first; the backend's own
+cache was correct. Turning off caching on the forwarding route (\#34) gave
+each client its requested encoding on a preview deployment.
 
 \paragraph{A weak live answer.}
 One 3 mile request from a park start was answered live with three routes
@@ -273,7 +281,13 @@ that were all close to out-and-backs (roundness 0.13), two of them repeating
 23\% of their length. Live planning uses the 10\% repetition limit only to
 order routes, not to exclude them. On 16 November the interface did not show
 repetition at all; since the 18 November fix each card shows the repeated
-share, but the runner still gets no explicit warning.
+share. To see how often this happens we planned live from all 48 public park
+starts at 3 and 5 miles: 12 of the 95 answers showed at least one such route,
+and in none of them was a rounder route within twice the distance tolerance
+left unshown, because ranking already puts every rounder in-band route first.
+Excluding these routes would therefore only return fewer of them, so the fix
+(\#32) adds a notice instead: ``No rounder loop of this length was found
+from this start'', with the count when only some routes are affected.
 
 \subsection{Findings outside the acceptance criteria}
 \paragraph{Route shape.}
@@ -306,6 +320,8 @@ request history. We did find two log lines that record location. When
 pre-loading a map fails, the API logs the runner's exact start coordinates,
 and when a precomputed route is unusable it logs the 200\,m cell the request
 fell in. Neither is stored by RunLine, but the hosting platforms keep logs.
+Both lines now name the area instead (\#31), with tests that fail if a log
+line contains a start's coordinates or cell.
 
 \paragraph{Map data.}
 Rebuilding the Charlottesville graph to keep signalized crosswalks raised the

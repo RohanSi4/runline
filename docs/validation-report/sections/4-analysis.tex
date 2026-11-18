@@ -48,17 +48,17 @@ Finding & Decision & Action & Owner & How we will verify \\
 US4: crossings, repetition, distance error and score not shown & Completed fix (\#29) & Restored crossings; added distance off target, repetition and score to each card and an expandable score breakdown & Rohan & Deployed rerun 18 Nov: 3,969 values, 0 mismatches, 8/8 components shown \\
 US9: drive cost and score not shown & Completed fix (\#29) & Show driving distance and score on alternative-start cards and in the panel & Rohan & Ten-case rerun 18 Nov: both shown, 19/19 in radius \\
 US6: hilly often ties flat & Design change & Let elevation influence path search, not only ranking, then retune its weight & Rohan & \texttt{acceptance.py}: US6 $\geq$80\% live \emph{and} US3 still met \\
-Production backend behind \texttt{main}; manual deploys & Planned fix & Merge the reproducible release script (\#18) and redeploy from a recorded commit & Rohan & \texttt{/api/version} equals the release commit \\
+Production backend behind \texttt{main}; manual deploys & Planned fix & Release script merged (\#18); its pool check now accepts a recorded compatibility review (\#35); redeploy from a recorded commit & Rohan & \texttt{/api/version} equals the release commit \\
 Precomputed routes miss 8.7\% of requests & Completed fix, not deployed & Retry from the connected network and a wider ring (\#15) & Rohan & 600-request check $\geq$97\% after deploy \\
-Live answers can be all slivers or repeat 23\% & Planned fix & Exclude routes over the repetition limit when alternatives exist; otherwise show a notice & Rohan & Shape audit; the failing park case \\
-Place list served Brotli to non-browser clients & Planned fix & Stop the cache serving one encoding to every client & Krish & Both rehearsal scripts pass against the public site \\
-Start locations written to logs & Planned fix & Log the area name instead of coordinates or cells & Rohan & Test that fails if a log line contains coordinates \\
+Live answers can be all slivers or repeat 23\% & Completed fix, not deployed & Notice when shown routes double back (\#32); exclusion dropped, since no answer had a rounder alternative & Rohan & 48 park starts: identical routes, notice on the 12 affected answers \\
+Place list served in one encoding to every client & Completed fix (\#34) & Turn off caching on the public site's \texttt{/api} forwarding route & Rohan & Each encoding correct on a preview; both rehearsal scripts pass against the public site \\
+Start locations written to logs & Completed fix, not deployed & Log the area name instead of coordinates or cells (\#31) & Rohan & Tests fail if a log line contains a start's coordinates or cell \\
 Tests did not catch removed UI fields; no CI on PRs & Completed fix & Tests run on every pull request (\#21); browser tests now assert the US4 and US9 fields are present (\#29) & Rohan & CI blocks a PR that removes a required field \\
 First request in a new city up to 23\,s & Backlog & Compact tile format (\#22) and pre-loading the map when a start is chosen & Krish & Deployed first-request times \\
 Metros use graphs without crosswalk signals & Deferred & Rebuild with the signal-preserving builder in the next cluster batch & Krish & Signal-node counts and benchmark per metro \\
 US1 5\% rule vs.\ the $\pm$0.25 mile band & Explicit decision & Keep the band; the 3 mile misses are deliberate trades for fewer interruptions & Rohan & Report both measures \\
 US2 overlap definition differs from the code & Backlog & Align the duplicate test with the shorter-route measure & Rohan & US2 served rerun \\
-Drive distance can be below straight line & Backlog & Add the legs from each start onto the road network & Rohan & US9 check: road $\geq$ straight line \\
+Drive distance can be below straight line & Completed fix, not deployed & Add the legs from each start onto the road network (\#33) & Rohan & 37,061 park--start pairs: none below the straight line \\
 \bottomrule
 \end{tabularx}
 \end{table}
