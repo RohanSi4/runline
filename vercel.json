@@ -20,7 +20,10 @@
     },
     {
       "src": "/api/(.*)",
-      "dest": "https://runline-capstone.vercel.app/api/$1"
+      "dest": "https://runline-capstone.vercel.app/api/$1",
+      "headers": {
+        "x-vercel-enable-rewrite-caching": "0"
+      }
     },
     {
       "src": "/(.*)",
