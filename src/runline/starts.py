@@ -87,13 +87,27 @@ def load_drive_graph(
 def _road_distance_miles(
     graph: nx.Graph, origin: Coordinate, destination: Coordinate
 ) -> float | None:
+    """Drive from the origin to the destination, including the legs onto the roads.
+
+    The path runs between the nearest road nodes, so without the two snap legs
+    a drive could come out shorter than the straight line between the points.
+    """
+
     start = _nearest_node(graph, origin)
     end = _nearest_node(graph, destination)
     try:
         meters = nx.shortest_path_length(graph, start, end, weight="length")
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return None
-    return float(meters) / METERS_PER_MILE
+    snap = distance_meters(origin, _node_coordinate(graph, start)) + distance_meters(
+        destination, _node_coordinate(graph, end)
+    )
+    return (float(meters) + snap) / METERS_PER_MILE
+
+
+def _node_coordinate(graph: nx.Graph, node: int) -> Coordinate:
+    data = graph.nodes[node]
+    return Coordinate(float(data["y"]), float(data["x"]))
 
 
 def _starts_from_precomputed(
