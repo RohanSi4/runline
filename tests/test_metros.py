@@ -1049,3 +1049,53 @@ def test_every_planned_cell_serves_the_same_from_arrays_and_graphs_retries_inclu
     assert from_fallback == from_graphs and fallback_retries == graph_retries
     metros.TILE_GRAPHS.clear()
     metros.TILE_ARRAYS.clear()
+
+
+def _shards_with_one_rerun(run, tmp_path) -> tuple[Path, Path, str]:
+    """A copy of the run's shards whose last unit says it was rebuilt at another commit."""
+
+    shards = tmp_path / "shards"
+    shutil.copytree(run["root"] / "shards", shards)
+    last = sorted(shards.glob("*.jsonl.gz"))[-1]
+    _rewrite_header(last, commit="f00dbee")
+    return shards, run["directory"] / "plan.json.gz", "f00dbee"
+
+
+def test_merge_refuses_a_unit_rerun_at_another_commit_unless_allowed(run, tmp_path, capsys) -> None:
+    shards, plan, rerun = _shards_with_one_rerun(run, tmp_path)
+
+    assert merge_pools.main(["--plan", str(plan), "--input", str(shards)]) == 1
+    assert "'commit'" in capsys.readouterr().out
+    assert merge_pools.main(["--plan", str(plan), "--input", str(shards), "--allow-commit", rerun]) == 0
+
+    database = sqlite3.connect(shards / "pools.sqlite")
+    meta = {key: json.loads(value) for key, value in database.execute("SELECT key, value FROM meta")}
+    database.close()
+    assert rerun in meta["commits"] and len(meta["commits"]) == 2
+    assert meta["commit"] in meta["commits"]
+
+
+def test_an_allowed_commit_does_not_excuse_other_differences(run, tmp_path, capsys) -> None:
+    shards, plan, rerun = _shards_with_one_rerun(run, tmp_path)
+    last = sorted(shards.glob("*.jsonl.gz"))[-1]
+    _rewrite_header(last, targets=[1, 2])
+
+    assert merge_pools.main(["--plan", str(plan), "--input", str(shards), "--allow-commit", rerun]) == 1
+    assert "'targets'" in capsys.readouterr().out
+    assert not (shards / "pools.sqlite").exists()
+
+
+def test_allowing_one_commit_does_not_admit_a_third(run, tmp_path, capsys) -> None:
+    shards, plan, rerun = _shards_with_one_rerun(run, tmp_path)
+    _rewrite_header(sorted(shards.glob("*.jsonl.gz"))[-2], commit="0ther00")
+
+    assert merge_pools.main(["--plan", str(plan), "--input", str(shards), "--allow-commit", rerun]) == 1
+
+
+def test_an_allowed_commit_may_come_first(run, tmp_path) -> None:
+    shards = tmp_path / "shards"
+    shutil.copytree(run["root"] / "shards", shards)
+    _rewrite_header(sorted(shards.glob("*.jsonl.gz"))[0], commit="f00dbee")
+
+    assert merge_pools.main(["--plan", str(run["directory"] / "plan.json.gz"), "--input", str(shards),
+                             "--allow-commit", "f00dbee"]) == 0
