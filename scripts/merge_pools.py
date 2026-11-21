@@ -14,6 +14,13 @@ from a different graph (area runs), commit, dirty tree, targets or surfaces
 than the first one are refused rather than mixed; a metro run records each
 tile's graph hash in ``tiles`` and refuses a tile whose units disagree on it.
 
+A unit rerun after a code fix records a newer commit. Once you have checked
+that the code between the commits computes the same pools, name the newer
+commit with ``--allow-commit`` (repeatable); every commit merged is recorded
+in ``meta`` as ``commits``:
+
+    python scripts/merge_pools.py --plan plan.json.gz --input DIR --allow-commit 9bd8768
+
 A metro run also writes the index serving needs (runline.metros): ``cells``
 maps every planned cell to the tile that owns it, ``pools.tile`` records the
 tile each pool was built on (from its shard's header; the two must agree),
@@ -162,6 +169,10 @@ def main(argv=None) -> int:
     parser.add_argument("--expect-shards", type=int, help="fail unless this many shards exist")
     parser.add_argument("--add-index", type=Path, help="with --plan: index this merged file instead of merging")
     parser.add_argument(
+        "--allow-commit", action="append", default=[], metavar="SHA",
+        help="also accept shards built at this commit; check first that it computes the same pools",
+    )
+    parser.add_argument(
         "--metros", type=Path, default=ROOT / "config" / "metros.json",
         help="tile discs and labels, for a plan written before it listed them",
     )
@@ -229,6 +240,7 @@ def main(argv=None) -> int:
         return 1
 
     reference = None
+    commits: set[str] = set()
     tile_graphs: dict[str, str | None] = {}
     rows = 0
     for shard in shards:
@@ -239,7 +251,13 @@ def main(argv=None) -> int:
                 return refuse(f"{shard.name} is pool format {build['format']}, expected {FORMAT_VERSION}; recompute it")
             if reference is None:
                 reference = build
-            elif build != reference:
+            # Allowed commits may join the one other commit the shards share,
+            # whichever order the shards come in.
+            commits.add(build["commit"])
+            if {**build, "commit": None} != {**reference, "commit": None} or (
+                len(commits - set(arguments.allow_commit)) > 1
+                if arguments.allow_commit else build != reference
+            ):
                 return refuse(f"{shard.name} was built from {build}, not {reference}")
             tile = header.get("tile")
             if tile is not None:
@@ -262,6 +280,8 @@ def main(argv=None) -> int:
         "INSERT INTO meta VALUES (?, ?)",
         [(key, json.dumps(value)) for key, value in reference.items()],
     )
+    if len(commits) > 1:
+        database.execute("INSERT INTO meta VALUES ('commits', ?)", (json.dumps(sorted(commits)),))
     if plan is not None:
         problem = write_index(database, plan, *index)
         if problem:
