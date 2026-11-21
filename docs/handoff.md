@@ -147,7 +147,11 @@ Charlottesville and the DC pilot from `main`:
 | `~/metros/b2/pools.sqlite`, `plan.json.gz`, `tile-graphs/` | Batch `b2` (Chicago, Houston and Miami), laid out like `b4`: 945 tile graphs (15 GB) in its own folder |
 
 The service also sets `RUNLINE_ALLOW_OSM_DOWNLOAD=0`,
-`RUNLINE_TILE_GRAPHS_CACHE=16` and `RUNLINE_CACHE_DIR=~/.cache/runline`.
+`RUNLINE_TILE_GRAPHS_CACHE=12` (16 until November 21) and
+`RUNLINE_CACHE_DIR=~/.cache/runline`. The VM has an 8 GB swap file
+(`/swapfile`, in `/etc/fstab`, `vm.swappiness=10` in
+`/etc/sysctl.d/99-runline-swap.conf`) as a cushion against the kernel
+killing the service.
 `/etc/systemd/system/runline.service.pr7-backup` is the previous unit, which
 ran the closed PR #7 branch from `~/runline` (kept for rollback only).
 
@@ -206,8 +210,12 @@ runline-nine.vercel.app, 3–5 mile requests at six public starts in Chicago,
 Miami and Houston came from pools in 0.4–1.9 s after a warm-up. Disk use is 79
 of 184 GB. With four metro runs served, the process held about 16 GB of the
 VM's 24 GB (6.8 GB available, no swap), more than 16 cached tiles at about
-650 MB each predict, because freed graphs are not returned to the system;
-watch memory before adding batches. A backup is under `~/pools/b2` on the
+650 MB each predict, because freed graphs are not returned to the system.
+On November 21 the cache was lowered to 12 (the previous unit is kept as
+`runline.service.cache16-backup`) and the swap file added. After requests in
+14 tiles across all seven metros, all answered from pools, the process held
+8.8 GB with 14 GB available and no swap in use. Check memory before adding
+batches. A backup is under `~/pools/b2` on the
 portal.
 
 **Compact tile graphs** (branch `compact-tiles`, not deployed): see
