@@ -124,8 +124,8 @@ nearby starts and start-to-finish routes.
 
 We could not validate several things. In-app GPS run recording was added late
 and has only been tested on synthetic location samples, never outdoors on a
-phone. We did not audit accessibility (keyboard use, screen readers or
-contrast). We did not load-test the deployment with concurrent users. Washington,
+phone. Accessibility was checked only by an automated audit; we did not test
+keyboard-only use or a screen reader. We did not load-test the deployment with concurrent users. Washington,
 New York and Los Angeles were built from an older map graph that does not
 keep signalized crosswalks, so their signal counts are less complete;
 Atlanta, Boston and Phoenix were built with the signal-preserving builder. We also cannot independently verify OpenStreetMap's tags in the

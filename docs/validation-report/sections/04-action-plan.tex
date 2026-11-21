@@ -13,11 +13,11 @@ measurable tradeoffs'' and ``make the final choice'' themselves (US4), and on
 16 November the interface did not show most of the tradeoffs the engine was
 making. We fixed that display on 18 November and the rerun passed. The same
 day we changed how the elevation preference steers the search, which brought
-US6 from 65.6\% to 90.6\% live. Six of the seven must-haves are therefore
-fully met. The seventh, US7, is met by the schema evidence but still lacks its
-recorded import into an outside application, and one should-have, US8, waits
-on the three-person browser checklist. Both are manual checks rather than
-known defects, but until they are recorded we do not claim them.
+US6 from 65.6\% to 90.6\% live. With the outside-application import
+recorded on 21 November, all seven must-haves are met. One should-have, US8,
+waits on two of the three members' browser checklists, and the one run we
+have found a real gap: the hilly setting can leave the top route unchanged
+without telling the runner.
 
 We ranked issues by how much they affect what a runner sees and by whether
 they break a must-have criterion. The two display gaps ranked first, so we
@@ -30,7 +30,7 @@ Deployment issues followed, because several fixes were written but not live;
 the backend was redeployed on 18 November. Map-data and scaling issues rank lower. They are
 real, but they mostly affect the metros beyond our primary area.
 
-Table~\ref{tab:actions} records a decision for each important finding. Owners
+Tables~\ref{tab:actions} and~\ref{tab:actions-low} record a decision for each important finding. Owners
 follow the areas of responsibility in our proposal: the interface for
 Adithya, data, performance and deployment for Krish, and routing and scoring
 for Rohan. Each item names how we will check that it worked. In every case
@@ -43,7 +43,7 @@ system, and \emph{Low} is a measurement or documentation gap.
 \begin{table}[htbp]
 \centering\footnotesize
 \renewcommand{\arraystretch}{1.0}% this table only
-\caption{Decisions on the main findings, highest priority first.}
+\caption{Decisions on the main findings: high and medium priority.}
 \label{tab:actions}
 \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{1.6cm} Y l >{\raggedright\arraybackslash}p{2.9cm}@{}}
 \toprule
@@ -52,7 +52,8 @@ Priority & Finding & Decision & Action & Owner & How we verify \\
 High & US4: crossings, repetition, distance error and score not shown & Completed fix (\#29) & Restored crossings; added distance off target, repetition and score to each card and an expandable score breakdown & Rohan & Deployed rerun 18 Nov: 3,969 values, 0 mismatches, 8/8 components shown \\
 High & US9: drive cost and score not shown & Completed fix (\#29) & Show driving distance and score on alternative-start cards and in the panel & Rohan & Ten-case rerun 18 Nov: both shown, 19/19 in radius \\
 High & US6: hilly often ties flat & Completed fix, deployed (\#38) & Flat requests pay for climbing in the path search; a hilly credit was tried and dropped & Rohan & \texttt{acceptance.py}: US6 90.6\% live, 87.5\% served; US1, US3, US5 unchanged \\
-High & US7 import and US8 checklist not recorded & Planned, before submission & Each member runs Appendix~\ref{app:checklists} on desktop and phone; one GPX per distance imported into an outside application & All three & Completed checklists attached in Appendix~\ref{app:checklists}; any F becomes a new row here \\
+High & US8: two members' checklist runs and all phone runs not recorded & Planned, before submission & Adithya and Rohan run Appendix~\ref{app:checklists} on desktop and phone; Krish repeats it on a phone & All three & Completed columns in Appendix~\ref{app:checklists}; any F becomes a new row here \\
+High & Hilly can leave the top route unchanged with no explanation (checklist step 6) & Planned fix & Show a notice when the hilly top route equals the balanced one, as for doubled-back routes (\#32) & Rohan & Step 6 passes on rerun; US6 acceptance unchanged \\
 Medium & Production backend behind \texttt{main}; manual deploys & Completed fix, deployed & Release script (\#18, \#35, \#39) that refuses a candidate reporting another commit; backend on \texttt{62e37f5} since 18 Nov & Rohan & \texttt{/api/version} equals the release commit; release checks pass on both public URLs \\
 Medium & Precomputed routes miss 8.7\% of requests & Completed fix, deployed & Retry from the connected network and a wider ring (\#15) & Rohan & 600-request check $\geq$97\% after deploy \\
 Medium & Live answers can be all slivers or repeat 23\% & Completed fix, deployed & Notice when shown routes double back (\#32); exclusion dropped, since no answer had a rounder alternative & Rohan & 48 park starts: identical routes, notice on the 12 affected answers \\
@@ -60,7 +61,22 @@ Medium & First request in a new city 4--23\,s & Partly fixed, deployed (\#24, \#
 Medium & One precompute task crashed on a degenerate retry, blocking batch \texttt{b2} & Completed fix (\#26, \#41) & Cap the waypoint rescale; allow a merge across a checked commit & Krish & Regression test; benchmark and shape audit unchanged; \texttt{b2} merged (850,512 pools) \\
 Medium & Start locations written to logs & Completed fix, deployed & Log the area name instead of coordinates or cells (\#31) & Rohan & Tests fail if a log line contains a start's coordinates or cell \\
 Medium & Tests did not catch removed UI fields; no CI on PRs & Completed fix & Tests run on every pull request (\#21); browser tests now assert the US4 and US9 fields are present (\#29) & Rohan & CI blocks a PR that removes a required field \\
-Medium & Accessibility not evaluated & Planned & Automated audit (Lighthouse accessibility) of the public page, then a keyboard-only and screen-reader pass of the checklist & Adithya & Audit report attached; each failed item becomes a row here \\
+Medium & Accessibility: start pin has no accessible name; manual items unchecked & Planned fix & Give the map marker a name (or make it non-interactive); keyboard-only and screen-reader pass of the checklist & Adithya & Lighthouse: 0 failed audits; manual pass recorded \\
+Medium & GPX files carry no elevation, so apps show 0 climb & Backlog & Write each point's elevation into the GPX & Krish & gpx.studio shows climb matching RunLine's within the terrain model's precision \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.0}% this table only
+\caption{Decisions on the main findings: low priority (continues Table~\ref{tab:actions}).}
+\label{tab:actions-low}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{1.1cm} >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{1.6cm} Y l >{\raggedright\arraybackslash}p{2.9cm}@{}}
+\toprule
+Priority & Finding & Decision & Action & Owner & How we verify \\
+\midrule
+Low & Start-to-finish card shows a score of about 5,000 & Planned fix & Show a comparable score, or none, for start-to-finish routes & Rohan & Step 10 card shows a score on the loop scale \\
 Low & Place list served in one encoding to every client & Completed fix (\#34) & Turn off caching on the public site's \texttt{/api} forwarding route & Rohan & Each encoding correct on a preview; both rehearsal scripts pass against the public site \\
 Low & Metros use graphs without crosswalk signals & Deferred & Rebuild with the signal-preserving builder in the cluster batches (\texttt{b2} and \texttt{b4} already use it) & Krish & Signal-node counts and benchmark per metro \\
 Low & Drive distance can be below straight line & Completed fix, deployed (\#33) & Add the legs from each start onto the road network & Rohan & 37,061 park--start pairs: none below the straight line \\

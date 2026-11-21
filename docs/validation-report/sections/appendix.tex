@@ -19,12 +19,13 @@ US3 & Benchmark; crossing audit & \texttt{acceptance.py} baseline; \texttt{audit
 US4 & Deployed validation & \texttt{validate\_deployed.py}, \texttt{ui\_display\_check.mjs} & \S3.6, Figure~\ref{fig:app} & \pass & Fixed (\#29); tests assert fields \\
 US5 & Route benchmark & \texttt{acceptance.py} paired surfaces & Table~\ref{tab:matrix}, \S3.3 & \pass & None \\
 US6 & Route benchmark & \texttt{acceptance.py} paired elevation & \S3.3, Appendix~\ref{app:results} & \pass & Fixed (\#38); rerun 90.6\% \\
-US7 & Benchmark; manual & \texttt{acceptance.py} + \texttt{xmllint}; import checklist & \S3.4, Appendix~\ref{app:checklists} & \partmet & Import record before submission \\
-US8 & Manual; automated & Browser checklist; Node tests & \S3.6, Appendix~\ref{app:checklists} & \pending & Three-person checklist \\
+US7 & Benchmark; manual & \texttt{acceptance.py} + \texttt{xmllint}; gpx.studio import & \S3.4, Figure~\ref{fig:gpx} & \pass & Add elevation to GPX (backlog) \\
+US8 & Manual; automated & Browser checklist; Node tests & \S3.6, Appendix~\ref{app:checklists} & \pending & Two members and phone runs; hilly notice \\
 US9 & Deployed validation & \texttt{validate\_deployed.py}, ten cases & \S3.6 & \pass & Fixed (\#29, \#33) \\
 US10 & Benchmark; deployed & \texttt{acceptance.py}; \texttt{validate\_deployed.py} & Table~\ref{tab:latency}, \S3.5--3.6 & \pass & First requests: \#24, \#25, \#22 \\
 US11 & Deployed validation & \texttt{validate\_deployed.py} metro smoke & \S3.6, Appendix~\ref{app:results} & \pass & Rebuild older metro graphs \\
 Privacy & Code review; tests & Privacy and log tests & \S2.7, \S3.7 & \pass & Logs fixed (\#31) \\
+Access. & Automated audit & Lighthouse via PageSpeed Insights & \S3.6 & 96/100 & Name the start pin; manual pass \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -75,36 +76,47 @@ Each member runs this once on a desktop browser and once on a phone, at
 \toprule
 \# & Step & Adithya & Krish & Rohan \\
 \midrule
-1 & Search for ``Rotunda'' and pick the suggestion; the pin moves there. & & & \\
-2 & Click elsewhere on the map; the start moves to the click. & & & \\
-3 & Request 5 miles, mixed, balanced; routes appear without an error. & & & \\
-4 & Switch between the route cards; the map highlights the chosen route. & & & \\
-5 & Change surface to trail and regenerate; the results change or a notice explains why not. & & & \\
-6 & Change elevation to hilly and regenerate; the climb shown changes or a notice explains why not. & & & \\
-7 & Download GPX for the selected route; a file is saved. & & & \\
-8 & Enter an invalid distance (0 or blank); an explained error appears. & & & \\
-9 & Choose a start outside the supported areas; an explained error appears. & & & \\
-10 & Use Start $\rightarrow$ finish with two points in Charlottesville; a one-way route appears. & & & \\
+1 & Search for ``Rotunda'' and pick the suggestion; the pin moves there. & & P$^a$ & \\
+2 & Click elsewhere on the map; the start moves to the click. & & P & \\
+3 & Request 5 miles, mixed, balanced; routes appear without an error. & & P & \\
+4 & Switch between the route cards; the map highlights the chosen route. & & P & \\
+5 & Change surface to trail and regenerate; the results change or a notice explains why not. & & P & \\
+6 & Change elevation to hilly and regenerate; the climb shown changes or a notice explains why not. & & F$^b$ & \\
+7 & Download GPX for the selected route; a file is saved. & & P$^c$ & \\
+8 & Enter an invalid distance (0 or blank); an explained error appears. & & P & \\
+9 & Choose a start outside the supported areas; an explained error appears. & & P & \\
+10 & Use Start $\rightarrow$ finish with two points in Charlottesville; a one-way route appears. & & P$^d$ & \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\noindent\footnotesize Krish's column: desktop Chrome, 21 November 2026, run by
+an AI browser agent in Krish's browser at his direction. Phone runs not yet
+done. (a)~``Rotunda'' suggested Rotunda Alley and Rotunda Drive, not the
+landmark; Rotunda Drive moved the start. (b)~Hilly left the top route
+unchanged at 325\,ft with no notice; route~3 changed from 380 to 484\,ft.
+(c)~Chrome received the 21\,KB GPX file; this browser asks where to save each
+download, so the final save was left to Krish. (d)~A 2.71 mile one-way route
+appeared; its card showed a score of 5037.06.\normalsize
 
 \subsection{US7 GPX import}
 For one route at each of 3, 5, 8 and 12 miles, import the downloaded file into
 an outside application that the tester already uses (for example Garmin
 Connect, Strava or gpx.studio; record which), and record whether the track
 appears, whether its distance matches RunLine's within 2\%, and whether start
-and finish meet. Use only public starts.
+and finish meet. Use only public starts. Recorded 21 November 2026 by the
+same agent run as above, using the top production route from the Rotunda at
+each distance.
 
 \begin{center}\small
 \begin{tabularx}{\linewidth}{@{}l l l l Y@{}}
 \toprule
 Distance & Application & Track appears & Distance within 2\% & Start meets finish; notes \\
 \midrule
-3 mi & & & & \\
-5 mi & & & & \\
-8 mi & & & & \\
-12 mi & & & & \\
+3 mi & gpx.studio & Yes & Yes (5.05\,km; RunLine 3.138 mi) & Yes; 0\,m climb shown \\
+5 mi & gpx.studio & Yes & Yes (8.34\,km; RunLine 5.184 mi) & Yes; 0\,m climb shown \\
+8 mi & gpx.studio & Yes & Yes (12.90\,km; RunLine 8.014 mi) & Yes; 0\,m climb shown \\
+12 mi & gpx.studio & Yes & Yes (19.48\,km; RunLine 12.107 mi) & Yes; 0\,m climb shown \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -146,7 +158,6 @@ route climbing less. After the 18 November fix (\#38) no pair tied; in three
 the flat route climbed more (ring\_120 3\,mi, 355 vs 231\,ft; ring\_240 8\,mi,
 868 vs 728\,ft) or the same (ring\_300 3\,mi, 231\,ft).
 
-\paragraph{Manual checklists.} The completed US8 checklist, GPX import record
-and route review are recorded in the tables of
-Appendix~\ref{app:checklists}. Any step marked F is added to
+\paragraph{Manual checklists.} The US8 checklist and GPX import record are in
+Appendix~\ref{app:checklists}; the route review has not been recorded yet. Any step marked F is added to
 Table~\ref{tab:actions} with an owner and a check.

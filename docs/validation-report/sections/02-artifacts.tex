@@ -18,7 +18,10 @@ The benchmark measurements in Section~\ref{sec:evidence} were run on
 16 November 2026 on an Apple M4 Pro laptop (24\,GB, macOS, Python~3.13.0),
 one request at a time, with the exact package versions pinned in
 \texttt{requirements.txt}. The deployed checks were run on 16 November and
-rerun on 18 November after a release. The pins matter because the saved map
+rerun on 18 November after a release. On 21 November the desktop browser
+checklist, the GPX import check and an automated accessibility audit were run
+in Krish's desktop Chrome by an AI browser agent (Claude) that he directed;
+we record them under his name and say so wherever they appear. The pins matter because the saved map
 graphs only load under the library versions that built them.
 
 Table~\ref{tab:procedures} summarizes each procedure before the detail below.
@@ -180,5 +183,9 @@ appear in the public benchmark file. The application keeps no account,
 history or saved requests. A recorded run stays in the page's memory and is
 discarded when the page closes \citep{w3c2026geolocation}. Map data is
 OpenStreetMap's, used under the Open Database License with attribution
-\citep{osm2026copyright}. We did not evaluate accessibility, which is listed
-as a gap in Section~\ref{sec:analysis}.
+\citep{osm2026copyright}. For accessibility we ran Google's Lighthouse
+accessibility audit, through PageSpeed Insights, on the public page in its
+desktop and mobile configurations. It checks automatically detectable
+problems such as missing names, contrast and ARIA misuse, and lists the
+items it cannot judge for a person to check; we did not do that manual
+pass.
