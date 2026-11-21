@@ -6,19 +6,40 @@ summary. Anyone with the repository and its pinned environment can rerun
 them. Appendix~\ref{app:repro} lists the exact commands, and
 Appendix~\ref{app:checklists} holds the manual checklists.
 
-\paragraph{Who did the work.}
-The team members wrote the requirements, chose the benchmark and its
+The three team members wrote the requirements, chose the benchmark and its
 thresholds, reviewed every change through pull requests, and are responsible
 for the manual checks. Much of the measurement tooling (the benchmark
 harness, the crossing audit, the pool comparison and the acceptance and
 deployment scripts) was written with AI coding assistants (Claude Code and
-Codex), which ran under our direction and whose output we reviewed before
-merging. \todo{confirm this disclosure matches the course's generative-AI
-policy and how each member used these tools.} The automated measurements in
-Section~\ref{sec:evidence} were run on \todo{date of final runs} on a MacBook
-running Python~3.13 with the exact package versions pinned in
-\texttt{requirements.txt}. The pins matter because the saved map graphs only
-load under the library versions that built them.
+Codex). They ran under our direction, and we reviewed their output before
+merging it, as with any other contribution. Every number in this report comes
+from running those scripts, not from an assistant's description of a result.
+The benchmark measurements in Section~\ref{sec:evidence} were run on
+16 November 2026 on an Apple M4 Pro laptop (24\,GB, macOS, Python~3.13.0),
+one request at a time, with the exact package versions pinned in
+\texttt{requirements.txt}. The deployed checks were run on 16 November and
+rerun on 18 November after a release. The pins matter because the saved map
+graphs only load under the library versions that built them.
+
+Table~\ref{tab:procedures} summarizes each procedure before the detail below.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Validation procedures, the artifact each runs, and what is recorded.}
+\label{tab:procedures}
+\begin{tabularx}{\linewidth}{@{}p{0.2\linewidth} Y Y@{}}
+\toprule
+Method & Procedure / artifact & Outcome recorded \\
+\midrule
+Automated tests & \texttt{pytest} suite and Node tests; run on every pull request by GitHub Actions & Pass or fail per test; a failing test blocks the merge \\
+Route benchmark & \texttt{scripts/acceptance.py}: 8 fixed public starts $\times$ 4 distances $\times$ 5 preference settings, live and served & Per-request metrics and a pass/fail per criterion, in JSON tied to the graph's hash \\
+Crossing audit & \texttt{scripts/audit\_crossings.py}: independent geometric labels for major-road crossings & Precision and recall of the planner's count; every disagreement plotted and resolved by inspecting the map \\
+Shape and pool checks & \texttt{scripts/shape\_audit.py} (96 routes); \texttt{scripts/compare\_pools.py} (600 requests, seed 7) & Roundness, dead ends, revisits, repetition; pool hit rate and quality against live planning \\
+Deployed validation & \texttt{scripts/validate\_deployed.py} ($\leq$250 paced requests) and \texttt{scripts/ui\_display\_check.mjs} & Response times, errors, metro smoke results, nearby-start radii, displayed value versus API value \\
+Manual review & Checklists in Appendix~\ref{app:checklists}: browser walk-through, GPX import, route review & P/F/N/A per step and member, with notes \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \subsection{Automated tests}
 The suite has 223 Python tests across 24 files and 35 Node tests that load the

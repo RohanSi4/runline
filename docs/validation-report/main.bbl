@@ -1,0 +1,82 @@
+\begin{thebibliography}{11}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Balasubramaniam et~al.(2026)Balasubramaniam, Patel, and
+  Singh]{runguys2026proposal}
+Adithya Balasubramaniam, Krish Patel, and Rohan Singh.
+\newblock {RunLine}: {CS} 4971 project proposal \& plan.
+\newblock Team ORANGE-03 (RunGuys), University of Virginia, 2026.
+\newblock Submitted September 2026.
+
+\bibitem[Boeing(2017)]{boeing2017osmnx}
+Geoff Boeing.
+\newblock {OSMnx}: New methods for acquiring, constructing, analyzing, and
+  visualizing complex street networks.
+\newblock \emph{Computers, Environment and Urban Systems}, 65:\penalty0
+  126--139, 2017.
+\newblock \doi{10.1016/j.compenvurbsys.2017.05.004}.
+
+\bibitem[C{\'a}ceres and Grant(2026)]{w3c2026geolocation}
+Marcos C{\'a}ceres and Reilly Grant.
+\newblock Geolocation.
+\newblock W3C Candidate Recommendation Draft,
+  \url{https://www.w3.org/TR/geolocation/}, 2026.
+\newblock Version of 5 November 2026, accessed 2026-11-16.
+
+\bibitem[Dijkstra(1959)]{dijkstra1959note}
+E.~W. Dijkstra.
+\newblock A note on two problems in connexion with graphs.
+\newblock \emph{Numerische Mathematik}, 1:\penalty0 269--271, 1959.
+\newblock \doi{10.1007/BF01386390}.
+
+\bibitem[{European Space Agency}(2022)]{copernicus2022dem}
+{European Space Agency}.
+\newblock Copernicus {DEM}: {GLO}-90 digital elevation model.
+\newblock
+  \url{https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM},
+  2022.
+\newblock Accessed 2026-11-16.
+
+\bibitem[Hagberg et~al.(2008)Hagberg, Schult, and Swart]{hagberg2008networkx}
+Aric~A. Hagberg, Daniel~A. Schult, and Pieter~J. Swart.
+\newblock Exploring network structure, dynamics, and function using {NetworkX}.
+\newblock In \emph{Proceedings of the Python in Science Conference (SciPy
+  2008)}, pages 11--15, 2008.
+\newblock \doi{10.25080/TCWV9851}.
+
+\bibitem[{OpenStreetMap Foundation}(2026)]{osm2026copyright}
+{OpenStreetMap Foundation}.
+\newblock Copyright and license.
+\newblock \url{https://www.openstreetmap.org/copyright}, 2026.
+\newblock Accessed 2026-11-16.
+
+\bibitem[{OpenStreetMap Wiki contributors}(2026)]{osmwiki2026signals}
+{OpenStreetMap Wiki contributors}.
+\newblock Tag:highway=traffic\_signals.
+\newblock
+  \url{https://wiki.openstreetmap.org/wiki/Tag:highway=traffic_signals}, 2026.
+\newblock Accessed 2026-11-16.
+
+\bibitem[Polsby and Popper(1991)]{polsby1991third}
+Daniel~D. Polsby and Robert~D. Popper.
+\newblock The third criterion: Compactness as a procedural safeguard against
+  partisan gerrymandering.
+\newblock \emph{Yale Law \& Policy Review}, 9\penalty0 (2):\penalty0 301, 1991.
+
+\bibitem[{RunGuys (Team ORANGE-03)}(2026)]{runline2026repo}
+{RunGuys (Team ORANGE-03)}.
+\newblock {RunLine} source repository.
+\newblock \url{https://github.com/RohanSi4/runline}, 2026.
+\newblock Commit f482881 unless stated otherwise.
+
+\bibitem[{TopoGrafix}(2004)]{topografix2004gpx}
+{TopoGrafix}.
+\newblock {GPX} 1.1 schema documentation.
+\newblock \url{https://www.topografix.com/GPX/1/1/}, 2004.
+\newblock Accessed 2026-11-16.
+
+\end{thebibliography}

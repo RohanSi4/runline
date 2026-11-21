@@ -1,3 +1,34 @@
+\section{Traceability from criteria to decisions}
+\label{app:trace}
+
+Each row follows one acceptance criterion, or one expectation from the
+proposal, from the method that tested it to the evidence and the decision.
+``Live'' and ``served'' are defined in Section~\ref{sec:evidence}.
+
+\begin{table}[htbp]
+\centering\footnotesize
+\caption{Criterion $\rightarrow$ method $\rightarrow$ artifact $\rightarrow$ evidence $\rightarrow$ status and follow-up.}
+\label{tab:trace}
+\begin{tabularx}{\linewidth}{@{}l >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{3.1cm} >{\raggedright\arraybackslash}p{2.0cm} l Y@{}}
+\toprule
+ID & Method & Artifact & Evidence & Status & Follow-up \\
+\midrule
+US1 & Route benchmark & \texttt{acceptance.py}, 32 requests & Table~\ref{tab:matrix}, \S3.1 & \pass & Keep band (Table~\ref{tab:actions}) \\
+US2 & Route benchmark & \texttt{acceptance.py} overlap & Table~\ref{tab:matrix}, \S3.1 & \pass & Align duplicate test (backlog) \\
+US3 & Benchmark; crossing audit & \texttt{acceptance.py} baseline; \texttt{audit\_crossings.py} & Table~\ref{tab:us3}, \S3.2 & \pass & Side-road crossing rule added \\
+US4 & Deployed validation & \texttt{validate\_deployed.py}, \texttt{ui\_display\_check.mjs} & \S3.6, Figure~\ref{fig:app} & \pass & Fixed (\#29); tests assert fields \\
+US5 & Route benchmark & \texttt{acceptance.py} paired surfaces & Table~\ref{tab:matrix}, \S3.3 & \pass & None \\
+US6 & Route benchmark & \texttt{acceptance.py} paired elevation & \S3.3, Appendix~\ref{app:results} & \pass & Fixed (\#38); rerun 90.6\% \\
+US7 & Benchmark; manual & \texttt{acceptance.py} + \texttt{xmllint}; import checklist & \S3.4, Appendix~\ref{app:checklists} & \partmet & Import record before submission \\
+US8 & Manual; automated & Browser checklist; Node tests & \S3.6, Appendix~\ref{app:checklists} & \pending & Three-person checklist \\
+US9 & Deployed validation & \texttt{validate\_deployed.py}, ten cases & \S3.6 & \pass & Fixed (\#29, \#33) \\
+US10 & Benchmark; deployed & \texttt{acceptance.py}; \texttt{validate\_deployed.py} & Table~\ref{tab:latency}, \S3.5--3.6 & \pass & First requests: \#24, \#25, \#22 \\
+US11 & Deployed validation & \texttt{validate\_deployed.py} metro smoke & \S3.6, Appendix~\ref{app:results} & \pass & Rebuild older metro graphs \\
+Privacy & Code review; tests & Privacy and log tests & \S2.7, \S3.7 & \pass & Logs fixed (\#31) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{Reproducing the measurements}
 \label{app:repro}
 
@@ -60,9 +91,23 @@ Each member runs this once on a desktop browser and once on a phone, at
 
 \subsection{US7 GPX import}
 For one route at each of 3, 5, 8 and 12 miles, import the downloaded file into
-an outside application \todo{name the application, e.g. Garmin Connect,
-Strava or gpx.studio} and record whether the track appears, whether its
-distance matches RunLine's within 2\%, and whether start and finish meet.
+an outside application that the tester already uses (for example Garmin
+Connect, Strava or gpx.studio; record which), and record whether the track
+appears, whether its distance matches RunLine's within 2\%, and whether start
+and finish meet. Use only public starts.
+
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}l l l l Y@{}}
+\toprule
+Distance & Application & Track appears & Distance within 2\% & Start meets finish; notes \\
+\midrule
+3 mi & & & & \\
+5 mi & & & & \\
+8 mi & & & & \\
+12 mi & & & & \\
+\bottomrule
+\end{tabularx}
+\end{center}
 
 \subsection{Route review}
 Each member independently marks twelve benchmark routes (three starts
@@ -101,5 +146,7 @@ route climbing less. After the 18 November fix (\#38) no pair tied; in three
 the flat route climbed more (ring\_120 3\,mi, 355 vs 231\,ft; ring\_240 8\,mi,
 868 vs 728\,ft) or the same (ring\_300 3\,mi, 231\,ft).
 
-\paragraph{Manual checklists.} \todo{Attach the completed US8 checklists, GPX
-import record and route review from Appendix~\ref{app:checklists}.}
+\paragraph{Manual checklists.} The completed US8 checklist, GPX import record
+and route review are recorded in the tables of
+Appendix~\ref{app:checklists}. Any step marked F is added to
+Table~\ref{tab:actions} with an owner and a check.

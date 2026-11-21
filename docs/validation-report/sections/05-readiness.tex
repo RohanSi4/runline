@@ -1,7 +1,6 @@
 \section{Reflection on Readiness}
 \label{sec:readiness}
 
-\paragraph{What is reliable now.}
 For a runner in Charlottesville who looks at a route before running it,
 RunLine is ready to use. The evidence for that is strong and repeatable. Every
 benchmark request in both modes returned routes, distance fit met its
@@ -13,31 +12,30 @@ better than live planning: all were within the distance band and fewer
 repeated themselves. The six additional metro areas passed the same smoke
 checks, which shows the pipeline generalizes beyond the city it was tuned on.
 
-\paragraph{What remains uncertain.}
-Until 18 November the engine was ahead of the interface: a runner saw a good
+What remains uncertain is mostly at the edges of that use. Until 18 November the engine was ahead of the interface: a runner saw a good
 route but not why it was chosen, which is the part of the design the proposal
 said distinguished RunLine. That display is now in place and verified, but no
 runner outside the team has used it yet. The elevation preference now works
 for live requests too, but its fix is a single tuned constant measured on
 eight starts, and the hilly setting still relies on ranking alone. The
 production backend now runs the code we measured, but the regional server for
-the metro areas was not part of that release, and its first requests in a new
-city remain slow. We also have no evidence about
+the metro areas was not part of that release. Its first request in a new city
+is now fast when the page has pre-loaded the map, but still takes several
+seconds when it has not. We also have no evidence about
 people other than ourselves, and none about the GPS run mode outdoors or about
 accessibility.
 
-\paragraph{What must happen before wider use.}
-In order: complete the three-person browser checklist, the GPX import check and the route review;
-and run an accessibility review against a
-recognized checklist. Before anyone outside the team is invited to use it, we
+Before wider use, three things must happen, in order. We must complete the three-person browser checklist, the GPX import check and the route review;
+run an automated accessibility audit followed by a keyboard and
+screen-reader pass; and fix whatever those turn up. Before anyone outside the team is invited to use it, we
 would also want a short observed session with a handful of runners. The
 proposal's premise was that visible tradeoffs help a runner choose, and
 nothing in this report tests it. The metro
-areas should not be promoted beyond a preview until they are rebuilt with the
-crosswalk signals and the first request in a new city is reliably fast.
+areas should not be promoted beyond a preview until Washington, New York and
+Los Angeles are rebuilt with the crosswalk signals and the first request in a
+new city is reliably fast.
 
-\paragraph{What validation taught us.}
-Three lessons changed how we work. The first is that a metric needs a check
+Validation also changed how we work, through three lessons. The first is that a metric needs a check
 that does not share its assumptions. Building the independent crossing
 labeller found errors in both directions: the labeller was wrong in eight of
 the cases we first blamed on the planner, and the planner was missing a whole
