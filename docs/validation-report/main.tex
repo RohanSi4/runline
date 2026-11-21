@@ -1,45 +1,73 @@
-% Standalone build of the RunLine QA / Validation Report.
-% To submit: copy sections/*.tex and references.bib into the CS 4971 Overleaf
-% template and keep its formatting. This preamble only exists so the draft
-% compiles locally (tectonic main.tex).
-\documentclass[11pt]{article}
+\documentclass[10pt,letterpaper]{article}
+
+% CS 4971 QA / Validation Report starter. Keep the document settings consistent.
+% RunLine: this is the course's Overleaf starter with its fields filled in.
+% Only the four definitions after the starter's own are added; the document
+% settings are unchanged. Build locally with `tectonic main.tex`, or upload
+% this folder to Overleaf as is.
 \usepackage[margin=1in]{geometry}
 \usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{array}
-\usepackage{graphicx}
-\usepackage{xcolor}
-\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+\usepackage[numbers]{natbib}
 \usepackage[hidelinks]{hyperref}
-\usepackage[numbers,sort&compress]{natbib}
-\setlist{nosep,leftmargin=1.4em}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\renewcommand{\arraystretch}{1.15}
+\newcommand{\placeholder}[1]{\textcolor{blue!65!black}{\textit{[Replace this guidance: #1]}}}
+
+% RunLine additions: a ragged-right table column and the status labels.
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcommand{\pass}{\textbf{Met}}
-\newcommand{\fail}{\textbf{Not met}}
 \newcommand{\partmet}{\textbf{Partly met}}
 \newcommand{\pending}{\textbf{Pending}}
-% Marks a value the team must still fill in or confirm before submission.
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
-\title{\textbf{RunLine}\\[4pt]\large CS 4971 QA / Validation Report}
-\author{RunGuys (Team M3)\\[2pt]
-Adithya Balasubramaniam, Krish Patel, Rohan Singh}
-\date{\todo{report date}}
+% Replace these fields before submission.
+\newcommand{\projectname}{RunLine}
+\newcommand{\teamname}{ORANGE-03 (RunGuys)}
+\newcommand{\teammembers}{Adithya Balasubramaniam, Krish Patel, Rohan Singh}
+\newcommand{\reportdate}{\today}
 
 \begin{document}
-\maketitle
 
-\input{sections/1-strategy}
-\input{sections/2-procedures}
-\input{sections/3-evidence}
-\input{sections/4-analysis}
-\input{sections/5-readiness}
+\begin{titlepage}
+  \centering
+  \vspace*{1.5in}
+  {\Large CS 4971 Capstone Practicum\par}
+  \vspace{0.35in}
+  {\huge\bfseries QA / Validation Report\par}
+  \vspace{0.45in}
+  {\LARGE \projectname\par}
+  \vspace{0.75in}
+  {\large \textbf{Team:} \teamname\par}
+  \vspace{0.12in}
+  {\large \textbf{Members:} \teammembers\par}
+  \vfill
+  {\large \reportdate\par}
+\end{titlepage}
 
+\setcounter{page}{1}
+\input{sections/01-strategy}
+\input{sections/02-artifacts}
+\input{sections/03-evidence}
+\input{sections/04-action-plan}
+\input{sections/05-readiness}
+
+% Add verified sources to references.bib, then cite them with \citep{key}.
+% The references heading is omitted until at least one source is cited.
 \bibliographystyle{plainnat}
 \bibliography{references}
 
+% Add appendices only when useful; remove this block if none are needed.
 \appendix
 \input{sections/appendix}
 

@@ -9,8 +9,8 @@ OpenStreetMap walking network \citep{boeing2017osmnx,hagberg2008networkx} with
 a cost function that penalizes mapped traffic signals, major-road crossings,
 repeated segments, the wrong surface and the wrong amount of climbing.
 
-\paragraph{Definition of success.}
-Our Project Proposal \& Plan \citep{runguys2026proposal} defined success as a
+For this report, ``working'' means what our Project Proposal \& Plan
+\citep{runguys2026proposal} said it would mean. The proposal defined success as a
 runner being able to enter a start and a distance, receive several routes that
 stay close to that distance, compare measurable tradeoffs between them, and
 export the one they choose. It turned that goal into eleven user stories with
@@ -53,9 +53,11 @@ US11 & Nice & At least one additional area, built with the same pipeline, passes
 \end{tabularx}
 \end{table}
 
-\paragraph{Methods.}
-We used five validation methods, each chosen for what it can establish about
-a route planner and what the others cannot.
+To decide whether RunLine meets those criteria we used five validation
+methods, each chosen for what it can establish about a route planner and what
+the others cannot. Appendix~\ref{app:trace} traces every criterion through the
+method that tested it, the artifact that ran, the evidence it produced and the
+decision we took.
 
 \begin{enumerate}
 \item \textbf{Automated tests.} A pytest suite and two Node test files check
@@ -100,14 +102,17 @@ evidence in this report shows that runners other than ourselves find the
 routes or the score breakdown useful. We return to this gap in
 Sections~\ref{sec:analysis} and~\ref{sec:readiness}.
 
-\paragraph{Scope.}
-This report covers \texttt{main} at commit \texttt{f482881}
-\citep{runline2026repo} and the production deployment at
-\url{https://runline-nine.vercel.app}. When we measured it, the production
-backend reported commit \texttt{ebcd150} from 11 November, three code
-pull requests behind \texttt{main}. None of them changed scoring, but one
-(\#26) changed how loops are generated, so for some requests production can
-return different routes from the benchmark, which used \texttt{main}. Charlottesville
+The evidence covers a specific version of the system. The benchmark measured
+\texttt{main} at commit \texttt{f482881} \citep{runline2026repo}, and the
+deployed checks measured the production site at
+\url{https://runline-nine.vercel.app}. During the first deployed run on
+16 November, the production backend reported commit \texttt{ebcd150} from
+11 November, three code pull requests behind \texttt{main}. None of them
+changed scoring, but one (\#26) changed how loops are generated in rare,
+degenerate cases. The backend was redeployed on 18 November at
+\texttt{62e37f5}, which includes every change the benchmark measured plus the
+fixes described in Section~\ref{sec:analysis}, and the deployed checks were
+rerun against it. Charlottesville
 is the primary area. Its graph was rebuilt in November to keep signalized
 crosswalks, and it is served with a complete set of precomputed routes
 (11,417 pools, 605,206 loops). Washington DC, New York, Los Angeles, Atlanta,
@@ -120,9 +125,9 @@ nearby starts and start-to-finish routes.
 We could not validate several things. In-app GPS run recording was added late
 and has only been tested on synthetic location samples, never outdoors on a
 phone. We did not audit accessibility (keyboard use, screen readers or
-contrast). We did not load-test the deployment with concurrent users. The
-metro areas other than Charlottesville were built from an older map graph
-that does not keep signalized crosswalks, so their signal counts are less
-complete. We also cannot independently verify OpenStreetMap's tags in the
+contrast). We did not load-test the deployment with concurrent users. Washington,
+New York and Los Angeles were built from an older map graph that does not
+keep signalized crosswalks, so their signal counts are less complete;
+Atlanta, Boston and Phoenix were built with the signal-preserving builder. We also cannot independently verify OpenStreetMap's tags in the
 field, so every interruption count in this report means \emph{mapped}
 signals and crossings \citep{osmwiki2026signals}.

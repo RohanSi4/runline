@@ -5,7 +5,7 @@ Table~\ref{tab:matrix} summarizes the result for every acceptance criterion.
 The rest of this section gives the evidence behind each row, then the
 findings from the audits that the criteria do not cover. Unless stated
 otherwise, benchmark figures come from the acceptance run of
-\todo{date, e.g. 17 November 2026} on code \texttt{61f45cd} (main
+16 November 2026 on code \texttt{61f45cd} (main
 \texttt{f482881} plus the measurement script, no routing changes) and the
 rebuilt Charlottesville graph (hash prefix \texttt{66b524897627167e}), which
 is the graph production serves. The script reports two modes. \emph{Live} is
@@ -13,6 +13,13 @@ the planner on its own, with precomputed routes switched off. \emph{Served}
 is the path the API actually uses: precomputed routes first, live planning
 if none fit. In the served run, precomputed routes answered 30 of the 32
 default requests.
+
+Throughout this section, numbers and counts are what the scripts and checks
+recorded; each is traceable to an artifact through
+Appendix~\ref{app:trace}. Where we explain \emph{why} a result came out as it
+did, we say so, and we name the evidence the explanation rests on (a code
+path, a plotted disagreement, a rerun). Explanations we did not confirm by
+experiment are marked as likely rather than stated as fact.
 
 \begin{table}[ht]
 \centering\small
@@ -28,8 +35,8 @@ US3 & Median interruptions 14 $\rightarrow$ 4 ($-$71\%); error 1.45\% & 14 $\rig
 US4 & \multicolumn{2}{l}{Values match API (0 of 3,969 differ); all 8 components shown (fixed 18 Nov)} & \pass \\
 US5 & 62/64 (96.9\%) toward preference & 63/64 (98.4\%) & \pass \\
 US6 & 21/32 (65.6\%) $\rightarrow$ 29/32 (90.6\%) after fix & 26/32 (81.2\%); 28/32 on rerun & \pass \\
-US7 & 10/10 valid against GPX 1.1 schema & 10/10; outside-app import \todo{team} & \partmet \\
-US8 & \multicolumn{2}{l}{Team checklist \todo{results}; automated browser tests 35/35} & \pending \\
+US7 & 10/10 valid against GPX 1.1 schema & 10/10; outside-app import not yet recorded & \partmet \\
+US8 & \multicolumn{2}{l}{Three-person checklist not yet recorded; automated browser tests 35/35} & \pending \\
 US9 & \multicolumn{2}{l}{19/19 starts in radius; score and drive cost shown (fixed 18 Nov)} & \pass \\
 US10 & Laptop: median 0.33\,s, p95 1.18\,s & Production: median 0.48\,s, p95 1.95\,s; rerun 0.44 / 1.42\,s & \pass \\
 US11 & \multicolumn{2}{l}{6/6 areas: 72/72 requests, 216 valid routes; rerun 71/72} & \pass \\
@@ -151,8 +158,12 @@ was closed and matched its route's length. We then checked every route in the
 run, 576 live and 474 served, with the same result. The length check is
 nearly circular, since the reported distance is computed from the same points
 the file contains. It shows that no points were lost or duplicated, not that
-the distance itself is right. \todo{Outside-application import: name the app,
-the four routes tried and the outcome.}
+the distance itself is right. The second half of US7, opening one route per
+distance in an application outside RunLine (Appendix~\ref{app:checklists}),
+had not been recorded when this report was compiled. Until it is, we count
+US7 as only partly met: the files are valid by the standard's own schema, but
+we have no recorded evidence that a real fitness or mapping application
+accepts them.
 
 \subsection{Speed (US10, local part)}
 On a laptop with the map already loaded, warm 3 and 5 mile requests took a
@@ -238,6 +249,23 @@ had to be geocoded) took over 20\,s. US10 covers warm requests only, so these
 do not fail it, but a runner opening the app in a new city meets exactly this
 case.
 
+Almost all of a first request's time is spent loading one map tile into
+memory. On the regional server, rebuilding the largest tile of the
+Atlanta, Boston and Phoenix batch (263{,}000 nodes) from its file took 6--7\,s of the request; reading and
+decompressing it took 0.6\,s. Two changes deployed on 14 November target this
+(\#24, \#25). Loading pauses Python's garbage collector, which cut that tile's
+load from 6.7 to 3.8\,s over two runs each. The page also asks the server to
+load a start's tile as soon as the start is set, while the runner is still
+choosing a distance. The deployment script requests routes directly and so
+measures the cold case in Table~\ref{tab:latency}. In a separate check through
+the public site on 14 November, we set a start in a tile no one had used,
+waited six seconds as a runner choosing a distance would, and requested a
+route: four such first requests (Boston, Phoenix, Los Angeles, New York) took
+0.4--1.8\,s. Without pre-loading, first requests at eight other fresh starts
+took 3.7--10.5\,s after the garbage-collector change. These are single
+requests per area, so they show the mechanism works, not its typical
+benefit.
+
 \begin{table}[ht]
 \centering\small
 \caption{US10: production response times, 3 and 5 mile loops (seconds, end to end).}
@@ -288,7 +316,8 @@ names, that picking one moved the start, and that a typed address and a map
 click at the same point produced identical routes. A start-to-finish request
 in Charlottesville returned a correct 3.48 mile path in 1.7\,s. These checks
 support US8 but do not replace the three-person checklist the proposal
-specifies, whose results are \todo{fill in from Appendix~\ref{app:checklists}}.
+specifies. That checklist (Appendix~\ref{app:checklists}) had not been
+recorded when this report was compiled, so US8 remains pending.
 
 \paragraph{A defect found by the validation tooling.}
 Both of our own rehearsal scripts failed against the public site before
@@ -352,10 +381,32 @@ fell in. Neither is stored by RunLine, but the hosting platforms keep logs.
 Both lines now name the area instead (\#31), with tests that fail if a log
 line contains a start's coordinates or cell.
 
+\paragraph{Robustness of the precompute pipeline.}
+Precomputing a batch of metro areas is itself a large test of the planner:
+batch \texttt{b2} (Chicago, Miami and Houston) ran the loop generator for
+every start cell of three metro areas, producing about 850{,}000 precomputed
+pools. One of its 4{,}000 cluster tasks failed after
+2\,h\,20\,min with ``longitude must be between $-$180 and 180'', and because the
+merge only runs when every task succeeds, the whole batch was blocked. The
+cause was a retry step: when a direction's best attempt was a loop only a few
+metres long, the generator scaled its next attempt by the ratio of target to
+measured length, which can exceed 1{,}000, and placed waypoints thousands of
+kilometres away. We reproduced it with a test on a 5\,m block, where a
+20 mile request placed a waypoint 12{,}432\,km out. The fix (\#26) caps the
+rescale at four times the base radius; with it, the benchmark and shape audit
+produced identical routes, so earlier batches remained valid. Rerunning the
+failed task exposed a second gap: the rerun recorded a newer code commit, and
+the merge correctly refused to mix commits. We added an explicit
+\texttt{--allow-commit} option that accepts a named commit only after the
+code between the two has been checked to compute the same pools, and records
+both commits in the merged file (\#41). Batch \texttt{b2} then merged with
+850{,}512 precomputed routes.
+
 \paragraph{Map data.}
 Rebuilding the Charlottesville graph to keep signalized crosswalks raised the
 number of signal nodes from 131 to 569, and counted signal events on the
 benchmark rose from 38 to 74. This is not a regression in routing. The old
 graph had dropped the crosswalk signals during simplification, so earlier
-signal counts were undercounts. The six other metro areas still use graphs
-built before this fix.
+signal counts were undercounts. Of the six other metro areas, Atlanta, Boston
+and Phoenix were built after this fix; Washington, New York and Los Angeles
+still use graphs built before it.
