@@ -37,7 +37,7 @@ on Oracle. This recovery has not changed the deployed backend.
 | Metro serving | Cell-to-tile index, graph hash checks, bounded graph cache and live fallback integrated. Serving the DC pilot on the VM; measurements in task 4. |
 | Pool hit rate | Loops start where they pass nearest the runner; requests read their cell and eight neighbors and measure the entire drawn route. Metro reads are restricted to the loaded tile. |
 | Routing fixes | Builders retain signalized crosswalk tags and nodes; nearby signal nodes count as one event; self-crossing loop area counts enclosed faces. Browser validation errors display as text. |
-| Cluster precompute | Batch `b1` (New York and Los Angeles) finished on the UVA CS cluster on November 11; `b4` (Atlanta, Boston and Phoenix) finished on November 13 with the signal-preserving pipeline from `main`. Both are served from the Oracle VM (task 4). Other batches have not started. Rivanna allocation has not been verified. |
+| Cluster precompute | Batch `b1` (New York and Los Angeles) finished on the UVA CS cluster on November 11; `b4` (Atlanta, Boston and Phoenix) finished on November 13 and `b2` (Chicago, Houston and Miami) on November 21, both with the signal-preserving pipeline from `main`. All three are served from the Oracle VM (task 4). Other batches have not started. Rivanna allocation has not been verified. |
 | Graphs and pools | Repository graph remains unchanged for compatibility. The rebuilt graph and complete 95 MB pool file are deployed on the separate capstone project; the original Oracle assets remain in place. |
 
 See [validation.md](validation.md) for the before/after routing checks and
@@ -121,7 +121,7 @@ Copernicus elevation). Confirm the elevation bake is complete before
 publishing. Recompute pools on those exact graphs using the pool-generation
 fixes in this branch, which exclude unusable loops and choose origins inside
 routable cells. Charlottesville's rebuild is complete on the capstone project. DC and the
-top-50 coverage remains incomplete; batches `b1` (New York and Los Angeles) and `b4` (Atlanta, Boston and Phoenix) are served from the Oracle VM.
+top-50 coverage remains incomplete; batches `b1` (New York and Los Angeles), `b2` (Chicago, Houston and Miami) and `b4` (Atlanta, Boston and Phoenix) are served from the Oracle VM.
 
 ### 4. Update the existing hosted backend
 
@@ -144,9 +144,14 @@ Charlottesville and the DC pilot from `main`:
 | `~/metros/b1/pools.sqlite`, `plan.json.gz` | Batch `b1` (New York and Los Angeles), indexed with `--add-index` |
 | `~/metros/b1/tile-graphs` | Symlink to the same shared folder, which also holds `b1`'s 906 tile graphs (18 GB in total with DC's) |
 | `~/metros/b4/pools.sqlite`, `plan.json.gz`, `tile-graphs/` | Batch `b4` (Atlanta, Boston and Phoenix). Its 963 rebuilt, signal-preserving tile graphs (13 GB) sit in their own folder, apart from the older shared graphs |
+| `~/metros/b2/pools.sqlite`, `plan.json.gz`, `tile-graphs/` | Batch `b2` (Chicago, Houston and Miami), laid out like `b4`: 945 tile graphs (15 GB) in its own folder |
 
 The service also sets `RUNLINE_ALLOW_OSM_DOWNLOAD=0`,
-`RUNLINE_TILE_GRAPHS_CACHE=16` and `RUNLINE_CACHE_DIR=~/.cache/runline`.
+`RUNLINE_TILE_GRAPHS_CACHE=12` (16 until November 21) and
+`RUNLINE_CACHE_DIR=~/.cache/runline`. The VM has an 8 GB swap file
+(`/swapfile`, in `/etc/fstab`, `vm.swappiness=10` in
+`/etc/sysctl.d/99-runline-swap.conf`) as a cushion against the kernel
+killing the service.
 `/etc/systemd/system/runline.service.pr7-backup` is the previous unit, which
 ran the closed PR #7 branch from `~/runline` (kept for rollback only).
 
@@ -193,6 +198,25 @@ runline-nine.vercel.app, 3–8 mile requests in Atlanta, Boston, Cambridge,
 Phoenix and Tempe came from pools (first request in a tile 5–11 s, then about
 1 s); the process used about 3.5 GB afterwards. Disk use is 56 of 184 GB. A
 backup of the pools and plan is in the portal home directory under `~/pools/b4`.
+
+Batch `b2` (November 21) used the same pipeline. One of its 4,000 pool tasks
+crashed on a degenerate loop retry (fixed in #26) and was rerun on the fixed
+code, so the merge needed `--allow-commit 9bd8768` (#41); the merged file's
+`meta` records both commits. On the VM it passed `PRAGMA quick_check`
+(396,511 indexed cells on 945 tiles; 283,540 cells with 850,512 pools), and all
+945 tile graph hashes match. The tile graphs were copied before the pool file,
+so the live service only saw `b2` once its graphs were in place. Through
+runline-nine.vercel.app, 3–5 mile requests at six public starts in Chicago,
+Miami and Houston came from pools in 0.4–1.9 s after a warm-up. Disk use is 79
+of 184 GB. With four metro runs served, the process held about 16 GB of the
+VM's 24 GB (6.8 GB available, no swap), more than 16 cached tiles at about
+650 MB each predict, because freed graphs are not returned to the system.
+On November 21 the cache was lowered to 12 (the previous unit is kept as
+`runline.service.cache16-backup`) and the swap file added. After requests in
+14 tiles across all seven metros, all answered from pools, the process held
+8.8 GB with 14 GB available and no swap in use. Check memory before adding
+batches. A backup is under `~/pools/b2` on the
+portal.
 
 **Compact tile graphs** (branch `compact-tiles`, not deployed): see
 [compact-tiles.md](compact-tiles.md). `scripts/compact_graphs.py <tile-graphs>
